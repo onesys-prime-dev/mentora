@@ -4,7 +4,7 @@
  *
  * @var list<array<string, mixed>> $planRows each with `features` as a list
  */
-$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$btn   = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $plain = 'border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50';
 
 $cap = static fn ($value, string $unit = ''): string => $value === null ? 'Unlimited' : number_format((int) $value) . $unit;
@@ -53,7 +53,7 @@ foreach ($planRows as $row) {
 
 <div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
-<?= view('components/page-head', ['title' => 'Plans', 'icon' => 'points', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/plans/new') . '">Add a plan</a>'], ['saveData' => false]) ?>
+<?= view('components/page-head', ['title' => 'Plans', 'icon' => 'points', 'actions' => '<a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/plans/new') . '">Add a plan</a>'], ['saveData' => false]) ?>
 <p class="mt-2 max-w-3xl text-sm text-[#646464]">
     A plan is what an institution subscribes to: the features it gets and the limits that apply. A retired plan can no longer be chosen
     for new subscriptions, but institutions already on it keep it.

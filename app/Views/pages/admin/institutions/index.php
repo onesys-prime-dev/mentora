@@ -19,10 +19,10 @@ $statusLabels = [
     'past'      => ['Past', 'danger'],
 ];
 
-$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$btn   = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $plain = 'border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50';
 $brand = 'border-brand bg-white text-brand hover:bg-brand-tint';
-$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 
 $statusOptions = ['' => 'All (not deleted)'];
 
@@ -48,7 +48,7 @@ foreach ($institutionRows as $row) {
 
     $name = $isDeleted
         ? esc($row['name'])
-        : '<a class="font-medium text-brand hover:underline" href="' . site_url('admin/institutions/' . $id) . '">' . esc($row['name']) . '</a>';
+        : '<a class="inline-flex max-w-full items-center pointer-coarse:min-h-11 font-medium text-brand hover:underline" href="' . site_url('admin/institutions/' . $id) . '">' . esc($row['name']) . '</a>';
 
     $badges = view('components/status-badge', ['label' => $statusLabel, 'tone' => $statusTone], ['saveData' => false])
         . ($isDeleted ? ' ' . view('components/status-badge', ['label' => 'Deleted', 'tone' => 'neutral'], ['saveData' => false]) : '')
@@ -76,7 +76,7 @@ foreach ($institutionRows as $row) {
         if ($effective !== 'active') {
             $actions .= '<details class="text-left">'
                 . '<summary class="' . $btn . ' cursor-pointer border-[#C33939] bg-white text-[#C33939] hover:bg-[#FDEDEC]">Delete</summary>'
-                . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/delete') . '" class="mt-2 flex w-64 flex-col gap-2">' . csrf_field()
+                . '<form method="post" action="' . site_url('admin/institutions/' . $id . '/delete') . '" class="mt-2 flex w-64 max-w-full flex-col gap-2">' . csrf_field()
                 . '<label class="text-xs text-[#646464]" for="confirm-' . $id . '">Type <strong>' . esc($row['name']) . '</strong> to confirm</label>'
                 . '<input id="confirm-' . $id . '" class="' . $input . '" type="text" name="confirm_name" autocomplete="off" required>'
                 . '<button type="submit" class="' . $btn . ' border-[#C33939] bg-[#C33939] text-white hover:bg-[#8E2424]">Delete institution</button>'
@@ -107,7 +107,7 @@ foreach ($institutionRows as $row) {
 
 <div class="rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
-<?= view('components/page-head', ['title' => 'Institutions', 'icon' => 'hat', 'actions' => '<a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/institutions/new') . '">Add an institution</a>'], ['saveData' => false]) ?>
+<?= view('components/page-head', ['title' => 'Institutions', 'icon' => 'hat', 'actions' => '<a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . site_url('admin/institutions/new') . '">Add an institution</a>'], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>

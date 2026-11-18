@@ -19,9 +19,9 @@ $sortUrl = static fn (string $column, string $next): string => $link(['sort' => 
 
 $exportUrl = site_url('admin/users/export') . ($query(['page' => null]) === '' ? '' : '?' . $query(['page' => null]));
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$warn    = 'rounded-full border border-[#946200] bg-white px-5 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF1D6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$warn    = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-[#946200] bg-white px-5 py-2 text-sm font-semibold text-[#946200] transition hover:bg-[#FFF1D6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50';
 
 $institutionOptions = ['' => 'Any institution'];
 
@@ -39,7 +39,7 @@ foreach ($userRows as $row) {
     $deactivated = (int) $row['active'] === 0 || $row['deactivated_at'] !== null;
 
     $nameCell = '<span data-user="' . esc((string) $row['id']) . '" data-status="' . ($deactivated ? 'deactivated' : 'active') . '">'
-        . '<a class="font-medium text-brand hover:underline" href="' . site_url('admin/users/' . $row['id']) . '">' . esc($shown) . '</a>'
+        . '<a class="inline-flex max-w-full items-center pointer-coarse:min-h-11 font-medium text-brand hover:underline" href="' . site_url('admin/users/' . $row['id']) . '">' . esc($shown) . '</a>'
         . ((int) $row['id'] === $userSelf ? ' <span class="text-xs font-normal text-[#646464]">(you)</span>' : '')
         . '</span>';
 
@@ -108,8 +108,8 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
         'columns'    => [
             ['key' => 'name', 'label' => 'Name', 'sortable' => true],
             ['key' => 'email', 'label' => 'Email', 'sortable' => true],
-            ['key' => 'roles', 'label' => 'Roles'],
-            ['key' => 'institution', 'label' => 'Institutions'],
+            ['key' => 'roles', 'label' => 'Roles', 'priority' => 2],
+            ['key' => 'institution', 'label' => 'Institutions', 'priority' => 2],
             ['key' => 'status', 'label' => 'Status'],
             ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true],
         ],

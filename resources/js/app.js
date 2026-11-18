@@ -23,6 +23,7 @@ import "./shared/student-autocomplete";
 import "./shared/data-table";
 import "./shared/row-actions";
 import "./shared/scroll-x";
+import "./shared/check-all";
 import "./shared/phone-tabs";
 import "./shared/side-panel";
 import "./shared/split-divider";

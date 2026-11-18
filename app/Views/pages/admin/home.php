@@ -15,8 +15,8 @@ use App\Services\Monitoring\SystemHealth;
 $statusNames = ['pending' => 'Pending', 'read_only' => 'Read-only', 'past' => 'Past'];
 
 $ring    = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$primary = 'rounded-full border border-brand bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark ' . $ring;
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint ' . $ring;
+$primary = 'inline-flex items-center pointer-coarse:min-h-11 rounded-full border border-brand bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark ' . $ring;
+$second  = 'inline-flex items-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint ' . $ring;
 
 $cellLabel = 'text-[11px] font-semibold uppercase tracking-wide text-[#646464]';
 $rule      = 'border-gray-300';
@@ -108,11 +108,11 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
                     <?= icon($urgentCount > 0 ? 'warning' : 'attention', 'h-4 w-4 shrink-0 text-current') ?>
                     <?= esc((string) $attentionN) ?> to fix
                 </p>
-                <ul class="flex flex-wrap gap-2">
+                <ul class="flex min-w-0 max-w-full flex-wrap gap-2">
                     <?php foreach ($homeAttention as $item): ?>
-                        <li>
-                            <a class="inline-flex max-w-full items-center gap-1 rounded-full border bg-white px-3 py-1 text-xs font-semibold transition hover:bg-brand-tint <?= $ring ?> <?= esc($chipTone[$item['severity']] ?? $chipTone['soon']) ?>" href="<?= site_url($item['link']) ?>" data-attention="<?= esc($item['severity']) ?>">
-                                <span class="sr-only"><?= $item['severity'] === 'urgent' ? 'Urgent' : 'Soon' ?>: </span><span class="truncate"><?= esc($item['text']) ?></span><span aria-hidden="true">›</span>
+                        <li class="min-w-0 max-w-full">
+                            <a class="inline-flex max-w-full items-center gap-1 pointer-coarse:min-h-11 rounded-full border bg-white px-3 py-1 text-xs font-semibold transition hover:bg-brand-tint <?= $ring ?> <?= esc($chipTone[$item['severity']] ?? $chipTone['soon']) ?>" href="<?= site_url($item['link']) ?>" data-attention="<?= esc($item['severity']) ?>">
+                                <span class="sr-only"><?= $item['severity'] === 'urgent' ? 'Urgent' : 'Soon' ?>: </span><span class="min-w-0 truncate"><?= esc($item['text']) ?></span><span aria-hidden="true">›</span>
                             </a>
                         </li>
                     <?php endforeach; ?>
@@ -159,7 +159,7 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
         <ul class="flex flex-wrap gap-2">
             <?php foreach ($shortcuts as [$label, $shortcutIcon, $path]): ?>
                 <li>
-                    <a class="flex items-center gap-2 rounded-xl border <?= $rule ?> bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint <?= $ring ?>" href="<?= site_url($path) ?>">
+                    <a class="flex items-center gap-2 pointer-coarse:min-h-11 rounded-xl border <?= $rule ?> bg-white px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint <?= $ring ?>" href="<?= site_url($path) ?>">
                         <?= icon($shortcutIcon, 'h-4 w-4 text-brand') ?><?= esc($label) ?>
                     </a>
                 </li>
@@ -170,33 +170,30 @@ $value = static fn (int $n): string => $n === 0 ? 'text-[#A0A7B4]' : 'text-brand
     <section class="flex flex-col gap-2 lg:min-h-0 lg:flex-1" aria-labelledby="home-activity" data-section="activity">
         <div class="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="home-activity" class="text-base font-bold text-brand">Recent activity</h2>
-            <a class="text-sm font-semibold text-brand hover:underline <?= $ring ?>" href="<?= site_url('admin/audit-log') ?>">Audit log</a>
+            <a class="inline-flex items-center pointer-coarse:min-h-11 text-sm font-semibold text-brand hover:underline <?= $ring ?>" href="<?= site_url('admin/audit-log') ?>">Audit log</a>
         </div>
 
         <?php if ($homeActivity === []): ?>
             <p class="text-sm text-[#646464]" data-activity-empty>Nothing has been recorded yet.</p>
         <?php else: ?>
-            <div class="overflow-hidden rounded-2xl border <?= $rule ?> lg:min-h-0 lg:flex-1 lg:overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Recent activity" data-activity-scroll>
-            <table class="w-full text-sm">
-                <caption class="sr-only">Recent activity</caption>
-                <thead class="max-sm:sr-only border-b <?= $rule ?> bg-gray-50">
-                    <tr>
-                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Action</th>
-                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-left <?= $cellLabel ?>" scope="col">Person</th>
-                        <th class="sticky top-0 bg-gray-50 px-3 py-2 text-right <?= $cellLabel ?>" scope="col">When</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                    <?php foreach ($homeActivity as $row): ?>
-                        <tr data-activity class="max-sm:block max-sm:px-3 max-sm:py-2">
-                            <td class="px-3 py-2 font-semibold text-[#1A1C1E] max-sm:block max-sm:px-0 max-sm:py-0" title="<?= esc($row['action']) ?>"><?= esc(InstitutionAuditLog::label((string) $row['action'])) ?></td>
-                            <td class="px-3 py-2 text-[#3D3D3D] max-sm:block max-sm:px-0 max-sm:py-0"><?= esc($row['actor_label'] ?? 'System') ?></td>
-                            <td class="px-3 py-2 text-right text-xs text-[#646464] max-sm:block max-sm:px-0 max-sm:py-0 max-sm:text-left"><?= esc($when((string) $row['created_at'])) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            </div>
+            <?= view('components/data-table', [
+                'caption' => 'Recent activity',
+                'columns' => [
+                    ['key' => 'action', 'label' => 'Action', 'role' => 'primary'],
+                    ['key' => 'person', 'label' => 'Person', 'role' => 'secondary'],
+                    ['key' => 'when', 'label' => 'When', 'role' => 'status'],
+                ],
+                'rows' => array_map(static fn (array $row): array => [
+                    'id'    => (string) $row['id'],
+                    'label' => InstitutionAuditLog::label((string) $row['action']),
+                    'cells' => [
+                        'action' => ['html' => '<span class="font-semibold text-[#1A1C1E]" title="' . esc((string) $row['action'], 'attr') . '">' . esc(InstitutionAuditLog::label((string) $row['action'])) . '</span>'],
+                        'person' => (string) ($row['actor_label'] ?? 'System'),
+                        'when'   => $when((string) $row['created_at']),
+                    ],
+                ], $homeActivity),
+                'fill' => true,
+            ], ['saveData' => false]) ?>
         <?php endif; ?>
     </section>
 

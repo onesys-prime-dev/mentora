@@ -78,7 +78,7 @@ foreach ($planHistory as $i => $h) {
             <p class="mt-1 text-sm text-[#3D3D3D]" data-subscription-state><?= esc($say($planStatus)) ?></p>
 
             <?php if (in_array($planStatus->state, ['read_only', 'expired'], true)): ?>
-                <p class="mt-3"><a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/export')) ?>">Take a full export of your data</a></p>
+                <p class="mt-3"><a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/export')) ?>">Take a full export of your data</a></p>
             <?php endif; ?>
         </section>
 

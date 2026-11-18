@@ -604,6 +604,8 @@ html[data-theme="dark"] .hover\:text-brand:hover { color: var(--dk-brand); }
 /* A row title's brand hover, which the mapped greys above would otherwise outrank (hover devices only, as Tailwind's own). */
 @media (hover: hover) {
     html[data-theme="dark"] .group:hover .group-hover\:text-brand { color: var(--dk-brand); }
+    /* The offering copy list's pinned tick cell follows its row's hover (group-hover:bg-brand-tint has no global mapping: app-tile uses it too). */
+    html[data-theme="dark"] [data-copy-form] tr.group:hover > td.sticky { background-color: var(--dk-brand-tint); }
 }
 /* A student's Mark as Completed (modules/partials/navigations.php): its colours are data-[completed] variants, which the plain-class mappings miss. */
 html[data-theme="dark"] [data-mark-complete][data-completed="0"]:not(:disabled) { color: var(--dk-brand); border-color: var(--dk-brand); }
@@ -1114,6 +1116,18 @@ html[data-theme="dark"] [data-dialog-panel] { background-color: var(--dk-surface
     [data-dialog-panel]:has(> [data-dialog-body] > [data-dialog-actions]) {
         padding-bottom: 0;
     }
+}
+
+/* A landscape phone (sm and up, but short): a centred form dialog scrolls, so the row ending its form with the submit stays in view. */
+@media (width >= 40rem) and (height <= 30rem) {
+    [data-dialog-body] > form > :last-child:has(> button[type="submit"]) {
+        position: sticky;
+        bottom: 0;
+        padding-block: 0.75rem;
+        background-color: #fff;
+    }
+
+    html[data-theme="dark"] [data-dialog-body] > form > :last-child:has(> button[type="submit"]) { background-color: var(--dk-surface); }
 }
 
 html[data-theme="dark"] [data-dialog-pin-actions] > form > :has(> button[type="submit"]) { background-color: var(--dk-surface); border-color: var(--dk-line); }

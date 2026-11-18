@@ -10,8 +10,8 @@
  * @var bool                      $copyCanEdit
  */
 $base    = 'institution/terms/copy';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center rounded-full bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
+$second  = 'inline-flex items-center justify-center rounded-full border border-brand bg-white px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $sourceOptions = ['' => 'Choose a term'];
 
@@ -45,6 +45,7 @@ if ($copyPlan !== null) {
     }
 }
 
+$anyTickable = $copyCanEdit && $copyPlan !== null && array_filter($copyPlan['offerings'], static fn ($o) => ! $o['conflict']) !== [];
 $shift = $copyPlan['shiftDays'] ?? 0;
 ?>
 
@@ -114,12 +115,17 @@ $shift = $copyPlan['shiftDays'] ?? 0;
             <?php if ($rows === []): ?>
                 <?= view('components/empty-state', ['icon' => 'modules', 'title' => 'No offerings to copy', 'text' => 'This term has no offerings that are not archived.'], ['saveData' => false]) ?>
             <?php else: ?>
-                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-gray-50 shadow-md" data-table>
+                <?php // A grid at every width: it scrolls in its box and the tick column stays pinned, so select-all is always in reach. ?>
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 shadow-md" tabindex="0" role="region" aria-label="Offerings to copy" data-scroll-x data-sticky-first>
                     <table class="w-full text-sm">
                         <caption class="sr-only">Offerings to copy</caption>
-                        <thead class="max-md:sr-only border-b border-gray-100 bg-gray-50/70">
+                        <thead class="border-b border-gray-100 bg-gray-50/70">
                             <tr>
-                                <th class="w-10 px-4 py-3" scope="col"><span class="sr-only">Copy</span></th>
+                                <th class="sticky left-0 top-0 z-10 w-10 bg-gray-50 px-4 py-3 pointer-coarse:min-w-11" scope="col">
+                                    <label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                                        <input type="checkbox" data-check-all="offerings[]" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every offering that can be copied" <?= $anyTickable ? '' : 'disabled' ?>>
+                                    </label>
+                                </th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]" scope="col">Course</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]" scope="col">Section</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]" scope="col">Holds</th>
@@ -129,10 +135,12 @@ $shift = $copyPlan['shiftDays'] ?? 0;
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             <?php foreach ($copyPlan['offerings'] as $i => $o): ?>
-                                <tr class="transition hover:bg-brand-tint">
-                                    <td class="w-10 px-4 py-3">
-                                        <input type="checkbox" name="offerings[]" value="<?= esc((string) $o['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"
-                                               aria-label="Copy <?= esc($o['course_code'] . ' ' . $o['section_code']) ?>" <?= $o['conflict'] || ! $copyCanEdit ? 'disabled' : 'checked' ?>>
+                                <tr class="group transition hover:bg-brand-tint">
+                                    <td class="sticky left-0 w-10 bg-gray-50 px-4 py-3 transition group-hover:bg-brand-tint">
+                                        <label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                                            <input type="checkbox" name="offerings[]" value="<?= esc((string) $o['id']) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"
+                                                   aria-label="Copy <?= esc($o['course_code'] . ' ' . $o['section_code']) ?>" <?= $o['conflict'] || ! $copyCanEdit ? 'disabled' : 'checked' ?>>
+                                        </label>
                                     </td>
                                     <td class="px-4 py-3"><?= $rows[$i]['cells']['course']['html'] ?></td>
                                     <td class="px-4 py-3"><?= esc($rows[$i]['cells']['section']) ?></td>
@@ -145,12 +153,13 @@ $shift = $copyPlan['shiftDays'] ?? 0;
                     </table>
                 </div>
 
-                <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11">
                     <input type="checkbox" name="with_instructors" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" <?= $copyCanEdit ? '' : 'disabled' ?>>
                     Also assign the same instructors
                 </label>
 
-                <div class="flex flex-wrap items-center justify-end gap-3">
+                <?php // On a phone the bar sticks to the bottom (clear of the home bar), so Copy is in reach however far the list scrolls. ?>
+                <div class="flex flex-wrap items-center justify-end gap-3 max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-5 border-t border-gray-200 bg-white max-sm:px-5 max-sm:pt-3 pb-safe-4 sm:border-0 sm:bg-transparent sm:pb-0" data-copy-bar>
                     <a class="<?= $second ?>" href="<?= esc(site_url('institution/terms')) ?>">Cancel</a>
                     <?php if ($copyCanEdit): ?>
                         <button type="submit" class="<?= $primary ?>">Copy the ticked offerings</button>

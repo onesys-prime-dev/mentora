@@ -31,7 +31,7 @@ foreach ($auditRows as $row) {
     if ($row['withheld']) {
         $details = '<span class="text-xs text-[#646464]">Kept by Mentora</span>';
     } elseif ($row['old_values'] !== null || $row['new_values'] !== null) {
-        $details = '<details><summary class="cursor-pointer text-brand hover:underline">View</summary>'
+        $details = '<details><summary class="cursor-pointer pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center text-brand hover:underline">View</summary>'
             . ($row['old_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">Before: ' . esc((string) $row['old_values']) . '</pre>' : '')
             . ($row['new_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">After: ' . esc((string) $row['new_values']) . '</pre>' : '')
             . '</details>';
@@ -69,7 +69,7 @@ foreach ($auditRows as $row) {
         'title'       => 'Audit log',
         'icon'        => 'info',
         'description' => 'Who did what in your institution, and when. Entries are never changed or removed.',
-        'actions'     => '<a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '" data-audit-export>Export CSV</a>',
+        'actions'     => '<a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '" data-audit-export>Export CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [

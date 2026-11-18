@@ -14,7 +14,7 @@
 import { expect, test } from "@playwright/test";
 import { dialogPanel, expectAccessible, expectInViewport, expectNoPageOverflow, expectNoPanelOverflow, expectTouchTargets, setTheme, sizes, snap, zoom200 } from "./support/responsive.js";
 import { runSql } from "./support/database.js";
-import { signInAsAdmin } from "./support/admin.js";
+import { confirmPassword, dateIn, signInAsAdmin } from "./support/admin.js";
 import { courseAddress, openCourse, openItem, openModule, openTab, signInAs } from "./support/course.js";
 import { accounts, submitLoginForm } from "./support/sign-in.js";
 import { disableMessages, enableMessages } from "./support/messages.js";
@@ -276,7 +276,142 @@ const SCREENS = [
             }),
         ],
     })),
+    // The institution administrator's and the platform administrator's screens (Phase 7). `as: "systemAdmin"` signs in
+    // with the emailed code (open() below). The three onboarding pages sit on an institution seeded for the row (seedOnboarding,
+    // marker RF7ONB): the seeded ones are onboarded already and redirect to their profile. Ids come from the seeded lists (listedPath). Seeded rows of a task's own
+    // carry the marker RF7 and are removed by it (runSql returns no ids), before the test and in finally.
+    ...["dashboard", "structure", "terms", "offerings", "terms/copy", "sections", "people", "people/parents", "courses", "roles", "people/upload", "export", "reports", "reports/courses", "reports/at-risk", "integrations", "settings", "settings/parents", "subscription", "audit"].map((p) => ({
+        name: `institution-${p.replaceAll("/", "-")}`,
+        path: `/institution/${p}`,
+        as: "institutionAdmin",
+        scope: "main",
+        ...(p === "structure" && { dialogs: structureDialogs() }),
+        ...(p === "terms" && { dialogs: [via("term-form", (page) => page.locator('[data-dialog-open="term-form"]').first())] }),
+        ...(p === "offerings" && { dialogs: offeringDialogs() }),
+        ...(p === "sections" && { dialogs: [via("section-add", (page) => page.locator('[data-dialog-open="section-add"]'))] }),
+        ...(p === "people" && { dialogs: peopleDialogs() }),
+        ...(p === "people/parents" && { dialogs: rowDialogs(["parent-link", "parent-confirm"], "table [data-row]:has([data-dialog-open=parent-confirm])") }),
+        ...(p === "courses" && { dialogs: [via("course-add", (page) => page.locator('[data-dialog-open="course-add"]')), ...rowDialogs(["course-edit", "course-confirm"])] }),
+    })),
+    { name: "institution-offering-schedule", path: (page) => listedPath(page, "/institution/offerings", /\/offerings\/\d+\/schedule$/), as: "institutionAdmin", scope: "main" },
+    { name: "institution-terms-copy-plan", path: copyPlanPath, as: "institutionAdmin", scope: "main" },
+    { name: "institution-report-offering", path: (page) => listedPath(page, "/institution/reports/courses", /\/reports\/offerings\/\d+/), as: "institutionAdmin", scope: "main" },
+    { name: "institution-term-close", path: (page) => listedPath(page, "/institution/terms", /\/terms\/\d+\/close$/), as: "institutionAdmin", scope: "main" },
+    {
+        name: "institution-section",
+        path: (page) => listedPath(page, "/institution/sections", /\/sections\/\d+$/),
+        as: "institutionAdmin",
+        scope: "main",
+        dialogs: [
+            ...["section-edit", "section-course", "section-students"].map((id) => via(id, (page) => page.locator(`main [data-dialog-open="${id}"]`).first())),
+            // The row "Take out" buttons sit in the rows' ⋯ sheets on a phone; "Archive this section" is always on the page.
+            via("section-confirm", (page) => page.locator('[aria-label="Archive this section"] [data-dialog-open="section-confirm"]')),
+        ],
+    },
+    {
+        name: "institution-enrolments",
+        path: (page) => listedPath(page, "/institution/offerings", /\/enrolments\/offering\/\d+$/),
+        as: "institutionAdmin",
+        scope: "main",
+        dialogs: [
+            via("roster-add", (page) => page.locator('[data-dialog-open="roster-add"]')),
+            via("roster-status", (page) => rowEntry(page, page.locator("[data-row]").first(), "body", '[data-dialog-open="roster-status"]')),
+        ],
+    },
+    ...["dashboard", "monitoring", "audit-log", "roles", "flags", "institutions", "institutions/new", "plans", "plans/new", "users", "users/new", "settings/general", "settings/security", "backups", "archive"].map((p) => ({
+        name: p === "dashboard" ? "admin-home" : `admin-${p.replaceAll("/", "-")}`,
+        path: `/admin/${p}`,
+        as: "systemAdmin",
+        scope: "main",
+        ...(p === "audit-log" && { dialogs: [via("audit-settings", (page) => page.locator('[data-dialog-open="audit-settings"]'))] }),
+    })),
+    ...["", "/edit", "/users", "/audit", "/subscription", "/integrations", "/flags"].map((tail) => ({
+        name: `admin-institution${tail.replaceAll("/", "-")}`,
+        path: async (page) => `${await listedPath(page, "/admin/institutions", /\/institutions\/\d+$/)}${tail}`,
+        as: "systemAdmin",
+        scope: "main",
+    })),
+    // Editing a plan asks for the password first (the reauth filter); answered, the page returns to the edit form.
+    { name: "admin-plan-edit", path: (page) => listedPath(page, "/admin/plans", /\/plans\/\d+\/edit$/), then: confirmPlanEdit, as: "systemAdmin", scope: "main" },
+    {
+        name: "admin-user",
+        path: (page) => listedPath(page, "/admin/users", /\/users\/\d+$/),
+        as: "systemAdmin",
+        scope: "main",
+        // The password step a guarded action opens: the reset is answered "confirm your password" here, so nothing is sent.
+        dialogs: [via("reauth-dialog", (page) => page.locator("main form[data-dialog-form] button[type=submit]").filter({ hasText: "Send a password reset link" }), (page) => page.route(/\/admin\/users\/\d+\/reset-password$/, (route) => (route.request().method() === "POST" ? route.fulfill({ status: 403, contentType: "application/json", body: JSON.stringify({ error: "reauth_required" }) }) : route.continue())))],
+    },
+    // The password check every destructive admin action lands on (the plan's edit address redirects to it).
+    { name: "admin-reauth", path: (page) => listedPath(page, "/admin/plans", /\/plans\/\d+\/edit$/), as: "systemAdmin", scope: "main:has(input[name=password])" },
+    // An institution that has not finished onboarding, seeded by its marker for the row and removed after it.
+    { name: "admin-onboarding", path: (page) => onboardingPath(page, ""), seed: seedOnboarding, as: "systemAdmin", scope: "main:has([data-onboarding-steps])" },
+    { name: "admin-onboarding-subscription", path: (page) => onboardingPath(page, "/subscription"), seed: seedOnboarding, as: "systemAdmin", scope: "main:has([data-onboarding-steps])" },
+    { name: "admin-onboarding-administrator", path: (page) => onboardingPath(page, "/administrator"), seed: seedOnboarding, as: "systemAdmin", scope: "main:has([data-onboarding-steps])" },
 ];
+
+// RF7ONB: a pending institution (no subscription, no administrator), found by its code (runSql returns no ids).
+let onboardingSeeded = false;
+const cleanOnboarding = () => runSql("DELETE FROM institutions WHERE code LIKE 'RF7ONB%'");
+
+function seedOnboarding() {
+    cleanOnboarding();
+    onboardingSeeded = true;
+    runSql("INSERT INTO institutions (name, code, status, created_at, updated_at) VALUES ('RF7 Onboarding University', 'RF7ONB', 'pending', NOW(), NOW())");
+}
+
+test.beforeAll(() => cleanOnboarding()); // a killed run cannot leave the pending institution behind
+test.afterEach(() => {
+    if (onboardingSeeded) {
+        onboardingSeeded = false;
+        cleanOnboarding();
+    }
+});
+
+/** The seeded institution's onboarding page for a step; the last one is reached by answering the plan step. */
+async function onboardingPath(page, step) {
+    const base = await listedPath(page, "/admin/institutions?q=RF7ONB", /\/institutions\/\d+\/onboarding$/);
+
+    if (step === "/administrator") {
+        await page.goto(`${base}/subscription`);
+        await page.locator("select[name=plan_id]").selectOption({ index: 1 });
+        await page.locator("input[name=period_start]").fill(dateIn(0));
+        await page.locator("input[name=period_end]").fill(dateIn(365));
+        await page.getByRole("button", { name: "Continue" }).click();
+        await expect(page).toHaveURL(/\/onboarding\/administrator$/);
+    }
+
+    return `${base}${step}`;
+}
+
+/** Answers the "confirm your password" page the plan form sits behind, then waits for the form. */
+async function confirmPlanEdit(page) {
+    await confirmPassword(page);
+    await expect(page).toHaveURL(/\/plans\/\d+\/edit$/);
+}
+
+/** The first link on a list page whose address matches `pattern` (not anchored: the address may carry /index.php). */
+async function listedPath(page, list, pattern) {
+    await page.goto(list);
+    const hrefs = await page.locator("a[href]").evaluateAll((links) => links.map((a) => a.getAttribute("href")));
+    const paths = hrefs.map((href) => new URL(href, page.url()).pathname);
+    const found = paths.find((path) => pattern.test(path));
+    expect(found, `a link matching ${pattern} on ${list}`).toBeTruthy();
+
+    return found;
+}
+
+/** The copy page with a source term that has offerings and another term as the target, so its offering list shows. */
+async function copyPlanPath(page) {
+    await page.goto("/institution/terms/copy");
+    const path = new URL(page.url()).pathname;
+    const read = (name) => page.locator(`select[name="${name}"] option`).evaluateAll((os) => os.filter((o) => o.value).map((o) => ({ value: o.value, text: o.textContent })));
+    const sources = (await read("source")).filter((o) => !/\(0 offerings\)/.test(o.text));
+    const targets = await read("target");
+    const source = sources.find((s) => targets.some((t) => t.value !== s.value));
+    expect(source, "a source term with offerings and a different target").toBeTruthy();
+
+    return `${path}?source=${source.value}&target=${targets.find((t) => t.value !== source.value).value}`;
+}
 
 // The chairperson holds courses.manage and grading.manage (AuthGroups), so her course pages draw the instructor's
 // dialogs (the same files): they are opened the instructor's way on her pages too. "Edit as chairperson" asks first.
@@ -694,7 +829,9 @@ const isTouch = (size) => size.w <= 1024;
 async function open(page, screen, theme) {
     await setTheme(page, theme);
 
-    if (screen.as) {
+    if (screen.as === "systemAdmin") {
+        await signInAsAdmin(page);
+    } else if (screen.as) {
         const { email, password } = accounts[screen.as];
         await submitLoginForm(page, email, password);
         await expect(page).not.toHaveURL(/\/login$/);
@@ -719,6 +856,50 @@ async function openDialog(trigger, dialog) {
 
         await expect(dialog).toBeVisible({ timeout: 2_000 });
     }).toPass({ timeout: 20_000 });
+}
+
+/** The offerings page's dialogs: the add button's, then the first row's own (through its ⋯ sheet on a phone). */
+function offeringDialogs() {
+    const entry = (id) => via(id, (page) => rowEntry(page, page.locator("[data-row]").first(), "body", `[data-dialog-open="${id}"]`));
+
+    return [via("offering-add", (page) => page.locator('[data-dialog-open="offering-add"]')), entry("offering-edit"), entry("offering-instructor"), entry("offering-confirm")];
+}
+
+/** Dialogs opened from a list row's own entries (through its ⋯ sheet on a phone, else the entry itself or `toggle`'s dropdown). */
+function rowDialogs(ids, rowSelector = "[data-row]", toggle = "body") {
+    return ids.map((id) => via(id, (page) => rowEntry(page, page.locator(rowSelector).first(), toggle, `[data-dialog-open="${id}"]`)));
+}
+
+/** The people page's dialogs: Invite, then the first row's, from its Actions dropdown (md and up) or its ⋯ sheet. */
+function peopleDialogs() {
+    return [
+        via("person-invite", (page) => page.locator('[data-dialog-open="person-invite"]')),
+        ...rowDialogs(["person-edit", "person-roles", "person-confirm"], "[data-row]", "[data-person-menu] summary"),
+        // Not the signed-in administrator's own row (nobody views as themselves).
+        ...rowDialogs(["person-view-as"], "[data-row]:has([data-view-as])", "[data-person-menu] summary"),
+    ];
+}
+
+/** The structure page's dialogs: the first college's own, then (after opening its first department) the department's. */
+function structureDialogs() {
+    const inCollege = (page) => page.locator("[data-view^=college-]:visible");
+    const inDepartment = (page) => page.locator("[data-view^=department-]:visible");
+    const toDepartment = async (page) => {
+        // Already inside a department (an earlier dialog's page is reused): nothing to do.
+        if ((await inDepartment(page).count()) === 0) {
+            await inCollege(page).locator("[data-select^=department-]").first().click();
+        }
+    };
+
+    return [
+        via("structure-college-new", (page) => page.locator('[data-dialog-open="structure-college-new"]')),
+        via("structure-college", (page) => inCollege(page).locator('[data-dialog-open="structure-college"]')),
+        via("structure-dean", (page) => inCollege(page).locator('[data-dialog-open="structure-dean"]')),
+        via("structure-sub", (page) => inCollege(page).locator('[data-dialog-open="structure-sub"]').first()),
+        via("structure-confirm", (page) => inCollege(page).locator('[data-dialog-open="structure-confirm"]').first()),
+        via("structure-chair", (page) => inDepartment(page).locator('[data-dialog-open="structure-chair"]'), toDepartment),
+        via("structure-program", (page) => inDepartment(page).locator('[data-dialog-open="structure-program"]').first(), toDepartment),
+    ];
 }
 
 /**
@@ -858,6 +1039,53 @@ async function showRubricOptions(page) {
     await page.locator("[data-rubric-options]").evaluate((el) => el.classList.replace("hidden", "flex"));
 }
 
+// The copy page's offering list (the sweep row above covers axe and touch targets; this adds what a click does).
+for (const size of sizes()) {
+    test.describe(`copy list @${size.name}`, () => {
+        test.use({ viewport: { width: size.w, height: size.h }, ...(isTouch(size) ? { hasTouch: true, isMobile: true } : {}) });
+        for (const theme of THEMES) {
+            test(`institution-terms-copy-plan list @${size.name} ${theme}`, async ({ page }, testInfo) => {
+                test.skip(testInfo.project.name === "webkit" || size.w === 768, "chromium only, every size but 768");
+                await open(page, { path: copyPlanPath, as: "institutionAdmin", scope: "main" }, theme);
+
+                const grid = page.locator("[data-copy-form] [data-scroll-x]");
+                const all = grid.locator("[data-check-all]");
+                const boxes = grid.locator('tbody input[name="offerings[]"]');
+                await expect(boxes.first()).toBeVisible();
+                await grid.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+                await all.scrollIntoViewIfNeeded();
+                // Pinned: scrolled all the way along, the header tick is still at the grid's left edge.
+                const gridBox = await grid.boundingBox();
+                const allBox = await all.boundingBox();
+                expect(allBox.x - gridBox.x, "select-all stays at the grid's left edge").toBeLessThan(40);
+                // Every box starts ticked, so the header is ticked: one click clears, the next ticks them all again.
+                await all.click();
+                await expect(grid.locator('tbody input[name="offerings[]"]:checked')).toHaveCount(0);
+                await all.click();
+                await expect(grid.locator('tbody input[name="offerings[]"]:enabled:not(:checked)')).toHaveCount(0);
+                if (!isTouch(size)) {
+                    // A hovered row's pinned tick cell takes the row's own hover colour (in dark mode too).
+                    const row = grid.locator("tbody tr.group").first();
+                    await row.locator("td").nth(1).hover();
+                    const same = (tr) => {
+                        const own = globalThis.getComputedStyle(tr).backgroundColor;
+                        return own !== "rgba(0, 0, 0, 0)" && globalThis.getComputedStyle(tr.querySelector("td.sticky")).backgroundColor === own;
+                    };
+                    await expect.poll(() => row.evaluate(same), { message: "the pinned cell matches its hovered row" }).toBe(true);
+                }
+                if (size.w < 640) {
+                    await expectInViewport(page, "[data-copy-bar] button[type=submit]");
+                    expect(await page.locator("[data-copy-bar]").evaluate((el) => globalThis.getComputedStyle(el).position)).toBe("sticky");
+                    expect(await page.locator("[data-copy-bar]").evaluate((el) => globalThis.getComputedStyle(el).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
+                }
+                await expectNoPageOverflow(page);
+                if (isTouch(size)) await expectTouchTargets(page, "main");
+                await expectAccessible(page, "main");
+            });
+        }
+    });
+}
+
 const moduleRow = (page) => page.locator("[data-module-wrapper]").filter({ hasText: MODULE_TITLE }).first();
 
 for (const size of sizes()) {
@@ -876,6 +1104,7 @@ for (const size of sizes()) {
                         test.setTimeout(testInfo.timeout + 15_000 * (screen.dialogs?.length ?? 0));
                     }
 
+                    screen.seed?.();
                     await open(page, screen, theme);
 
                     await expectNoPageOverflow(page, screen.overflowScope);
@@ -1045,6 +1274,107 @@ test.describe("shell", () => {
 
             await link.tap();
             await expect(page).toHaveURL(/\/admin\/flags$/);
+        });
+    });
+
+    test("admin-monitoring: a live refresh at 375 keeps the viewport, the height and the focus", async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        await signInAsAdmin(page);
+        await page.goto("/admin/monitoring");
+        const box = page.locator("[data-auto-refresh]");
+        await box.focus();
+        await page.mouse.wheel(0, 150);
+        const state = () => page.evaluate(() => {
+            const { document: doc, scrollY } = globalThis;
+
+            return { y: Math.round(scrollY + (doc.querySelector("[data-page-panel]")?.scrollTop ?? 0)), h: doc.documentElement.scrollHeight, focus: doc.activeElement?.hasAttribute("data-auto-refresh") };
+        });
+        await page.waitForResponse((r) => r.url().includes("monitoring/live"));
+        const before = await state();
+        const points = () => page.locator('[data-spark="sessions"]').getAttribute("points");
+        const drawn = await points();
+        expect(before.y, "the page was scrolled before the refresh").toBeGreaterThan(0);
+
+        await page.waitForResponse((r) => r.url().includes("monitoring/live"), { timeout: 15_000 });
+        await expect.poll(points, "the refresh repainted the graph").not.toBe(drawn);
+        expect(await state()).toEqual(before);
+        expect(before.focus, "focus stays on the live-updates box").toBe(true);
+    });
+
+    test("admin-audit-log: at 768 every column that is shown fits its table", async ({ page }) => {
+        await page.setViewportSize({ width: 768, height: 1024 });
+        await signInAsAdmin(page);
+        await page.goto("/admin/audit-log");
+        const table = page.locator("[data-table]");
+
+        for (const name of ["Target", "Institution"]) {
+            await expect(table.locator("thead th", { hasText: name })).toBeVisible();
+        }
+
+        const { scroll, client } = await table.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+        expect(scroll, "no column is clipped").toBeLessThanOrEqual(client);
+        await expectNoPageOverflow(page);
+    });
+
+    // "Show the source IP" switched on (the settings row the Display settings dialog saves), removed again in finally.
+    for (const width of [768, 1024]) {
+        test(`admin-audit-log: with the source IP shown, at ${width} the shown columns fit and Source IP is there from lg`, async ({ page }) => {
+            const clean = () => runSql("DELETE FROM settings WHERE `key` = 'auditShowSourceIp'");
+            clean();
+
+            try {
+                runSql("INSERT INTO settings (class, `key`, value, type, context, created_at, updated_at) VALUES ('Config\\\\Platform', 'auditShowSourceIp', '1', 'boolean', NULL, NOW(), NOW())");
+                await page.setViewportSize({ width, height: 1024 });
+                await signInAsAdmin(page);
+                await page.goto("/admin/audit-log");
+                const table = page.locator("[data-table]");
+                const ip = table.locator("thead th", { hasText: "Source IP" });
+
+                await expect(ip).toHaveCount(1);
+                if (width >= 1024) {
+                    await expect(ip).toBeVisible();
+                } else {
+                    await expect(ip).toBeHidden();
+                }
+
+                const { scroll, client } = await table.evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
+                expect(scroll, "no column is clipped").toBeLessThanOrEqual(client);
+                await expectNoPageOverflow(page);
+            } finally {
+                clean();
+            }
+        });
+    }
+
+    // RF7: a deleted and a past institution seeded by the marker (runSql returns no ids), removed before and in finally.
+    test.describe("admin-archive rows with data", () => {
+        test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
+
+        test("a deleted institution's restore and purge sit in the row sheet at 375", async ({ page }) => {
+            const clean = () => runSql("DELETE FROM institutions WHERE code LIKE 'RF7%'");
+            clean();
+
+            try {
+                runSql("INSERT INTO institutions (name, code, status, created_at, updated_at, deleted_at) VALUES ('RF7 Deleted University', 'RF7DEL', 'active', NOW(), NOW(), NOW() - INTERVAL 1 DAY), ('RF7 Past University', 'RF7PST', 'past', NOW(), NOW(), NULL)");
+                await signInAsAdmin(page);
+                await page.goto("/admin/archive");
+                const row = page.locator('[data-section="deleted"] [data-row]').filter({ hasText: "RF7 Deleted University" });
+                await expect(row).toBeVisible();
+                await expectNoPageOverflow(page);
+                await expectTouchTargets(page, "main");
+                await expectAccessible(page, "main");
+
+                const phone = row.locator("[data-row-actions-open]");
+                const sheet = page.locator(`#${await phone.getAttribute("aria-controls")}`);
+                await openDialog(phone, sheet);
+                await expect(sheet.locator('form[action$="/restore"] button[type=submit]')).toBeVisible();
+                await sheet.locator("summary", { hasText: "Purge now" }).click();
+                await expect(sheet.locator('form[action$="/purge"] input[name=confirm_name]')).toBeVisible();
+                await expect(sheet.locator('form[action$="/purge"] button[type=submit]')).toBeVisible();
+                await expectTouchTargets(page, `#${await sheet.getAttribute("id")}`);
+            } finally {
+                clean();
+            }
         });
     });
 
@@ -4104,6 +4434,7 @@ if (FULL) {
         test(`${screen.name} @zoom200`, async ({ page }, testInfo) => {
             test.skip(testInfo.project.name === "webkit", "WebKit runs the 375px phone only");
 
+            screen.seed?.();
             await open(page, screen, "light");
             await zoom200(page);
 

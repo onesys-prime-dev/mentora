@@ -199,7 +199,9 @@ $wrap = $fill
                 <tr<?= $aria('row') ?><?= $phoneRows ? ' class="max-md:flex max-md:flex-wrap"' : '' ?>>
                     <?php if ($selectable): ?>
                         <th class="w-10 px-4 py-3<?= $pin ?>" scope="col"<?= $aria('columnheader') ?>>
-                            <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every row on this page">
+                            <label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                                <input type="checkbox" data-select-all class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" aria-label="Select every row on this page">
+                            </label>
                         </th>
                     <?php endif; ?>
 

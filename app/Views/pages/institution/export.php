@@ -35,7 +35,7 @@ foreach ($exportRows as $row) {
                 . ($row['status'] === 'failed' && ! empty($row['message']) ? '<span class="mt-1 block text-xs text-[#C33939]">' . esc((string) $row['message']) . '</span>' : '')],
         ],
         'actions' => match (true) {
-            $live                       => '<a class="font-semibold text-brand hover:underline" data-export="ready" href="' . esc(site_url('institution/export/' . $row['id'])) . '">Download</a>',
+            $live                       => '<a class="inline-flex items-center pointer-coarse:min-h-11 font-semibold text-brand hover:underline" data-export="ready" href="' . esc(site_url('institution/export/' . $row['id'])) . '">Download</a>',
             $open                       => '<span class="text-xs text-[#646464]" data-export="preparing">Being prepared</span>',
             $row['status'] === 'failed' => '<span class="text-xs text-[#C33939]" data-export="failed">Failed</span>',
             default                     => '<span class="text-xs text-[#646464]" data-export="expired">Expired</span>',
@@ -76,7 +76,7 @@ foreach ($exportRows as $row) {
     <?php elseif ($exportAllowed): ?>
         <form class="flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md" method="post" action="<?= site_url('institution/export') ?>" data-export-form>
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Create an export</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Create an export</button>
             <span class="text-xs text-[#646464]">Each export can be downloaded for <?= esc((string) $exportDays) ?> days.</span>
         </form>
     <?php else: ?>

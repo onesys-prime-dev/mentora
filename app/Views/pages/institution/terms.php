@@ -9,8 +9,8 @@
  * @var bool                       $termCanEdit
  */
 $base    = 'institution/terms';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'inline-flex items-center justify-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $tones  = ['upcoming' => 'info', 'active' => 'success', 'completed' => 'neutral', 'archived' => 'neutral'];
 $filtered = $termFilters['q'] !== '' || $termFilters['year'] !== '' || $termFilters['status'] !== '';
@@ -127,7 +127,7 @@ if ($current !== null) {
         'icon'        => 'calendar',
         'description' => 'The periods your offerings run in. One is usually active at a time.',
         'actions'     => $termCanEdit
-            ? '<a class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
+            ? '<a class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/copy')) . '">Copy offerings</a> '
                 . '<button type="button" class="' . $primary . '" data-dialog-open="term-form" data-dialog-title="Add a term" data-dialog-action="' . esc(site_url($base)) . '" data-dialog-label="Add term">Add a term</button>'
             : '',
     ], ['saveData' => false]) ?>
@@ -157,7 +157,7 @@ if ($current !== null) {
                 </p>
             </div>
 
-            <div class="flex min-w-56 max-w-md flex-1 flex-col gap-1.5">
+            <div class="flex min-w-0 max-w-md flex-1 sm:min-w-56 flex-col gap-1.5">
                 <span class="text-sm text-[#646464]">Week <?= esc((string) $weekNow) ?> of <?= esc((string) $weeks) ?></span>
                 <div class="h-2 overflow-hidden rounded-full bg-brand/15" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= esc((string) $progress) ?>" aria-label="Progress through the term">
                     <div class="h-full rounded-full bg-brand" style="width: <?= esc((string) $progress) ?>%"></div>
@@ -171,7 +171,7 @@ if ($current !== null) {
                         data-dialog-title="Edit <?= esc($current['name']) ?>" data-dialog-label="Save"
                         data-dialog-action="<?= esc(site_url($base . '/' . $current['id'])) ?>"
                         data-dialog-values="<?= $json(['name' => $current['name'], 'academic_year' => $current['academic_year'], 'start_date' => $current['start_date'], 'end_date' => $current['end_date']]) ?>">Edit dates</button>
-                    <a class="rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($base . '/' . $current['id'] . '/close')) ?>">Close term</a>
+                    <a class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($base . '/' . $current['id'] . '/close')) ?>">Close term</a>
                 </div>
             <?php endif; ?>
         </section>
@@ -232,8 +232,8 @@ if ($current !== null) {
         . '</div>'
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
         . '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
+        . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
         . '</div></form>';
     ?>
 

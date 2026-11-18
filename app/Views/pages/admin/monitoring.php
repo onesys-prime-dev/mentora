@@ -21,7 +21,9 @@ $lineBadge = [
     'warning'   => ['Nearly full', 'text-amber-700 font-semibold'],
     'full'      => ['Full', 'text-red-700 font-semibold'],
 ];
-$th = 'sticky top-0 z-10 bg-gray-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
+$thCell   = 'sticky top-0 bg-gray-50 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
+$th       = 'z-10 ' . $thCell;
+$thPinned = 'z-20 ' . $thCell; // the pinned Institution heading sits above both the other headings and the pinned cells
 
 $line = static function (array $l, bool $storage = false) use ($lineBadge): string {
     [$text, $class] = $lineBadge[$l['state']];
@@ -48,8 +50,8 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
     <noscript><meta http-equiv="refresh" content="60"></noscript>
     <p class="-mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#646464]">
         <span>Checked <?= esc($monRuntime['checkedAt']) ?>. This page changes nothing.</span>
-        <label class="flex items-center gap-2">
-            <input type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40" checked data-auto-refresh>
+        <label class="flex items-center gap-2 pointer-coarse:min-h-11">
+            <input type="checkbox" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300 text-brand focus:ring-brand/40" checked data-auto-refresh>
             Live updates every 5 seconds
         </label>
     </p>
@@ -102,7 +104,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
             <ul class="mt-2 flex flex-wrap gap-2 text-sm">
                 <?php foreach ($monWatch as $row): ?>
                     <li class="rounded-full bg-[#FFF1D6] px-3 py-1" data-watch="<?= esc($row['state']) ?>">
-                        <a class="font-medium text-[#946200] hover:underline" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>"><?= esc($row['name']) ?></a>
+                        <a class="inline-flex items-center pointer-coarse:min-h-11 font-medium text-[#946200] hover:underline" href="<?= site_url('admin/institutions/' . $row['id'] . '/subscription') ?>"><?= esc($row['name']) ?></a>
                         <span class="text-[#946200]">· <?= esc(str_replace('_', '-', $row['state'])) ?> · ends <?= esc($row['endDate']) ?></span>
                     </li>
                 <?php endforeach; ?>
@@ -112,11 +114,11 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
 
     <section class="flex flex-col lg:min-h-0 lg:flex-1" data-section="usage">
         <h2 class="mb-2 text-sm font-semibold text-brand">Usage against plans</h2>
-        <div class="overflow-auto rounded-2xl border border-gray-200 lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Usage against plans">
+        <div class="overflow-auto rounded-2xl border border-gray-200 lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" tabindex="0" role="region" aria-label="Usage against plans" data-scroll-x data-sticky-first>
             <table class="min-w-full divide-y divide-gray-200 text-sm">
                 <thead>
                     <tr>
-                        <th class="<?= $th ?>">Institution</th>
+                        <th class="<?= $thPinned ?> left-0 max-lg:w-36 max-lg:whitespace-normal">Institution</th>
                         <th class="<?= $th ?>">Plan</th>
                         <th class="<?= $th ?>">Active users</th>
                         <th class="<?= $th ?>">Seats</th>
@@ -130,7 +132,7 @@ $tiles = ['institutions' => 'Institutions', 'users' => 'Active users', 'signedIn
                     <?php endif; ?>
                     <?php foreach ($monUsage as $row): ?>
                         <tr data-institution="<?= esc((string) $row['id']) ?>">
-                            <td class="px-3 py-2 font-medium"><a class="text-brand hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a></td>
+                            <td class="sticky left-0 z-[1] bg-white px-3 py-2 font-medium max-lg:w-36 max-lg:whitespace-normal"><a class="inline-flex items-center pointer-coarse:min-h-11 text-brand hover:underline" href="<?= site_url('admin/institutions/' . $row['id']) ?>"><?= esc($row['name']) ?></a></td>
                             <td class="px-3 py-2"><?= esc($row['plan'] ?? '—') ?></td>
                             <td class="px-3 py-2"><?= esc((string) $row['activeUsers']) ?></td>
                             <td class="px-3 py-2"><?= $line($row['seats']) ?></td>

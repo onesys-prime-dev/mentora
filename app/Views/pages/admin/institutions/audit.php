@@ -25,11 +25,11 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#
     <a class="font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log?institution=' . $auditInstitution['id']) ?>">Open all of them in the audit log</a>
 </p>
 
-<div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
+<div class="mt-2 rounded-lg bg-white shadow" data-section="audit" data-scroll-x data-sticky-first tabindex="0" role="region" aria-label="Latest audit entries">
     <table class="min-w-full divide-y divide-gray-200 text-sm">
         <thead class="bg-gray-50">
             <tr>
-                <th class="<?= $th ?>">When</th>
+                <th class="<?= $th ?> sticky left-0 z-[1] bg-gray-50">When</th>
                 <th class="<?= $th ?>">Who</th>
                 <th class="<?= $th ?>">Role</th>
                 <th class="<?= $th ?>">Action</th>
@@ -42,7 +42,7 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#
             <?php endif; ?>
             <?php foreach ($auditRows as $row): ?>
                 <tr>
-                    <td class="whitespace-nowrap px-3 py-2 text-gray-700"><?= esc($row['created_at']) ?></td>
+                    <td class="sticky left-0 z-[1] whitespace-nowrap bg-white px-3 py-2 text-gray-700"><?= esc($row['created_at']) ?></td>
                     <td class="px-3 py-2"><?= esc($row['actor_label'] ?? 'system') ?></td>
                     <td class="px-3 py-2"><?= esc($row['acting_role'] ?? '—') ?></td>
                     <td class="px-3 py-2 font-mono text-xs"><?= esc($row['action']) ?></td>

@@ -22,3 +22,8 @@ document.addEventListener("keydown", (event) => {
         menu.querySelector("summary")?.focus();
     });
 });
+
+// A dropdown of actions (data-menu-pick) closes once one is chosen, so it is not left open behind the dialog the action opens.
+document.addEventListener("click", (event) => {
+    event.target.closest?.("details[data-menu-pick] :is(button, a)")?.closest("details").removeAttribute("open");
+});

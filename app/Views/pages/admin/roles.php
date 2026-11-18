@@ -16,7 +16,7 @@ $sections = [
     'Inside an institution' => $academicPerms,
 ];
 
-$ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/50';
+$ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/50';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -51,7 +51,7 @@ $ctl = 'rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outli
             <option value="<?= esc($sectionTitle) ?>"><?= esc($sectionTitle) ?></option>
         <?php endforeach; ?>
     </select>
-    <label class="flex items-center gap-2 text-sm text-[#1A1C1E]"><input type="checkbox" class="h-4 w-4 rounded border-gray-300" data-roles-edited> Edited only</label>
+    <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11"><input type="checkbox" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300" data-roles-edited> Edited only</label>
     <span class="text-xs text-[#646464]" data-roles-count aria-live="polite"></span>
 </div>
 

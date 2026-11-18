@@ -67,7 +67,7 @@ $toneWord = ['danger' => 'Problem', 'warning' => 'Warning', 'info' => 'Note'];
                                 <p class="text-[#3D3D3D]"><?= esc($item['text']) ?></p>
                             </div>
                         </div>
-                        <a class="shrink-0 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($item['url'])) ?>"><?= esc($item['action']) ?></a>
+                        <a class="inline-flex shrink-0 items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url($item['url'])) ?>"><?= esc($item['action']) ?></a>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -77,7 +77,7 @@ $toneWord = ['danger' => 'Problem', 'warning' => 'Warning', 'info' => 'Note'];
     <section class="flex flex-col gap-4" aria-labelledby="home-snapshot" data-section="snapshot">
         <h2 id="home-snapshot" class="text-lg font-bold text-brand">Snapshot</h2>
 
-        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <?= view('components/metric-card', [
                 'label'  => 'People',
                 'value'  => number_format($homeSnapshot['peopleTotal']),
@@ -139,7 +139,7 @@ $toneWord = ['danger' => 'Problem', 'warning' => 'Warning', 'info' => 'Note'];
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="home-activity" class="text-lg font-bold text-brand">Recent activity</h2>
                 <?php if ($homeCanAudit): ?>
-                    <a class="rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/audit')) ?>">Open the audit log</a>
+                    <a class="inline-flex items-center pointer-coarse:min-h-11 rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/audit')) ?>">Open the audit log</a>
                 <?php endif; ?>
             </div>
 
@@ -168,13 +168,13 @@ $toneWord = ['danger' => 'Problem', 'warning' => 'Warning', 'info' => 'Note'];
             <ul class="flex flex-col gap-2">
                 <?php foreach ($homeShortcuts as $shortcut): ?>
                     <li>
-                        <a class="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc($shortcut['url']) ?>">
+                        <a class="flex min-h-10 pointer-coarse:min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc($shortcut['url']) ?>">
                             <?= icon($shortcut['icon'], 'h-4 w-4') ?><?= esc($shortcut['label']) ?>
                         </a>
                     </li>
                 <?php endforeach; ?>
                 <li>
-                    <a class="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/export')) ?>">
+                    <a class="flex min-h-10 pointer-coarse:min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= esc(site_url('institution/export')) ?>">
                         <?= icon('folder', 'h-4 w-4') ?>Data export
                     </a>
                     <?php if (! $canExport): ?>

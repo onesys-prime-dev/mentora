@@ -8,9 +8,9 @@ $value = static fn (string $key): string => (string) old($key, (string) $secValu
 $roles = (array) old('twoFactorRoles', $secValues['twoFactorRoles']);
 
 $field   = static fn (array $spec): string => view('components/form-field', $spec, ['saveData' => false]);
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $legend  = 'text-lg font-bold text-brand';
-$tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
+$tick    = 'h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300 text-brand focus:ring-brand/40';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -61,9 +61,9 @@ $tick    = 'h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40';
             <legend class="<?= $legend ?>">Emailed sign-in code</legend>
             <p class="text-xs text-[#646464]">System administrators always need one. Turning it on for another role needs working email (<span class="font-mono">php spark mail:test</span>): without it those people cannot sign in.</p>
 
-            <label class="flex items-center gap-2 text-sm text-[#646464]"><input type="checkbox" class="<?= $tick ?>" checked disabled> <?= esc($secRoleLabels['admin']) ?> (always)</label>
+            <label class="flex items-center gap-2 text-sm text-[#646464] pointer-coarse:min-h-11"><input type="checkbox" class="<?= $tick ?>" checked disabled> <?= esc($secRoleLabels['admin']) ?> (always)</label>
             <?php foreach ($secChoices as $role): ?>
-                <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
+                <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11">
                     <input type="checkbox" class="<?= $tick ?>" name="twoFactorRoles[]" value="<?= esc($role) ?>" <?= in_array($role, $roles, true) ? 'checked' : '' ?>>
                     <?= esc($secRoleLabels[$role] ?? $role) ?>
                 </label>

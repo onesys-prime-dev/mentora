@@ -49,7 +49,7 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
     ], ['saveData' => false]) ?>
 
     <p>
-        <a class="inline-flex rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-view-course
+        <a class="inline-flex items-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-view-course
            href="<?= esc(site_url('institution/courses/' . $o['offering_id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) ?>">Open the course (view only)</a>
     </p>
 
@@ -65,12 +65,12 @@ $maxBucket = $g === null ? 1 : max(1, ...array_values($g['distribution']));
     </div>
 
     <?php if ($g !== null && $g['graded_count'] > 0): ?>
-        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="dist" data-report-distribution>
+        <section class="@container rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="dist" data-report-distribution>
             <h2 id="dist" class="text-sm font-bold text-brand">Grade distribution</h2>
             <ul class="mt-4 flex flex-col gap-2">
                 <?php foreach ($g['distribution'] as $bucket => $count): ?>
                     <li class="flex items-center gap-3 text-sm">
-                        <span class="w-16 shrink-0 text-xs font-semibold text-[#646464]"><?= esc((string) $bucket) ?></span>
+                        <span class="w-12 shrink-0 text-xs font-semibold text-[#646464] @xs:w-16"><?= esc((string) $bucket) ?></span>
                         <span class="h-3 flex-1 overflow-hidden rounded-full bg-gray-100" role="presentation">
                             <span class="block h-full rounded-full bg-brand" style="width: <?= (int) round($count / $maxBucket * 100) ?>%"></span>
                         </span>
