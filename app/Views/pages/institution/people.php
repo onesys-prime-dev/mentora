@@ -242,7 +242,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
                 ['key' => 'name', 'label' => 'Name', 'sortable' => true],
                 ['key' => 'roles', 'label' => 'Role'],
                 ['key' => 'status', 'label' => 'Status'],
-                ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true],
+                ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true, 'priority' => 2],
             ],
             'rows'       => $rows,
             'sort'       => $f->sort,

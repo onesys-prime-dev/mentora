@@ -226,7 +226,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
                     ['key' => 'enrolled', 'label' => 'Enrolled', 'sortable' => true],
                     ['key' => 'completion_percentage', 'label' => 'Completion', 'sortable' => true],
                     ['key' => 'average_percentage', 'label' => 'Average grade', 'sortable' => true],
-                    ['key' => 'avg_grading_turnaround_hours', 'label' => 'Grading time', 'sortable' => true],
+                    ['key' => 'avg_grading_turnaround_hours', 'label' => 'Grading time', 'sortable' => true, 'priority' => 2],
                 ],
                 'rows'    => $courseRows,
                 'fill'    => true,

@@ -156,6 +156,9 @@ export async function expectInViewport(page, selector) {
 
 /** No serious or critical axe findings against WCAG 2.2 A and AA (the filter dean.spec.js uses). */
 export async function expectAccessible(page, scope) {
+    // A colour still mid-transition (a hover just ended) is read as a half-way colour and can fail contrast.
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
     let axe = new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"]);
     if (scope) {
         axe = axe.include(scope);

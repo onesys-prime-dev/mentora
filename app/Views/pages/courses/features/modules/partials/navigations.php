@@ -36,7 +36,7 @@ $previousLocked = $isStudent && $previousItem && !empty($previousItem['is_locked
 $nextLockHint = $nextLocked ? ($nextLockHint ?? '') : '';
 
 // `flex`, not `inline-flex`: Tailwind emits .inline-flex after .hidden, so a hidden Continue would still show.
-$continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 max-lg:w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0056E0]';
+$continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0056E0]';
 ?>
 
 <footer
@@ -45,7 +45,7 @@ $continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 max-l
 
     <button
         type="button"
-        class="learning-item-link inline-flex items-center gap-2 max-lg:min-h-11 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
+        class="learning-item-link inline-flex items-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
             <?= $previousItem && !$previousLocked ? 'text-gray-500 hover:border-brand hover:bg-brand/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
         <?= $previousItem && !$previousLocked ? 'data-learning-item="' . esc($previousItem['id']) . '"' : 'disabled' ?>
         <?= $previousLocked ? 'title="Locked"' : '' ?>
@@ -82,7 +82,7 @@ $continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 max-l
                 data-learning-item-id="<?= esc($currentItem['id']) ?>"
                 data-completed="<?= $isCompleted ? '1' : '0' ?>"
                 <?= ($isCompleted || !$canComplete) ? 'disabled' : '' ?>
-                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 max-lg:flex-1 rounded-lg border px-5 py-2.5 text-sm font-semibold transition
+                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:flex-1 rounded-lg border px-5 py-2.5 text-sm font-semibold transition
                     data-[completed=1]:border-[#CFE6D5] data-[completed=1]:bg-[#E6F4EA] data-[completed=1]:text-[#5C9F72]
                     data-[completed=0]:border-brand data-[completed=0]:text-brand data-[completed=0]:hover:bg-brand/10
                     data-[completed=0]:disabled:cursor-not-allowed data-[completed=0]:disabled:border-gray-300 data-[completed=0]:disabled:text-gray-400 data-[completed=0]:disabled:hover:bg-transparent">
@@ -150,7 +150,7 @@ $continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 max-l
 
             <button
                 type="button"
-                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 max-lg:w-full rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
+                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:w-full rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
                 disabled>
                 <span>Continue</span>
             </button>
