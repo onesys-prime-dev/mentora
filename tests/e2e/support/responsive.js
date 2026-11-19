@@ -186,9 +186,14 @@ export async function zoom200(page) {
     await page.setViewportSize({ width: 320, height: 400 });
 }
 
-/** Compares a full-page screenshot with its baseline, on Linux only (the baselines are made on CI's runner). */
+/**
+ * Compares a full-page screenshot with its baseline, on Linux only (the baselines are made on CI's runner) and
+ * only with RESPONSIVE_SNAPSHOTS=1: the baselines are about 650 MB, too big for git, so they are not committed
+ * and a normal run skips the comparison. The Responsive workflow's update_snapshots run sets it and keeps them
+ * as an artifact.
+ */
 export async function snap(page, name) {
-    if (process.platform !== "linux") {
+    if (process.platform !== "linux" || process.env.RESPONSIVE_SNAPSHOTS !== "1") {
         return;
     }
 
