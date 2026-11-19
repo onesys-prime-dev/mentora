@@ -2,14 +2,17 @@ name: Responsive
 
 # The whole responsive sweep (tests/e2e/responsive.spec.js with RESPONSIVE_FULL=1): every screen at every
 # window size, light and dark, 200% zoom, on Chromium and WebKit. Pull requests run only the smoke sizes
-# (the e2e job in ci.yml); this runs the rest every night.
+# (the e2e job in ci.yml); this runs the rest every night once the schedule below is switched on.
 #
 # Run it by hand with "update_snapshots" ticked to make new screenshot baselines: they are uploaded as the
 # responsive-baselines artifact, to unzip into tests/e2e/__screenshots__, review and commit.
+#
+# The nightly schedule is OFF until the responsive stack and its baselines are on main: a schedule always runs
+# the default branch, where the sweep would only fail. Uncomment it when they land.
 
 on:
-  schedule:
-    - cron: "0 18 * * *" # 18:00 UTC = 02:00 in Manila
+  # schedule:
+  #   - cron: "0 18 * * *" # 18:00 UTC = 02:00 in Manila
   workflow_dispatch:
     inputs:
       update_snapshots:
@@ -28,7 +31,8 @@ jobs:
   responsive:
     name: Responsive sweep (Playwright)
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # The whole matrix (about 3,000 screenshots on Chromium plus WebKit) at a few seconds a row is hours, not minutes.
+    timeout-minutes: 300
     services:
       mysql:
         image: mysql:8.4
