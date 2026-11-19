@@ -34,14 +34,14 @@ $entries = $data['entries'] ?? [];
                         <span class="text-[13px] text-[#1A1C1E] truncate">
                             <?= esc($entry['action']) ?> · <?= esc($entry['course_code'] . ' ' . $entry['section_code']) ?>
                         </span>
-                        <span class="text-xs text-[#9AA3B8] shrink-0 whitespace-nowrap"><?= esc($entry['when']) ?></span>
+                        <span class="text-xs text-[#646464] shrink-0 whitespace-nowrap"><?= esc($entry['when']) ?></span>
                     </a>
 
                 <?php else: ?>
 
                     <div class="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-[#F6F7FA] last:border-b-0">
                         <span class="text-[13px] text-[#1A1C1E]"><?= esc($entry['action']) ?></span>
-                        <span class="text-xs text-[#9AA3B8] shrink-0 whitespace-nowrap"><?= esc($entry['when']) ?></span>
+                        <span class="text-xs text-[#646464] shrink-0 whitespace-nowrap"><?= esc($entry['when']) ?></span>
                     </div>
 
                 <?php endif; ?>

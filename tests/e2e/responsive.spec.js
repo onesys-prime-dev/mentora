@@ -741,9 +741,8 @@ const staffCourseAddresses = new Map();
 /** A course tab as the chairperson (IT101-A) or the dean (the first course their Courses page lists) opens it. */
 async function staffCoursePath(page, role, feature) {
     if (!staffCourseAddresses.has(role)) {
-        const href = role === "dean"
-            ? await page.goto("/dean/courses").then(() => page.locator('a[href*="/dean/courses/"]').first().getAttribute("href"))
-            : await courseAddress(page, role, "IT101", "A");
+        // IT101 A, not the first card: earlier specs add empty courses that can come first on the dean's list.
+        const href = await courseAddress(page, role, "IT101", "A");
         // Not anchored: the address may carry /index.php before the role (the e2e server's indexPage).
         staffCourseAddresses.set(role, new URL(href, page.url()).pathname.match(new RegExp(`/${role}/courses/\\d+/[^/]+`))[0]);
     }
