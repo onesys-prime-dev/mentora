@@ -407,10 +407,19 @@ async function copyPlanPath(page) {
     const read = (name) => page.locator(`select[name="${name}"] option`).evaluateAll((os) => os.filter((o) => o.value).map((o) => ({ value: o.value, text: o.textContent })));
     const sources = (await read("source")).filter((o) => !/\(0 offerings\)/.test(o.text));
     const targets = await read("target");
-    const source = sources.find((s) => targets.some((t) => t.value !== s.value));
-    expect(source, "a source term with offerings and a different target").toBeTruthy();
-
-    return `${path}?source=${source.value}&target=${targets.find((t) => t.value !== source.value).value}`;
+    // Earlier specs copy offerings into a term, so on a fresh run the first pair can have nothing left to copy
+    // (every box disabled): take the first pair whose list still has an offering that can be ticked.
+    for (const source of sources) {
+        for (const target of targets.filter((t) => t.value !== source.value)) {
+            const candidate = `${path}?source=${source.value}&target=${target.value}`;
+            await page.goto(candidate);
+            if ((await page.locator('[data-copy-form] tbody input[name="offerings[]"]:enabled').count()) > 0) {
+                return candidate;
+            }
+        }
+    }
+    expect(null, "a source term and a different target with an offering that can still be copied").toBeTruthy();
+    return path;
 }
 
 // The chairperson holds courses.manage and grading.manage (AuthGroups), so her course pages draw the instructor's
