@@ -805,27 +805,46 @@ async function coursePath(page, feature) {
 }
 
 /**
- * The first course's first module, opened on the first item the student can open (the address the Overview
- * links use: the Modules tab with ?item=).
+ * The student's first course that has a module with an item they can open, opened on that item (the address the
+ * Overview links use: the Modules tab with ?item=). Earlier specs enrol the student in offerings with no content,
+ * so the first course on the list is not always the one with modules.
  */
 async function moduleItemPath(page, title) {
-    const modules = await coursePath(page, "modules");
-    await page.goto(modules);
+    await page.goto("/student/courses");
+    const hrefs = await page.locator('ul[aria-label="Your courses"] a[href*="/student/courses/"]').evaluateAll((as) => as.map((a) => a.href));
+    // Not anchored: the address may carry /index.php before /student (the e2e server's indexPage).
+    const bases = [...new Set(hrefs.map((href) => new URL(href).pathname.match(/\/student\/courses\/\d+\/[^/]+/)[0]))];
+    expect(bases.length, "the student has a course").toBeGreaterThan(0);
 
-    const card = page.locator("[data-module-wrapper]").first();
-    const unlocked = page.locator("[data-learning-item-wrapper]:not([data-locked])");
-    const items = title ? unlocked.filter({ hasText: title }) : unlocked;
-    // A click that lands before the page script has attached does nothing, so the step repeats until it takes.
-    await expect(async () => {
-        const content = card.locator("[data-module-content]").first();
-        if (!((await content.getAttribute("class")) ?? "").includes("max-h-[2000px]")) {
-            await card.locator("[data-module]").first().click({ timeout: 2_000 });
+    for (const [i, base] of bases.entries()) {
+        const modules = `${base}/modules`;
+        await page.goto(modules);
+
+        const card = page.locator("[data-module-wrapper]").first();
+        const unlocked = page.locator("[data-learning-item-wrapper]:not([data-locked])");
+        const items = title ? unlocked.filter({ hasText: title }) : unlocked;
+        // A course with no module (an offering an earlier spec added) is passed over at once.
+        await card.or(page.getByText("No modules yet")).first().waitFor({ timeout: 15_000 });
+        if ((await card.count()) === 0) continue;
+        // A click that lands before the page script has attached does nothing, so the step repeats until it takes.
+        try {
+            await expect(async () => {
+                const content = card.locator("[data-module-content]").first();
+                if (!((await content.getAttribute("class")) ?? "").includes("max-h-[2000px]")) {
+                    await card.locator("[data-module]").first().click({ timeout: 2_000 });
+                }
+                await card.getByRole("button", { name: "Go to module" }).click({ timeout: 3_000 });
+                await expect(items.first()).toBeAttached({ timeout: 3_000 });
+            }).toPass({ timeout: i === bases.length - 1 ? 30_000 : 20_000 });
+        } catch (error) {
+            if (i === bases.length - 1) throw error;
+            continue;
         }
-        await card.getByRole("button", { name: "Go to module" }).click({ timeout: 3_000 });
-        await expect(items.first()).toBeAttached({ timeout: 3_000 });
-    }).toPass({ timeout: 30_000 });
 
-    return `${modules}?item=${await items.first().getAttribute("data-learning-item")}`;
+        return `${modules}?item=${await items.first().getAttribute("data-learning-item")}`;
+    }
+
+    expect(null, "a course with a module and an item the student can open").toBeTruthy();
 }
 
 const FULL = process.env.RESPONSIVE_FULL === "1";
