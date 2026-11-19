@@ -389,6 +389,12 @@ async function confirmPlanEdit(page) {
     await expect(page).toHaveURL(/\/plans\/\d+\/edit$/);
 }
 
+/**
+ * The dean's sign-off and teaching-load pages open on the newest term, and earlier specs add empty ones, so a
+ * bare address can show no instructors and no sections. The demo seed's term (the active one) is id 1.
+ */
+const SEEDED_TERM = "?term=1";
+
 /** The first link on a list page whose address matches `pattern` (not anchored: the address may carry /index.php). */
 async function listedPath(page, list, pattern) {
     await page.goto(list);
@@ -766,7 +772,12 @@ async function staffGradeWorkPath(page, role) {
 
 /** On Grade Work, picks Maria Santos (from the students panel below lg), repeated until the pick has loaded. */
 async function pickMaria(page) {
-    const row = page.locator('[data-grade-work-student][data-student-name="Maria Santos"]').first();
+    await pickStudent(page, "Maria Santos");
+}
+
+/** Opens the students panel when it is shut and picks the student, repeated until the page has taken the pick. */
+async function pickStudent(page, name) {
+    const row = page.locator(`[data-grade-work-student][data-student-name="${name}"]`).first();
     await expect(async () => {
         const id = await row.getAttribute("data-grade-work-student-id", { timeout: 2_000 });
         // Opened only when it is shut (the toggle shows below lg), so a retry never closes it.
@@ -4287,7 +4298,7 @@ test.describe("staff lists", () => {
                     removeRows();
                     seedRows();
                     try {
-                        await open(page, { path: "/dean/signoff", as: "dean2" }, theme);
+                        await open(page, { path: `/dean/signoff${SEEDED_TERM}`, as: "dean2" }, theme);
                         await checkPage(page, '[data-state="signed_off"]');
                         await checkDialog(page, page.locator('[data-state="signed_off"] [data-dialog-open^="reopen-"]'), (dialog) => reasonField(dialog, "reason", "Reopen", phone));
                         await checkDialog(page, page.locator("[data-signoff-all]").first());
@@ -4321,7 +4332,7 @@ test.describe("staff lists", () => {
         test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
 
         test("dean-teaching-load: a focused sort link shows its heading row, 44px, inside the window", async ({ page }) => {
-            await open(page, { path: "/dean/teaching-load", as: "dean2" }, "light");
+            await open(page, { path: `/dean/teaching-load${SEEDED_TERM}`, as: "dean2" }, "light");
             const link = page.locator("[data-table] thead th[aria-sort] a").first();
             await expect(link).toHaveAttribute("href", /sort=/);
             expect((await page.locator("[data-table] thead").boundingBox()).height, "hidden until focused").toBeLessThanOrEqual(1);
@@ -4435,6 +4446,8 @@ test.describe("staff course workspace", () => {
         const gradeWork = screen("chairperson-grade-work");
         await page.goto(await gradeWork.path(page));
         await gradeWork.then(page);
+        // Earlier specs grade Maria's work, which locks the bar (no Save); Angela has none, so her bar is open.
+        await pickStudent(page, "Angela Cruz");
         await expect(page.locator("[data-expandable-grade-work-actions-panel] [data-grade-work-submit-grade]")).toHaveCount(1);
     });
 
