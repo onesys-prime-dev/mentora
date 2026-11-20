@@ -119,7 +119,7 @@ class DeanAssignmentService
             (new \App\Services\Notifications\NotificationService())->send(
                 (int) $currentCollege['dean_user_id'], 'dean', 'Dean assignment ended',
                 "You are no longer the dean of {$college['name']}: another dean was assigned.",
-                false, "dean-replaced:{$currentCollege['id']}:" . date('YmdHis'), $institutionId, site_url('dashboard'),
+                false, "dean-replaced:{$currentCollege['id']}:" . date('YmdHis'), $institutionId, site_url('/'),
             );
         }
 
