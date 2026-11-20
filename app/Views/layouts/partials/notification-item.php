@@ -19,7 +19,7 @@ $isReact = $isMsg && str_contains((string) $row['title'], 'reaction');
 ?>
 <li class="group/note relative" data-notification-item data-notification-id="<?= (int) $row['id'] ?>" data-type="<?= esc((string) $row['type'], 'attr') ?>" data-notification="<?= $unread ? 'unread' : 'read' ?>">
     <<?= $tag ?>
-        <?php if ($row['link'] !== null): ?>href="<?= esc(site_url((string) $row['link']), 'attr') ?>"<?php endif; ?>
+        <?php if ($row['link'] !== null): ?>href="<?= esc(\App\Services\Notifications\NotificationService::href((string) $row['link']), 'attr') ?>"<?php endif; ?>
         data-role="note-row"
         class="flex gap-3 px-5 py-3 pr-[5rem] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55 <?= $unread ? 'bg-brand/5' : '' ?>">
 

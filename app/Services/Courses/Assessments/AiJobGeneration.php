@@ -322,7 +322,10 @@ class AiJobGeneration
 
         $institutionId = $row['institution_id'] !== null ? (int) $row['institution_id'] : null;
         $offeringId    = $batch['assessment_id'] !== null ? (new AssessmentModel())->offeringIdOf((int) $batch['assessment_id']) : null;
-        $link          = $offeringId !== null ? "courses/{$offeringId}/assessments" : null;
+        // The course page lives under the viewer's role ("instructor/courses/{id}/{slug}/assessments"); the slug is only cosmetic.
+        $creator       = auth()->getProvider()->findById((int) $row['created_by']);
+        $role          = $creator !== null && $offeringId !== null ? (new \App\Services\Courses\CourseMembership())->roleIn($creator, $offeringId) : null;
+        $link          = $offeringId !== null ? ($role ?? 'instructor') . "/courses/{$offeringId}/course/assessments" : null;
         $quiz          = $batch['assessment_id'] !== null ? (string) ((new AssessmentModel())->find((int) $batch['assessment_id'])['title'] ?? 'your quiz') : 'your quiz';
         $notes         = new NotificationService();
 

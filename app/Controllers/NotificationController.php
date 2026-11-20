@@ -80,7 +80,7 @@ class NotificationController extends BaseController
                         'id'     => (int) $row['id'],
                         'title'  => (string) $row['title'],
                         'body'   => (string) $row['body'],
-                        'link'   => $row['link'] === null ? null : site_url((string) $row['link']),
+                        'link'   => $row['link'] === null ? null : NotificationService::href((string) $row['link']),
                         'urgent' => (int) $row['urgent'] === 1,
                     ];
                 }
