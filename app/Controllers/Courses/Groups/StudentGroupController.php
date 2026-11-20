@@ -1,0 +1,198 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers\Courses\Groups;
+
+use App\Controllers\BaseController;
+use App\Models\Assessments\AssessmentModel;
+use App\Services\Courses\Grades\GradeFinalizationService;
+use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupSignupService;
+use App\Services\Institutions\StructureException;
+use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\ResponseInterface;
+
+/**
+ * JSON for a student's "Group activity" card (screens 3A, 3C): their own group, the groups they can still join,
+ * and join, leave and switch. A student only ever receives their own group, the open groups while they can
+ * join, and other groups only when the instructor allows it (groups_visible). A member is { id, name } and
+ * nothing else. An assessment not of the offering or a group not of this activity is "not found"; a broken
+ * rule is a 422 with { message, errors }.
+ */
+class StudentGroupController extends BaseController
+{
+    private const NAME = "COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username)";
+
+    public function show(int $offeringId, int $assessmentId): ResponseInterface
+    {
+        $this->assessment($offeringId, $assessmentId);
+        $config = (new ActivityGroupService())->findByAssessment($assessmentId);
+
+        if ($config === null) {
+            return $this->response->setJSON(['success' => true, 'isGroupActivity' => false]);
+        }
+
+        $configId = (int) $config['id'];
+        $me       = $this->actor();
+        $inPool   = in_array($me, (new ActivityGroupService())->pool($configId), true);
+        $finalized = (new GradeFinalizationService())->lockRefusal($offeringId) !== null;
+        $groups   = $this->groups($configId);
+        $mine     = null;
+
+        foreach ($groups as $g) {
+            if (in_array($me, array_column($g['members'], 'id'), true)) {
+                $mine = $g;
+            }
+        }
+
+        $opens  = $config['signup_opens_at'];
+        $closes = $config['signup_closes_at'];
+        $isOpen = $config['formation_mode'] === 'self_signup'
+            && ($opens === null || strtotime((string) $opens) <= time())
+            && ($closes === null || strtotime((string) $closes) > time());
+
+        $out = [
+            'success'           => true,
+            'isGroupActivity'   => true,
+            'inPool'            => $inPool,
+            'ungroupedPolicy'   => $config['ungrouped_policy'],
+            'submissionStyle'   => $config['submission_style'],
+            'signup'            => ['mode' => $config['formation_mode'], 'opensAt' => $opens, 'closesAt' => $closes, 'isOpen' => $isOpen],
+            'myGroup'           => $mine === null ? null : $this->mine($mine, $config, $finalized),
+            'candidates'        => $inPool ? (new GroupSignupService())->candidateGroups($configId, $me) : [],
+            'blocked'           => $inPool && $mine === null && $config['ungrouped_policy'] === 'block',
+            'offeringFinalized' => $finalized,
+        ];
+
+        if ((int) $config['groups_visible'] === 1) {
+            $out['otherGroups'] = array_values(array_map(
+                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => $g['members']],
+                array_filter($groups, static fn (array $g) => $mine === null || $g['id'] !== $mine['id']),
+            ));
+        }
+
+        return $this->response->setJSON($out);
+    }
+
+    public function join(int $offeringId, int $assessmentId): ResponseInterface
+    {
+        $configId = $this->configId($offeringId, $assessmentId);
+        $groupId  = $this->groupId($configId);
+
+        return $this->run(fn () => (new GroupSignupService())->join($configId, $groupId, $this->actor()));
+    }
+
+    public function switch(int $offeringId, int $assessmentId): ResponseInterface
+    {
+        $configId = $this->configId($offeringId, $assessmentId);
+        $groupId  = $this->groupId($configId);
+
+        return $this->run(fn () => (new GroupSignupService())->switchTo($configId, $groupId, $this->actor()));
+    }
+
+    public function leave(int $offeringId, int $assessmentId): ResponseInterface
+    {
+        $configId = $this->configId($offeringId, $assessmentId);
+        $row      = db_connect()->table('student_group_members')->select('group_id')->where('config_id', $configId)->where('student_user_id', $this->actor())->get()->getRowArray();
+
+        return $this->run(function () use ($row): void {
+            if ($row === null) {
+                throw new StructureException('You are not in a group.');
+            }
+
+            (new GroupSignupService())->leave((int) $row['group_id'], $this->actor());
+        });
+    }
+
+    /** @return list<array{id:int,name:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string}>}> */
+    private function groups(int $configId): array
+    {
+        $members = db_connect()->table('student_group_members m')
+            ->select('m.group_id, m.student_user_id, ' . self::NAME . ' AS name', false)
+            ->join('users u', 'u.id = m.student_user_id')->join('user_profiles p', 'p.user_id = u.id', 'left')
+            ->where('m.config_id', $configId)->orderBy('m.joined_at')->orderBy('m.id')->get()->getResultArray();
+
+        $byGroup = [];
+
+        foreach ($members as $m) {
+            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
+        }
+
+        $rows = db_connect()->table('student_groups')->where('config_id', $configId)->where('status', 'active')->orderBy('name')->orderBy('id')->get()->getResultArray();
+
+        return array_map(static fn (array $g) => [
+            'id'                  => (int) $g['id'],
+            'name'                => (string) $g['name'],
+            'frozen'              => $g['frozen_at'] !== null,
+            'leader_user_id'      => $g['leader_user_id'] === null ? null : (int) $g['leader_user_id'],
+            'leader_finalized_at' => $g['leader_finalized_at'],
+            'members'             => $byGroup[(int) $g['id']] ?? [],
+        ], $rows);
+    }
+
+    /**
+     * @param array<string, mixed> $g
+     * @param array<string, mixed> $config
+     *
+     * @return array{id:int,name:string,members:list<array{id:int,name:string}>,frozen:bool,canLeave:bool,canLeaveReason:?string}
+     */
+    private function mine(array $g, array $config, bool $finalized): array
+    {
+        $reason = match (true) {
+            $finalized => 'The grades of this course are final, so groups cannot change.',
+            $g['frozen'] => 'Your group has submitted. Ask your instructor if someone must change.',
+            $g['leader_finalized_at'] !== null && $g['leader_user_id'] !== $this->actor() && (int) $config['nonleader_can_leave'] !== 1 => 'Your group has chosen its leader, so members cannot leave. Ask your instructor.',
+            default => null,
+        };
+
+        return ['id' => $g['id'], 'name' => $g['name'], 'members' => $g['members'], 'frozen' => $g['frozen'], 'canLeave' => $reason === null, 'canLeaveReason' => $reason];
+    }
+
+    private function assessment(int $offeringId, int $assessmentId): void
+    {
+        if ((new AssessmentModel())->offeringIdOf($assessmentId) !== $offeringId) {
+            throw PageNotFoundException::forPageNotFound('Assessment not found.');
+        }
+    }
+
+    private function configId(int $offeringId, int $assessmentId): int
+    {
+        $this->assessment($offeringId, $assessmentId);
+        $config = (new ActivityGroupService())->findByAssessment($assessmentId);
+
+        if ($config === null) {
+            throw PageNotFoundException::forPageNotFound('This assignment does not use groups.');
+        }
+
+        return (int) $config['id'];
+    }
+
+    private function groupId(int $configId): int
+    {
+        $id = (int) (($this->request->getJSON(true) ?? [])['group_id'] ?? 0);
+
+        if (db_connect()->table('student_groups')->where('id', $id)->where('config_id', $configId)->countAllResults() === 0) {
+            throw PageNotFoundException::forPageNotFound('Group not found.');
+        }
+
+        return $id;
+    }
+
+    /** Runs a change: 200 {success}, or 422 {message, errors} for a broken rule. */
+    private function run(callable $change): ResponseInterface
+    {
+        try {
+            $change();
+        } catch (StructureException $e) {
+            return $this->response->setStatusCode(422)->setJSON(['success' => false, 'message' => $e->getMessage(), 'errors' => $e->errors()]);
+        }
+
+        return $this->response->setJSON(['success' => true]);
+    }
+
+    private function actor(): int
+    {
+        return (int) auth()->id();
+    }
+}

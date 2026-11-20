@@ -125,6 +125,12 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
 
         $routes->post('(:num)/assessments/(:num)/assignment-submissions', 'Courses\Assessments\AssignmentSubmissionController::submit/$1/$2');
 
+        // The student's own group of a group activity: state, join, leave, switch (screens 3A, 3C).
+        $routes->get('(:num)/assessments/(:num)/my-group', 'Courses\Groups\StudentGroupController::show/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/join', 'Courses\Groups\StudentGroupController::join/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/leave', 'Courses\Groups\StudentGroupController::leave/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/switch', 'Courses\Groups\StudentGroupController::switch/$1/$2');
+
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
         $routes->get('(:num)/grades', 'Courses\GradeController::show/$1');

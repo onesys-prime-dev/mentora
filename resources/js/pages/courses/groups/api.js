@@ -45,3 +45,9 @@ export const fetchActivityGroups = (assessmentId) => getJson(`${base()}/assessme
 
 /** A change to an assignment's groups; answers as sendChange. */
 export const sendActivityChange = (assessmentId, method, path, body = {}) => sendChange(method, path, body, `/assessments/${assessmentId}/groups`);
+
+/** The student's own group of an activity: { isGroupActivity, myGroup, candidates, ... }. */
+export const fetchMyGroup = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/my-group`, "your group");
+
+/** join | leave | switch; answers as sendChange. */
+export const sendMyGroup = (assessmentId, action, body = {}) => sendChange("POST", `/${action}`, body, `/assessments/${assessmentId}/my-group`);

@@ -19,6 +19,7 @@ class ActivityGroupMembershipService
         'submission_style' => ['shared', 'leader_only', 'per_member'],
         'grading_mode'     => ['collective', 'collective_adjust', 'individual'],
         'completion_mode'  => ['any', 'each'],
+        'formation_mode'   => ['manual', 'auto', 'self_signup', 'proposed'],
     ];
 
     private const FLAGS = ['use_average', 'nonleader_can_rename', 'nonleader_can_vote', 'nonleader_can_leave', 'groups_visible'];
@@ -164,6 +165,13 @@ class ActivityGroupMembershipService
             }
         }
 
+        $opens  = $new['signup_opens_at'] ?? $this->normal('signup_opens_at', $config['signup_opens_at']);
+        $closes = $new['signup_closes_at'] ?? $this->normal('signup_closes_at', $config['signup_closes_at']);
+
+        if ((isset($new['signup_opens_at']) || isset($new['signup_closes_at'])) && $opens !== null && $closes !== null && strtotime((string) $closes) <= strtotime((string) $opens)) {
+            throw StructureException::field('signup_closes_at', 'Sign-up must close after it opens.');
+        }
+
         if ($new === []) {
             return;
         }
@@ -172,6 +180,10 @@ class ActivityGroupMembershipService
 
         if ($frozen && isset($new['submission_style'])) {
             throw StructureException::field('submission_style', 'A group has already submitted. Unlock the group first to change how work is submitted.');
+        }
+
+        if ($frozen && isset($new['formation_mode'])) {
+            throw StructureException::field('formation_mode', 'A group has already submitted. Unlock the group first to change how groups are formed.');
         }
 
         if ($frozen && isset($new['ungrouped_policy']) && !$confirmed) {
@@ -272,7 +284,16 @@ class ActivityGroupMembershipService
             return (int) $value;
         }
 
-        return $value === null || $value === '' ? null : (string) $value;
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        // A datetime-local value and the stored value compare equal, so a re-save is no change.
+        if (($key === 'signup_opens_at' || $key === 'signup_closes_at') && ($time = strtotime((string) $value)) !== false) {
+            return date('Y-m-d H:i:s', $time);
+        }
+
+        return (string) $value;
     }
 
     /** @return array<string, mixed> an activity group plus its activity's offering */

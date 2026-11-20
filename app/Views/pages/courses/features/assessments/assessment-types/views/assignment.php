@@ -57,6 +57,10 @@
 
     <?php endif; ?>
 
+    <?php if (!\App\Services\Courses\CourseViewer::seesInstructorView($user)): ?>
+        <?= $this->include('pages/courses/features/assessments/partials/student-group-card') ?>
+    <?php endif; ?>
+
     <?= $this->include('pages/courses/features/assessments/partials/assignment-work') ?>
 
 </div>

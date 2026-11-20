@@ -38,3 +38,10 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - Red phases shown: ActivityGroupService (19 errors), ActivityGroupMembershipService (16 errors + 1 failure), activity routes (12 failures + 2 errors), activity-panel Vitest (module missing). Task 3.1 wrote the service first, then removed it to record the red run.
 - NOT run: Playwright `group-activity.spec.js` (e2e DB :3306 broken); no browser check. Unlock and late-enrollee are covered by PHPUnit/Vitest only (nothing freezes a group in the app until Phase 6).
 - Known limits: drop after a finalized offering leaves group rows (all group writes refused); the dean has no editor route, only the GET JSON endpoint; keep/excuse dialog (4D) deferred to Phase 7; proposals queue (4B) deferred to Phase 5; `activity_group_configs.frozen_at` column unused (freeze lives on student_groups).
+
+### Phase 4 (2026-11-21)
+- `phpunit` full suite: Tests 9746, Assertions 38636, OK. `npx vitest run`: 118 files, 1192 tests passed. eslint clean.
+- Red phases shown: GroupSignupService (22 errors), student routes (6 failures + 2 errors), Task 4.3 (PHP 3 failures + 1 error; Vitest 3 failed). Concurrency: second-process row lock test (join waits, then 'Group is full'); class passed 20/20 repeated runs.
+- A broad `--filter` run during Task 4.3 showed 27 errors that did not reproduce on rerun (1330 tests OK); likely overlapping runs on one test DB. Rule: never run two PHPUnit processes against the scratch DB at once.
+- NOT run: Playwright `group-activity-student.spec.js` and `group-activity.spec.js`; no browser/dark-mode/360 px visual check.
+- Known limits: join/switch need formation_mode=self_signup (now settable in the editor); candidate groups show member names during an open signup window; GroupSignupServiceTest concurrency cleanup truncates test-DB tables (precedent in CsvUploadServiceTest).

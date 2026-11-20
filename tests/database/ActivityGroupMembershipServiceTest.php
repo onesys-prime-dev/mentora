@@ -265,9 +265,38 @@ final class ActivityGroupMembershipServiceTest extends DatabaseTestCase
 
     public function testInvalidEnumRefused(): void
     {
-        foreach ([['grading_mode' => 'nonsense'], ['min_size' => 5, 'max_size' => 2], ['max_size' => 99], ['formation_mode' => 'auto']] as $bad) {
+        foreach ([['grading_mode' => 'nonsense'], ['min_size' => 5, 'max_size' => 2], ['max_size' => 99], ['formation_mode' => 'nonsense'], ['formation_mode' => '']] as $bad) {
             $this->assertNotSame('', $this->refused(fn () => $this->svc->changeSettings($this->config, $bad, false, $this->teacher))->getMessage());
         }
+    }
+
+    public function testFormationModeAndSignupWindowSaveAndAudit(): void
+    {
+        $this->svc->changeSettings($this->config, ['formation_mode' => 'self_signup', 'signup_opens_at' => '2030-01-01T08:00', 'signup_closes_at' => '2030-01-02T08:00'], false, $this->teacher);
+
+        $row = db_connect()->table('activity_group_configs')->where('id', $this->config)->get()->getRowArray();
+        $this->assertSame('self_signup', $row['formation_mode']);
+        $this->assertSame('2030-01-01 08:00:00', $row['signup_opens_at']);
+        $this->assertStringContainsString('self_signup', json_encode($this->audits('groups.settings_changed')[0]));
+
+        // The same window in the stored format is no change.
+        $this->svc->changeSettings($this->config, ['signup_opens_at' => '2030-01-01 08:00:00'], false, $this->teacher);
+        $this->assertCount(1, $this->audits('groups.settings_changed'));
+    }
+
+    public function testSignupWindowMustCloseAfterItOpens(): void
+    {
+        $e = $this->refused(fn () => $this->svc->changeSettings($this->config, ['signup_opens_at' => '2030-01-02T08:00', 'signup_closes_at' => '2030-01-01T08:00'], false, $this->teacher));
+        $this->assertArrayHasKey('signup_closes_at', $e->errors());
+    }
+
+    public function testModeChangeRefusedWhileFrozen(): void
+    {
+        $this->svc->freezeGroup($this->a);
+
+        $e = $this->refused(fn () => $this->svc->changeSettings($this->config, ['formation_mode' => 'self_signup'], true, $this->teacher));
+        $this->assertArrayHasKey('formation_mode', $e->errors());
+        $this->assertStringContainsString('Unlock the group first', $e->getMessage());
     }
 
     public function testFinalizedOfferingRefusesAll(): void

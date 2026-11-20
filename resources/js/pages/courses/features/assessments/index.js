@@ -45,6 +45,7 @@ import {
 } from "./inspector/inspector.js";
 
 import { initializeActivityGroups } from "../../groups/activity-panel.js";
+import { initializeStudentGroupCard } from "../../groups/student-card.js";
 
 import { bindPasswordGate } from "./quiz-taking/password-gate.js";
 
@@ -773,6 +774,11 @@ export async function loadAssessmentView(
 
                 }
             );
+
+        // Students only, assignments only: the card removes itself when this is not a group activity.
+        initializeStudentGroupCard(
+            document.querySelector("[data-student-group]")
+        );
 
         initializeAssignmentSubmission({
 

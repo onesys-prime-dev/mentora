@@ -1,12 +1,12 @@
 # Progress
 
-- Stage: 4 — Implementation, Phase 3 (attach to activity) in progress; Phases 1 (63b150cc) and 2 (c918376b) committed
+- Stage: 4 — Implementation, Phase 4 (student view + self-signup) in progress; Phases 1 (63b150cc), 2 (c918376b), 3 (bcfa5852) committed
 - Phase: n/a
-- Active branch: feat/group-activities-p3-attach (from p2)
+- Active branch: feat/group-activities-p4-signup (from p3)
 - Last verified checkpoint: Stage 2 approved by user ("approved, proceed to Stage 3"); implementation-plan.md + test-strategy.md written
 - Completed: workspace scaffold
 - Pending: interview (one question per message)
-- Exact next action: Phase 3 tasks 3.1 (ActivityGroupService+migrations), 3.2 (freeze/unlock/settings/drop, member ops on activity groups), 3.3 (editor UI). Ruling: keep-or-excuse decision for dropped students in GRADED groups deferred to Phase 7 (no grades exist yet). Commit at end of phase.
+- Exact next action: Phase 4 tasks 4.1 (GroupSignupService) and 4.2 (student routes + Your group card). Commit at phase end; then branch p5-leader.
 ## Phase 1 ledger
 - Task 1.1: DONE, reviewed by controller, GroupSchemaTest 4 tests OK (uncommitted)
 - Task 1.2: DONE; controller reviewed + mutation-checked (2 mutations caught); 22 tests OK. Note: implementer skipped TDD red phase
@@ -24,3 +24,9 @@
 - Task 3.2: DONE_WITH_CONCERNS (red phase shown 16 errors; 378 wide tests OK on my rerun; hooks in EnrolmentService::setStatus + SisImporter; limitation: drop after finalized offering leaves group rows)
 - Task 3.3: DONE_WITH_CONCERNS (red phases shown; Playwright not run). Full phpunit 9688 OK, vitest 1177 OK
 - PHASE 3 COMPLETE and committed on feat/group-activities-p3-attach
+
+## Phase 4 ledger
+- Task 4.1: DONE_WITH_CONCERNS (red phase 22 errors; 346 group tests OK; 20/20 flake runs; concurrency proven via second-process row lock; cleanup truncates test DB like CsvUploadServiceTest)
+- Task 4.2: DONE_WITH_CONCERNS (red phases shown; Playwright not run; gaps found: editor lacks formation-mode/window controls, card missing on module view)
+- Task 4.3: DONE_WITH_CONCERNS (red phases shown). Full phpunit 9746 OK, vitest 1192 OK
+- PHASE 4 COMPLETE and committed on feat/group-activities-p4-signup

@@ -52,6 +52,7 @@ import {
     initializeAssignmentSubmission,
 } from "../../../../shared/assignment/submission.js";
 
+import { initializeStudentGroupCard } from "../../groups/student-card.js";
 import { bindThread } from "../discussions/thread.js";
 import { syncContents } from "../../../../shared/contents-menu.js";
 import {
@@ -269,6 +270,11 @@ export async function loadLearningItem(
         initializeDiscussionItem();
 
         initializeVideoProgress();
+
+        // Students only, assignments only: the card removes itself when this is not a group activity.
+        initializeStudentGroupCard(
+            document.querySelector("[data-student-group]")
+        );
 
         initializeAssignmentSubmission({
 

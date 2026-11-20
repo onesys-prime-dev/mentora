@@ -21,7 +21,7 @@ import { renderDetailSkeleton } from "./skeleton.js";
 */
 
 const FLAGS = ["nonleader_can_rename", "nonleader_can_vote", "nonleader_can_leave", "groups_visible"];
-const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "min_size", "max_size", ...FLAGS];
+const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "formation_mode", "signup_opens_at", "signup_closes_at", "min_size", "max_size", ...FLAGS];
 const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog"];
 const REASON = "Give a reason. It is kept with the change.";
 
@@ -125,12 +125,10 @@ function render(panel) {
     for (const name of FIELDS) {
         const el = form.elements[name];
 
-        if (el.type === "checkbox") {
-            el.checked = Number(config[name]) === 1;
-        } else {
-            el.value = String(config[name] ?? "");
-        }
+        setValue(el, config[name]);
     }
+
+    showWindow(panel);
 
     // Re-copy and Copy replace the groups, which a submitted (frozen) group forbids.
     const open = write && !flags.frozenGroups;
@@ -184,14 +182,28 @@ const stored = (name, value) => (FLAGS.includes(name) ? (value ? 1 : 0) : value)
 
 function putBack(panel, name) {
 
-    const el = panel.part("[data-ga-settings]").elements[name];
-    const value = panel.detail.config[name];
+    setValue(panel.part("[data-ga-settings]").elements[name], panel.detail.config[name]);
+    showWindow(panel);
+
+}
+
+/** The server stores "2030-01-01 08:00:00"; a datetime-local input wants "2030-01-01T08:00". */
+function setValue(el, value) {
 
     if (el.type === "checkbox") {
         el.checked = Number(value) === 1;
+    } else if (el.type === "datetime-local") {
+        el.value = String(value ?? "").replace(" ", "T").slice(0, 16);
     } else {
         el.value = String(value ?? "");
     }
+
+}
+
+// Only the modes where students act on their own need a window.
+function showWindow(panel) {
+
+    panel.part("[data-ga-signup-window]").hidden = !["self_signup", "proposed"].includes(panel.detail.config.formation_mode);
 
 }
 

@@ -196,6 +196,28 @@ final class ActivityGroupsRoutesTest extends RouteTestCase
         $this->assertSame('solo', db_connect()->table('activity_group_configs')->where('assessment_id', $this->assignment)->get()->getRow()->ungrouped_policy);
     }
 
+    public function testFormationModeAndSignupWindowAreSavedAuditedAndValidated(): void
+    {
+        $detail = $this->attach();
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'PUT', '/settings', ['changes' => ['formation_mode' => 'self_signup', 'signup_opens_at' => '2030-01-01T08:00', 'signup_closes_at' => '2030-01-02T08:00']]);
+        $this->assertSame(200, $status, (string) json_encode($json));
+        $row = db_connect()->table('activity_group_configs')->where('assessment_id', $this->assignment)->get()->getRow();
+        $this->assertSame('self_signup', $row->formation_mode);
+        $this->assertSame('2030-01-02 08:00:00', $row->signup_closes_at);
+        $audit = db_connect()->table('audit_logs')->where('action', 'groups.settings_changed')->get()->getResultArray();
+        $this->assertStringContainsString('self_signup', json_encode($audit));
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'PUT', '/settings', ['changes' => ['signup_closes_at' => '2029-12-31T08:00']]);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('signup_closes_at', $json['errors']);
+
+        $this->freeze((int) $detail['groups'][0]['id']);
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'PUT', '/settings', ['changes' => ['formation_mode' => 'manual']]);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('formation_mode', $json['errors']);
+    }
+
     public function testRecopyCopyFromAndDetach(): void
     {
         $this->attach();

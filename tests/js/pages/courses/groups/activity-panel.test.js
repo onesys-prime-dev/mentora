@@ -29,6 +29,11 @@ function sectionHtml() {
                 ${field("ungrouped_policy", select("ungrouped_policy", ["block", "solo"]))}
                 ${field("submission_style", select("submission_style", ["shared", "leader_only", "per_member"]))}
                 ${field("grading_mode", select("grading_mode", ["collective", "collective_adjust", "individual"]))}
+                ${field("formation_mode", select("formation_mode", ["manual", "auto", "self_signup", "proposed"]))}
+                <div data-ga-signup-window hidden>
+                    ${field("signup_opens_at", "<input name=\"signup_opens_at\" type=\"datetime-local\">")}
+                    ${field("signup_closes_at", "<input name=\"signup_closes_at\" type=\"datetime-local\">")}
+                </div>
                 ${field("min_size", "<input name=\"min_size\" type=\"number\">")}
                 ${field("max_size", "<input name=\"max_size\" type=\"number\">")}
                 ${["nonleader_can_rename", "nonleader_can_vote", "nonleader_can_leave", "groups_visible"].map((n) => field(n, `<input type="checkbox" name="${n}">`)).join("")}
@@ -53,7 +58,7 @@ function sectionHtml() {
 
 const config = (over = {}) => ({
     id: 3, source_set_id: 5, source_set_name: "Project teams", ungrouped_policy: "block", submission_style: "shared", grading_mode: "collective",
-    min_size: 1, max_size: 3, nonleader_can_rename: 0, nonleader_can_vote: 0, nonleader_can_leave: 1, groups_visible: 0, ...over,
+    formation_mode: "manual", signup_opens_at: null, signup_closes_at: null, min_size: 1, max_size: 3, nonleader_can_rename: 0, nonleader_can_vote: 0, nonleader_can_leave: 1, groups_visible: 0, ...over,
 });
 
 const detail = ({ attached = true, frozen = false, canWrite = true } = {}) => ({
@@ -266,6 +271,63 @@ describe("changing a setting", () => {
         const error = form.querySelector("[data-field=\"submission_style\"] [data-field-error]");
         expect(error.hidden).toBe(false);
         expect(error.textContent).toBe("Unlock the group first.");
+    });
+
+});
+
+describe("how groups are formed", () => {
+
+    it("shows the sign-up window only for self sign-up or proposed groups, and saves the mode", async () => {
+        const fetch = server({
+            "GET /": () => json(detail()),
+            "PUT /settings": () => json({ success: true }),
+        });
+
+        await initializeActivityGroups(root());
+        const form = root().querySelector("[data-ga-settings]");
+        const window_ = form.querySelector("[data-ga-signup-window]");
+        expect(window_.hidden).toBe(true);
+
+        form.elements.formation_mode.value = "self_signup";
+        form.elements.formation_mode.dispatchEvent(new Event("change", { bubbles: true }));
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "PUT", "/settings")[0][1].body)).toEqual({ changes: { formation_mode: "self_signup" }, confirmed: false });
+        expect(window_.hidden).toBe(false);
+    });
+
+    it("fills the window from the stored time and sends the picked time", async () => {
+        const fetch = server({
+            "GET /": () => json({ ...detail(), config: config({ formation_mode: "self_signup", signup_opens_at: "2030-01-01 08:00:00" }) }),
+            "PUT /settings": () => json({ success: true }),
+        });
+
+        await initializeActivityGroups(root());
+        const form = root().querySelector("[data-ga-settings]");
+        expect(form.elements.signup_opens_at.value).toBe("2030-01-01T08:00");
+        expect(form.querySelector("[data-ga-signup-window]").hidden).toBe(false);
+
+        form.elements.signup_closes_at.value = "2030-01-02T08:00";
+        form.elements.signup_closes_at.dispatchEvent(new Event("change", { bubbles: true }));
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "PUT", "/settings")[0][1].body).changes).toEqual({ signup_closes_at: "2030-01-02T08:00" });
+    });
+
+    it("shows the server's reason under the window and puts the field back when refused", async () => {
+        server({
+            "GET /": () => json({ ...detail(), config: config({ formation_mode: "self_signup" }) }),
+            "PUT /settings": () => json({ success: false, message: "x", errors: { signup_closes_at: "Sign-up must close after it opens." } }, 422),
+        });
+
+        await initializeActivityGroups(root());
+        const form = root().querySelector("[data-ga-settings]");
+        form.elements.signup_closes_at.value = "2020-01-01T08:00";
+        form.elements.signup_closes_at.dispatchEvent(new Event("change", { bubbles: true }));
+        await flush();
+
+        expect(form.elements.signup_closes_at.value).toBe("");
+        expect(form.querySelector("[data-field=\"signup_closes_at\"] [data-field-error]").textContent).toBe("Sign-up must close after it opens.");
     });
 
 });

@@ -106,10 +106,16 @@ $confirm = static fn (string $id, string $title, string $text, string $button, s
                     <?= $field(['name' => 'ungrouped_policy', 'label' => 'Students without a group', 'type' => 'select', 'options' => ['block' => 'Must join a group', 'solo' => 'May work alone'], 'help' => 'Changing this after a group has submitted asks you to confirm.']) ?>
                     <?= $field(['name' => 'submission_style', 'label' => 'Submission style', 'type' => 'select', 'options' => ['shared' => 'Shared: any member submits', 'leader_only' => 'Leader only', 'per_member' => 'Per member'], 'help' => 'Locks after the first submission.']) ?>
                     <?= $field(['name' => 'grading_mode', 'label' => 'Grading', 'type' => 'select', 'options' => ['collective' => 'One score for the group', 'collective_adjust' => 'Group score with a per-student adjustment', 'individual' => 'Each student scored on their own']]) ?>
+                    <?= $field(['name' => 'formation_mode', 'label' => 'How are groups formed?', 'type' => 'select', 'options' => ['manual' => 'Instructor places students', 'auto' => 'Auto-generated', 'self_signup' => 'Students sign up', 'proposed' => 'Students propose groups'], 'help' => 'Locks after the first submission.']) ?>
                     <div class="grid grid-cols-2 gap-3">
                         <?= $field(['name' => 'min_size', 'label' => 'Smallest group', 'type' => 'number', 'attrs' => 'min="1" max="30"']) ?>
                         <?= $field(['name' => 'max_size', 'label' => 'Largest group', 'type' => 'number', 'attrs' => 'min="1" max="30"']) ?>
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2" data-ga-signup-window hidden>
+                    <?= $field(['name' => 'signup_opens_at', 'label' => 'Signup opens', 'type' => 'datetime-local']) ?>
+                    <?= $field(['name' => 'signup_closes_at', 'label' => 'Signup closes', 'type' => 'datetime-local']) ?>
                 </div>
 
                 <div class="flex flex-col gap-3">
