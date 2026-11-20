@@ -16,6 +16,12 @@ use Throwable;
  */
 class NotificationService
 {
+    /** A stored link as an address: triggers store both "dean/signoff" and a full site_url(), and site_url() on a full address would 404. */
+    public static function href(string $link): string
+    {
+        return preg_match('#^https?://#i', $link) === 1 ? $link : site_url($link);
+    }
+
     /**
      * @return bool true when it was new (and so stored), false when this person already had it
      */
@@ -187,7 +193,7 @@ class NotificationService
             $email->setFrom($config->fromEmail, $config->fromName);
             $email->setTo($to);
             $email->setSubject('Mentora: ' . $title);
-            $email->setMessage($body . ($link !== null ? "\n\n" . site_url($link) : '') . "\n");
+            $email->setMessage($body . ($link !== null ? "\n\n" . self::href($link) : '') . "\n");
 
             return $email->send() === true;
         } catch (Throwable $e) {

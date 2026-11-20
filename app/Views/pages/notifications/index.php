@@ -67,7 +67,7 @@ $height = $noteIsAdmin
                         <?php
                         $isUnread = $row['read_at'] === null;
                         $urgent   = (int) $row['urgent'] === 1;
-                        $href     = $row['link'] !== null ? site_url((string) $row['link']) : null;
+                        $href     = $row['link'] !== null ? \App\Services\Notifications\NotificationService::href((string) $row['link']) : null;
                         $tag      = $href !== null ? 'a' : 'div';
                         ?>
                         <li data-id="<?= (int) $row['id'] ?>" data-notification="<?= $isUnread ? 'unread' : 'read' ?>" data-type="<?= esc((string) $row['type'], 'attr') ?>" class="border-t border-[#eef2f7]">
