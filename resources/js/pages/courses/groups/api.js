@@ -43,6 +43,9 @@ export async function sendChange(method, path, body = {}, root = "/group-sets") 
 /** An assignment's groups: { config|null, groups, ungrouped, sets, activities, flags, lockReason }. */
 export const fetchActivityGroups = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/groups`, "the activity's groups");
 
+/** Student proposals waiting for approval and what is left after the window: { proposals, minSize, summary }. */
+export const fetchActivityProposals = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/groups/proposals`, "the proposed groups");
+
 /** A change to an assignment's groups; answers as sendChange. */
 export const sendActivityChange = (assessmentId, method, path, body = {}) => sendChange(method, path, body, `/assessments/${assessmentId}/groups`);
 

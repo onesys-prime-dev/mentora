@@ -130,6 +130,12 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->post('(:num)/assessments/(:num)/my-group/join', 'Courses\Groups\StudentGroupController::join/$1/$2');
         $routes->post('(:num)/assessments/(:num)/my-group/leave', 'Courses\Groups\StudentGroupController::leave/$1/$2');
         $routes->post('(:num)/assessments/(:num)/my-group/switch', 'Courses\Groups\StudentGroupController::switch/$1/$2');
+        // Leader vote, rename, proposals and invitations (screens 3A, 3B, 3E).
+        $routes->post('(:num)/assessments/(:num)/my-group/vote', 'Courses\Groups\StudentGroupController::vote/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/rename', 'Courses\Groups\StudentGroupController::rename/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/propose', 'Courses\Groups\StudentGroupController::propose/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/my-group/invitations/(:num)/accept', 'Courses\Groups\StudentGroupController::accept/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/my-group/invitations/(:num)/decline', 'Courses\Groups\StudentGroupController::decline/$1/$2/$3');
 
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
@@ -206,6 +212,10 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->delete('(:num)/assessments/(:num)/groups/members/(:num)', 'Courses\Groups\ActivityGroupsController::removeMember/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/unlock', 'Courses\Groups\ActivityGroupsController::unlock/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/late-members', 'Courses\Groups\ActivityGroupsController::addLateMember/$1/$2/$3');
+        $routes->get('(:num)/assessments/(:num)/groups/proposals', 'Courses\Groups\ActivityGroupsController::proposals/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/approve', 'Courses\Groups\ActivityGroupsController::approve/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -457,6 +467,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
         $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
         $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/groups/proposals', 'Courses\Groups\ActivityGroupsController::proposals/$1/$2');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -680,6 +691,10 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->delete('(:num)/assessments/(:num)/groups/members/(:num)', 'Courses\Groups\ActivityGroupsController::removeMember/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/unlock', 'Courses\Groups\ActivityGroupsController::unlock/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/late-members', 'Courses\Groups\ActivityGroupsController::addLateMember/$1/$2/$3');
+        $routes->get('(:num)/assessments/(:num)/groups/proposals', 'Courses\Groups\ActivityGroupsController::proposals/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/approve', 'Courses\Groups\ActivityGroupsController::approve/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

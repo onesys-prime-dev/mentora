@@ -1,12 +1,12 @@
 # Progress
 
-- Stage: 4 — Implementation, Phase 4 (student view + self-signup) in progress; Phases 1 (63b150cc), 2 (c918376b), 3 (bcfa5852) committed
+- Stage: 4 — Implementation, Phase 5 (proposals + leader) in progress; Phases 1-4 committed (63b150cc, c918376b, bcfa5852, e556d79c)
 - Phase: n/a
-- Active branch: feat/group-activities-p4-signup (from p3)
+- Active branch: feat/group-activities-p5-leader (from p4)
 - Last verified checkpoint: Stage 2 approved by user ("approved, proceed to Stage 3"); implementation-plan.md + test-strategy.md written
 - Completed: workspace scaffold
 - Pending: interview (one question per message)
-- Exact next action: Phase 4 tasks 4.1 (GroupSignupService) and 4.2 (student routes + Your group card). Commit at phase end; then branch p5-leader.
+- Exact next action: Phase 5: 5.1 GroupProposalService (invitations table ruling), 5.2 GroupLeaderService, 5.3 UI (instructor proposals queue + summary, student invite/leader/rename). Run ONE phpunit process at a time. Commit at phase end; then branch p6-submissions.
 ## Phase 1 ledger
 - Task 1.1: DONE, reviewed by controller, GroupSchemaTest 4 tests OK (uncommitted)
 - Task 1.2: DONE; controller reviewed + mutation-checked (2 mutations caught); 22 tests OK. Note: implementer skipped TDD red phase
@@ -30,3 +30,9 @@
 - Task 4.2: DONE_WITH_CONCERNS (red phases shown; Playwright not run; gaps found: editor lacks formation-mode/window controls, card missing on module view)
 - Task 4.3: DONE_WITH_CONCERNS (red phases shown). Full phpunit 9746 OK, vitest 1192 OK
 - PHASE 4 COMPLETE and committed on feat/group-activities-p4-signup
+
+## Phase 5 ledger
+- Task 5.1: DONE_WITH_CONCERNS (red 15 errors; 398 group tests OK; invitations table + GroupProposalService; GroupSchemaTest rollback test updated)
+- Task 5.2: DONE (red 20 errors; 418 group tests OK). Known gaps: destination group not recounted after a move; instructor-set leader with no votes is kept
+- Task 5.3: DONE_WITH_CONCERNS (red phases shown; Playwright not run). Full phpunit 9843 OK, vitest 1205 OK
+- PHASE 5 COMPLETE and committed on feat/group-activities-p5-leader

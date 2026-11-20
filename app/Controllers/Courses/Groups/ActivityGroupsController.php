@@ -9,6 +9,8 @@ use App\Models\Assessments\AssessmentModel;
 use App\Models\Groups\StudentGroupModel;
 use App\Services\Groups\ActivityGroupMembershipService;
 use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupLeaderService;
+use App\Services\Groups\GroupProposalService;
 use App\Services\Institutions\StructureException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -43,13 +45,17 @@ class ActivityGroupsController extends BaseController
                 $byGroup[(int) $m['group_id']][] = ['student_user_id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
             }
 
+            // Proposed groups wait in the proposals queue (GET groups/proposals); declined ones are history.
             $groups = array_map(static fn (array $g) => [
                 'id'      => (int) $g['id'],
                 'name'    => $g['name'],
+                'status'  => $g['status'],
                 'frozen'  => $g['frozen_at'] !== null,
+                'leader'  => ['id' => $g['leader_user_id'] === null ? null : (int) $g['leader_user_id'], 'final' => $g['leader_finalized_at'] !== null],
                 'members' => $byGroup[(int) $g['id']] ?? [],
-            ], (new StudentGroupModel())->where('config_id', $configId)->orderBy('id', 'ASC')->findAll());
+            ], (new StudentGroupModel())->where('config_id', $configId)->where('status', 'active')->orderBy('id', 'ASC')->findAll());
 
+            // Members of a pending proposal are not free either.
             $free = array_values(array_diff($service->pool($configId), array_map('intval', array_column($members, 'student_user_id'))));
 
             $config['source_set_name'] = $config['source_set_id'] === null ? null
@@ -147,6 +153,51 @@ class ActivityGroupsController extends BaseController
         $this->group($offeringId, $assessmentId, $groupId);
 
         return $this->run(fn () => (new ActivityGroupService())->renameGroup($groupId, (string) ($this->body()['name'] ?? ''), $this->actor()));
+    }
+
+    /** Screen 4B: pending proposals, and what is left to sort out (groups below the minimum, students in no group). */
+    public function proposals(int $offeringId, int $assessmentId): ResponseInterface
+    {
+        $configId = $this->configId($offeringId, $assessmentId);
+        $service  = new GroupProposalService();
+        $summary  = $service->windowSummary($configId);
+        $config   = (new ActivityGroupService())->findByAssessment($assessmentId);
+        $below    = $summary['belowMinimum'] === [] ? [] : db_connect()->table('student_groups')->select('id, name')->whereIn('id', $summary['belowMinimum'])->orderBy('id')->get()->getResultArray();
+        $free     =$summary['ungrouped'] === [] ? [] : db_connect()->table('users u')->select('u.id, ' . self::NAME . ' AS name', false)
+            ->join('user_profiles p', 'p.user_id = u.id', 'left')->whereIn('u.id', $summary['ungrouped'])->orderBy('name')->get()->getResultArray();
+
+        return $this->response->setJSON([
+            'success'   => true,
+            'proposals' => $service->proposalsForConfig($configId),
+            'minSize'   => (int) $config['min_size'],
+            'maxSize'   => (int) $config['max_size'],
+            'closesAt'  => $config['signup_closes_at'],
+            'summary'   => [
+                'belowMinimum' => array_map(static fn (array $g) => ['id' => (int) $g['id'], 'name' => (string) $g['name']], $below),
+                'ungrouped'    => array_map(static fn (array $s) => ['id' => (int) $s['id'], 'name' => (string) $s['name']], $free),
+            ],
+        ]);
+    }
+
+    public function approve(int $offeringId, int $assessmentId, int $groupId): ResponseInterface
+    {
+        $this->group($offeringId, $assessmentId, $groupId);
+
+        return $this->run(fn () => (new GroupProposalService())->approve($groupId, $this->actor()));
+    }
+
+    public function decline(int $offeringId, int $assessmentId, int $groupId): ResponseInterface
+    {
+        $this->group($offeringId, $assessmentId, $groupId);
+
+        return $this->run(fn () => (new GroupProposalService())->decline($groupId, $this->actor(), (string) ($this->body()['reason'] ?? '')));
+    }
+
+    public function setLeader(int $offeringId, int $assessmentId, int $groupId): ResponseInterface
+    {
+        $this->group($offeringId, $assessmentId, $groupId);
+
+        return $this->run(fn () => (new GroupLeaderService())->setLeader($groupId, (int) ($this->body()['student_user_id'] ?? 0), $this->actor()));
     }
 
     public function deleteGroup(int $offeringId, int $assessmentId, int $groupId): ResponseInterface

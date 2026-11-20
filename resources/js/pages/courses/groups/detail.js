@@ -78,8 +78,8 @@ function memberChip(student, canEdit, ungrouped) {
 }
 
 /**
- * decorate(group) lets a screen add to a card: { badge, actions } (html) and locked (members cannot be moved
- * and the card's own actions replace Rename/Delete). The activity groups use it for frozen groups.
+ * decorate(group) lets a screen add to a card: { badge, actions } (html, actions sit beside Rename) and locked
+ * (members cannot be moved and Delete is gone). The activity groups use it for frozen groups and the leader.
  */
 function groupCard(group, set, canEdit, decorate) {
 
@@ -99,7 +99,8 @@ function groupCard(group, set, canEdit, decorate) {
                     ${extra.badge ?? ""}
                     ${canEdit ? `
                         <button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="rename-group" data-group="${group.id}" aria-label="Rename ${name}">Rename</button>
-                        ${extra.locked ? (extra.actions ?? "") : `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="delete-group" data-group="${group.id}" aria-label="Delete ${name}">Delete</button>`}` : ""}
+                        ${extra.actions ?? ""}
+                        ${extra.locked ? "" : `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="delete-group" data-group="${group.id}" aria-label="Delete ${name}">Delete</button>`}` : ""}
                 </div>
             </div>
             ${members}

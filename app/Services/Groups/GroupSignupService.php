@@ -63,6 +63,7 @@ class GroupSignupService
             db_connect()->table('student_group_members')->where('config_id', $config['id'])->where('student_user_id', $studentId)->delete();
         }, 'You could not leave the group. Try again.');
 
+        (new GroupLeaderService())->membershipChanged($groupId);
         GroupSetService::audit('groups.member_left', $studentId, $groupId, 'student_group', ['old' => ['group_id' => $groupId, 'student_user_id' => $studentId, 'config_id' => (int) $config['id']]]);
     }
 
@@ -101,6 +102,7 @@ class GroupSignupService
             $this->insert($toGroupId, $configId, $studentId);
         }, 'You could not switch groups. You stay in your group.');
 
+        (new GroupLeaderService())->membershipChanged($from);
         GroupSetService::audit('groups.member_switched', $studentId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => $configId]]);
     }
 

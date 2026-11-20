@@ -143,6 +143,18 @@ final class GroupSignupServiceTest extends DatabaseTestCase
         $this->assertSame($this->a, $this->groupOf($this->s[0]));
     }
 
+    public function testProposedAndDeclinedGroupsAreNotJoinable(): void
+    {
+        foreach (['proposed', 'declined'] as $status) {
+            db_connect()->table('student_groups')->insert(['set_id' => null, 'config_id' => $this->config, 'name' => 'X' . $status, 'status' => $status]);
+            $id = (int) db_connect()->insertID();
+            $this->refused(fn () => $this->svc->join($this->config, $id, $this->s[0]));
+            $this->refused(fn () => $this->svc->switchTo($this->config, $id, $this->s[0]));
+        }
+
+        $this->assertNull($this->groupOf($this->s[0]));
+    }
+
     public function testJoinOnlyInSelfSignupMode(): void
     {
         foreach (['manual', 'auto', 'proposed'] as $mode) {

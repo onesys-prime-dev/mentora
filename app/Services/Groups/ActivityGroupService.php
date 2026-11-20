@@ -138,13 +138,11 @@ class ActivityGroupService
         return $id;
     }
 
+    /** Staff rename: the same locked, audited rename students use (GroupLeaderService), without the student rules. */
     public function renameGroup(int $groupId, string $name, int $userId): void
     {
-        $group = $this->group($groupId);
-        $name  = GroupSetService::groupName($name);
-
-        (new StudentGroupModel())->update($groupId, ['name' => $name]);
-        GroupSetService::audit('groups.group_renamed', $userId, $groupId, 'student_group', ['old' => ['name' => $group['name']], 'new' => ['name' => $name]]);
+        $this->group($groupId);
+        (new GroupLeaderService())->rename($groupId, $name, $userId, true);
     }
 
     /** A group that has submitted keeps its work, so it cannot be deleted. */

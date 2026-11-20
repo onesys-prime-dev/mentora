@@ -350,6 +350,113 @@ final class ActivityGroupsRoutesTest extends RouteTestCase
         $this->assertStringNotContainsString('data-group-activity', $html($quiz));
     }
 
+    /** Proposal mode with two student proposals: one at the minimum, one below it with a pending invitee. */
+    private function proposals(): array
+    {
+        $this->attach();
+        $config = (int) (new ActivityGroupService())->findByAssessment($this->assignment)['id'];
+        $third  = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $third);
+        db_connect()->table('student_group_members')->where('config_id', $config)->delete();
+        db_connect()->table('student_groups')->where('config_id', $config)->delete();
+        db_connect()->table('activity_group_configs')->where('id', $config)->update(['formation_mode' => 'proposed', 'min_size' => 2, 'max_size' => 3]);
+
+        $service = new \App\Services\Groups\GroupProposalService();
+        $full    = $service->propose($config, (int) $this->student->id, [(int) $this->second->id], 'Ready');
+        $service->respondToInvitation($full, (int) $this->second->id, true);
+        $short = $service->propose($config, (int) $third->id, [], 'Short');
+
+        return [$full, $short, $config];
+    }
+
+    public function testTheProposalQueueListsProposalsAndTheWindowSummary(): void
+    {
+        [$full, $short] = $this->proposals();
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'GET', '/proposals');
+        $this->assertSame(200, $status, (string) json_encode($json));
+        $this->assertSame([$full, $short], array_column($json['proposals'], 'id'));
+        $this->assertTrue($json['proposals'][0]['meetsMinimum']);
+        $this->assertFalse($json['proposals'][1]['meetsMinimum']);
+        $this->assertCount(2, $json['proposals'][0]['member_names']);
+        $this->assertSame(2, $json['minSize']);
+        $this->assertSame([['id' => $short, 'name' => 'Short']], $json['summary']['belowMinimum']);
+        $this->assertSame([], $json['summary']['ungrouped']);
+
+        // The dean and the chairperson read it too.
+        $this->assertSame(200, $this->api($this->dean(), 'dean', 'GET', '/proposals')[0]);
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'GET', '/proposals')[0]);
+    }
+
+    public function testApproveAndDeclineAProposal(): void
+    {
+        [$full, $short] = $this->proposals();
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/groups/{$short}/approve");
+        $this->assertSame(422, $status);
+        $this->assertSame('Needs at least 2 members', $json['message']);
+
+        $this->assertSame(200, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$full}/approve")[0]);
+        $this->assertSame('active', db_connect()->table('student_groups')->where('id', $full)->get()->getRow()->status);
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/groups/{$short}/decline", ['reason' => ' ']);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('reason', $json['errors']);
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'POST', "/groups/{$short}/decline", ['reason' => 'Join a team instead'])[0]);
+        $this->assertSame('declined', db_connect()->table('student_groups')->where('id', $short)->get()->getRow()->status);
+        $this->assertSame(422, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$short}/approve")[0], 'no longer pending');
+    }
+
+    public function testSetLeaderAndTheDetailCarriesLeaderInfo(): void
+    {
+        $detail = $this->attach();
+        $g1     = (int) $detail['groups'][0]['id'];
+
+        $this->assertSame(['id' => null, 'final' => false], $detail['groups'][0]['leader']);
+        $this->assertSame('active', $detail['groups'][0]['status']);
+
+        $this->assertSame(422, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/leader", ['student_user_id' => (int) $this->second->id])[0], 'not a member');
+        $this->assertSame(200, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/leader", ['student_user_id' => (int) $this->student->id])[0]);
+        $this->assertSame(['id' => (int) $this->student->id, 'final' => true], $this->api($this->teacher, 'instructor', 'GET')[1]['groups'][0]['leader']);
+
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'POST', "/groups/{$g1}/leader", ['student_user_id' => (int) $this->student->id])[0]);
+
+        // The instructor renames through the shared rule: allowed even after the leader is final and the group froze.
+        $this->freeze($g1);
+        $this->assertSame(200, $this->api($this->teacher, 'instructor', 'PUT', "/groups/{$g1}", ['name' => 'Renamed'])[0]);
+        $this->assertSame('Renamed', db_connect()->table('student_groups')->where('id', $g1)->get()->getRow()->name);
+    }
+
+    public function testProposalAndLeaderWritesAreRefusedToOthersForeignIdsAndAFinalizedOffering(): void
+    {
+        [$full, $short] = $this->proposals();
+        $dean           = $this->dean();
+
+        foreach (["/groups/{$full}/approve", "/groups/{$full}/decline", "/groups/{$full}/leader"] as $path) {
+            $this->assertContains($this->api($dean, 'dean', 'POST', $path, ['reason' => 'x', 'student_user_id' => (int) $this->student->id])[0], [403, 404, 405], "dean {$path}");
+            $this->assertContains($this->api($this->student, 'instructor', 'POST', $path, ['reason' => 'x'])[0], [302, 403, 404], "student {$path}");
+            $this->assertSame(404, $this->api($this->stranger, 'instructor', 'POST', $path, ['reason' => 'x'])[0], "stranger {$path}");
+        }
+
+        $this->assertContains($this->api($this->student, 'student', 'GET', '/proposals')[0], [403, 404, 405]);
+
+        $theirs = CourseFactory::assessment($this->other, $this->stranger, CourseFactory::module($this->other), null, 'Assignment');
+        $config = (new ActivityGroupService())->attachAssessment($theirs, null, [], (int) $this->stranger->id);
+        $group  = (new ActivityGroupService())->addGroup($config, 'Theirs', (int) $this->stranger->id);
+        $this->assertSame(404, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$group}/approve")[0]);
+        $this->assertSame(404, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$group}/leader", ['student_user_id' => 1])[0]);
+        $this->assertSame(404, $this->api($this->teacher, 'instructor', 'GET', '/proposals', [], $theirs)[0]);
+
+        db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $this->offering, 'finalized_by' => $this->teacher->id, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
+
+        foreach ([["/groups/{$full}/approve", []], ["/groups/{$short}/decline", ['reason' => 'x']], ["/groups/{$full}/leader", ['student_user_id' => (int) $this->student->id]]] as [$path, $body]) {
+            $this->assertContains($this->api($this->teacher, 'instructor', 'POST', $path, $body)[0], [403, 409, 422, 423], $path);
+        }
+
+        $this->assertSame(2, db_connect()->table('student_groups')->whereIn('id', [$full, $short])->where('status', 'proposed')->countAllResults());
+        $this->assertNull(db_connect()->table('student_groups')->where('id', $full)->get()->getRow()->leader_user_id);
+    }
+
     public function testTheFilterAsksTheContentPermissionForActivityGroupWrites(): void
     {
         $this->assertSame('courses.manage', CoursePermissionFilter::required("assessments/{$this->assignment}/groups/attach"));

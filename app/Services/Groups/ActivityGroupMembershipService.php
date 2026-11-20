@@ -78,6 +78,7 @@ class ActivityGroupMembershipService
             $this->insert($toGroupId, (int) $to['config_id'], $studentId);
         }, 'The student could not be moved. They stay in their group.');
 
+        (new GroupLeaderService())->membershipChanged($from);
         GroupSetService::audit('groups.member_moved', $actorId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => (int) $to['config_id']]]);
     }
 
@@ -96,6 +97,7 @@ class ActivityGroupMembershipService
             db_connect()->table('student_group_members')->where('config_id', $configId)->where('student_user_id', $studentId)->delete();
         }, 'The student could not be removed. Try again.');
 
+        (new GroupLeaderService())->membershipChanged($from);
         GroupSetService::audit('groups.member_removed', $actorId, $from, 'student_group', ['old' => ['group_id' => $from, 'student_user_id' => $studentId, 'config_id' => $configId]]);
     }
 
@@ -211,6 +213,10 @@ class ActivityGroupMembershipService
                 'old' => ['group_id' => (int) $row['group_id'], 'student_user_id' => $studentId, 'set_id' => $row['set_id'], 'config_id' => $row['config_id']],
                 'new' => ['reason' => 'dropped'],
             ]);
+
+            if ($row['config_id'] !== null) {
+                (new GroupLeaderService())->membershipChanged((int) $row['group_id']);
+            }
         }
     }
 

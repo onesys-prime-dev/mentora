@@ -101,11 +101,13 @@ final class GroupSchemaTest extends DatabaseTestCase
 
     public function testMigrationRollsBack(): void
     {
-        $tables = ['group_sets', 'student_groups', 'student_group_members'];
+        $tables = ['group_sets', 'student_groups', 'student_group_members', 'student_group_invitations', 'student_group_leader_votes'];
         $files  = [
             '2026-12-01-000001_CreateGroupSets'          => 'CreateGroupSets',
             '2026-12-01-000002_CreateStudentGroups'      => 'CreateStudentGroups',
             '2026-12-01-000003_CreateStudentGroupMembers' => 'CreateStudentGroupMembers',
+            '2026-12-01-000006_CreateStudentGroupInvitations' => 'CreateStudentGroupInvitations',
+            '2026-12-01-000007_CreateStudentGroupLeaderVotes' => 'CreateStudentGroupLeaderVotes',
         ];
 
         $migrations = [];

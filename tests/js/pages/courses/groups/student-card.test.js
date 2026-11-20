@@ -22,6 +22,23 @@ const pageHtml = () => `
                 <button type="submit">Leave group</button>
             </form>
         </div>
+        <div id="sg-rename-dialog" data-dialog hidden class="hidden">
+            <h2 data-dialog-title></h2>
+            <form method="post" action="#">
+                <div data-field="name"><input name="name"><p data-field-error hidden></p></div><p data-form-error hidden></p>
+                <button type="button" data-dialog-close>Cancel</button><button type="submit">Save</button>
+            </form>
+        </div>
+        <div id="sg-propose-dialog" data-dialog hidden class="hidden">
+            <h2 data-dialog-title></h2>
+            <form method="post" action="#">
+                <div data-field="name"><input name="name"><p data-field-error hidden></p></div>
+                <p data-sg-size-hint></p>
+                <fieldset data-field="invitee_ids"><div data-sg-invitees></div><p data-field-error hidden></p></fieldset>
+                <p data-form-error hidden></p>
+                <button type="button" data-dialog-close>Cancel</button><button type="submit">Send invitations</button>
+            </form>
+        </div>
     </div>`;
 
 const base = { success: true, isGroupActivity: true, inPool: true, ungroupedPolicy: "block", submissionStyle: "shared", offeringFinalized: false };
@@ -272,6 +289,169 @@ describe("changing groups", () => {
 
         expect(card().querySelector("#sg-leave-confirm [data-form-error]").textContent).toBe("Your group has submitted; ask your instructor");
         expect(card().querySelector("#sg-leave-confirm").hidden).toBe(false);
+    });
+
+});
+
+const noLeader = { id: null, final: false, votes: [], needed: 2, myVote: null };
+const leaderGroup = (leader = {}, group = {}) => inGroup({ candidates: [] }, { status: "active", canRename: true, canVote: true, leader: { ...noLeader, ...leader }, ...group });
+
+describe("leader and name", () => {
+
+    it("shows the leading nominee with the tally, and Agree sends that candidate", async () => {
+        const fetch = server({
+            "GET /": () => json(leaderGroup({ votes: [{ candidateId: 5, count: 1 }] })),
+            "POST /vote": () => json({ success: true }),
+        });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        expect(card().querySelector("[data-sg-leader]").textContent).toContain("Nominated: Ana Cruz · 1 of 2 agreed");
+        click("[data-sg-action=agree]");
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/vote")[0][1].body)).toEqual({ candidate_id: 5 });
+        expect(card().querySelector("[data-sg-live]").textContent).toBe("You agreed to Ana Cruz as leader.");
+    });
+
+    it("Nominate sends the member chosen in the select", async () => {
+        const fetch = server({ "GET /": () => json(leaderGroup()), "POST /vote": () => json({ success: true }) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        card().querySelector("[data-sg-nominee]").value = "6";
+        click("[data-sg-action=nominate]");
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/vote")[0][1].body)).toEqual({ candidate_id: 6 });
+    });
+
+    it("a final leader shows as 'Leader: name' and, without canVote, no vote controls", async () => {
+        server({ "GET /": () => json(leaderGroup({ id: 5, final: true, votes: [{ candidateId: 5, count: 2 }] }, { canVote: false, canRename: false })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        expect(card().querySelector("[data-sg-leader]").textContent).toContain("Leader: Ana Cruz");
+        expect(card().querySelector("[data-sg-action=agree]")).toBeNull();
+        expect(card().querySelector("[data-sg-action=nominate]")).toBeNull();
+    });
+
+    it("Rename is hidden when canRename is false", async () => {
+        server({ "GET /": () => json(leaderGroup({}, { canRename: false })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        expect(card().querySelector("[data-sg-action=rename]")).toBeNull();
+    });
+
+    it("Rename opens a dialog with the name and posts the new one", async () => {
+        const fetch = server({ "GET /": () => json(leaderGroup()), "POST /rename": () => json({ success: true }) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+        click("[data-sg-action=rename]");
+
+        const form = card().querySelector("#sg-rename-dialog form");
+
+        expect(card().querySelector("#sg-rename-dialog").hidden).toBe(false);
+        expect(form.elements.name.value).toBe("Team 1");
+
+        form.elements.name.value = "Night Owls";
+        form.requestSubmit();
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/rename")[0][1].body)).toEqual({ name: "Night Owls" });
+        expect(card().querySelector("[data-sg-live]").textContent).toBe("Your group is now called Night Owls.");
+    });
+
+});
+
+describe("proposals and invitations", () => {
+
+    const proposedSignup = { ...open, mode: "proposed", isOpen: false, minSize: 3, maxSize: 4 };
+    const canPropose = (over = {}) => notIn({ signup: proposedSignup, candidates: [], canPropose: true, invitable: [{ id: 11, name: "Ben Ong" }, { id: 12, name: "Cai Lim" }], pendingInvitations: [], ...over });
+
+    it("Propose a new group posts the name and the chosen invitees, with the size hint", async () => {
+        let proposed = false;
+        const fetch = server({
+            "GET /": () => json(proposed ? inGroup({ candidates: [] }, { status: "proposed", canRename: false, canVote: false, leader: noLeader, proposal: { pending: ["Ben Ong"] } }) : canPropose()),
+            "POST /propose": () => {
+                proposed = true;
+
+                return json({ success: true, id: 40 });
+            },
+        });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+        click("[data-sg-action=propose]");
+
+        const form = card().querySelector("#sg-propose-dialog form");
+
+        expect(form.querySelector("[data-sg-size-hint]").textContent).toBe("Groups have 3 to 4 members, you included.");
+        expect(form.querySelectorAll("input[name=invitee_ids]").length).toBe(2);
+
+        form.elements.name.value = "Night Owls";
+        form.querySelector("input[name=invitee_ids][value=\"11\"]").checked = true;
+        form.requestSubmit();
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/propose")[0][1].body)).toEqual({ name: "Night Owls", invitee_ids: [11] });
+        expect(card().querySelector("[data-sg-waiting]").textContent).toContain("Waiting for your instructor to approve");
+        expect(card().textContent).toContain("Invited: Ben Ong");
+    });
+
+    it("lists invitations; Accept and Decline send to the group's address and refresh", async () => {
+        let answered = null;
+        const invitation = { groupId: 40, name: "Night Owls", proposer: "Ana Cruz", members: ["Ana Cruz"] };
+        const fetch = server({
+            "GET /": () => json(canPropose({ pendingInvitations: answered ? [] : [invitation, { ...invitation, groupId: 41, name: "Bug Hunters" }] })),
+            "POST /invitations/40/accept": () => {
+                answered = "accept";
+
+                return json({ success: true });
+            },
+            "POST /invitations/41/decline": () => json({ success: true }),
+        });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        const rows = card().querySelectorAll("[data-sg-invitation]");
+
+        expect(rows.length).toBe(2);
+        expect(rows[0].textContent).toContain("Night Owls");
+        expect(rows[0].textContent).toContain("Ana Cruz invited you");
+
+        card().querySelector("[data-sg-action=decline-invite][data-group-id=\"41\"]").click();
+        await flush();
+        expect(sent(fetch, "POST", "/invitations/41/decline").length).toBe(1);
+
+        card().querySelector("[data-sg-action=accept-invite][data-group-id=\"40\"]").click();
+        await flush();
+        expect(sent(fetch, "POST", "/invitations/40/accept").length).toBe(1);
+        expect(card().querySelector("[data-sg-live]").textContent).toBe("You joined Night Owls.");
+        expect(card().querySelectorAll("[data-sg-invitation]").length).toBe(0);
+    });
+
+    it("a refused proposal keeps the dialog open with the server's message", async () => {
+        server({
+            "GET /": () => json(canPropose()),
+            "POST /propose": () => json({ success: false, message: "Someone you invited is already in a group.", errors: [] }, 422),
+        });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+        click("[data-sg-action=propose]");
+        card().querySelector("#sg-propose-dialog form").requestSubmit();
+        await flush();
+
+        expect(card().querySelector("#sg-propose-dialog").hidden).toBe(false);
+        expect(card().querySelector("#sg-propose-dialog [data-form-error]").textContent).toBe("Someone you invited is already in a group.");
     });
 
 });

@@ -45,3 +45,9 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - A broad `--filter` run during Task 4.3 showed 27 errors that did not reproduce on rerun (1330 tests OK); likely overlapping runs on one test DB. Rule: never run two PHPUnit processes against the scratch DB at once.
 - NOT run: Playwright `group-activity-student.spec.js` and `group-activity.spec.js`; no browser/dark-mode/360 px visual check.
 - Known limits: join/switch need formation_mode=self_signup (now settable in the editor); candidate groups show member names during an open signup window; GroupSignupServiceTest concurrency cleanup truncates test-DB tables (precedent in CsvUploadServiceTest).
+
+### Phase 5 (2026-11-21)
+- `phpunit` full suite: Tests 9843, Assertions 38938, OK. `npx vitest run`: 118 files, 1205 tests passed. eslint clean; phpstan on changed controllers/service (implementer): no errors.
+- Red phases shown: GroupProposalService (15 errors), GroupLeaderService (20 errors), routes (6 failures + 3 errors), student-card Vitest (7 failed), activity-panel Vitest (5 failed).
+- NOT run: Playwright `group-activity-leader.spec.js` (e2e DB :3306 broken); no browser/dark-mode/360 px check.
+- Known gaps: destination group of a move/switch is not recounted for a leader majority; an instructor-set leader with no votes is kept; instructor board shows only active groups (proposed ones live in the proposals queue); Approve has no confirm dialog; leader shown as a badge on the group card, not a star on the chip.

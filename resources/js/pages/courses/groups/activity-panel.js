@@ -3,7 +3,7 @@ import { showToast } from "../../../shared/toast.js";
 import { beginLoad } from "../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../shared/spa/error-state.js";
 
-import { fetchActivityGroups, sendActivityChange } from "./api.js";
+import { fetchActivityGroups, fetchActivityProposals, sendActivityChange } from "./api.js";
 import { applyMove, bindDragMoves, FAILED, fillMoveSelect, groupOf, NETWORK, onSubmit, studentById } from "./board.js";
 import { badge, escapeHtml, renderGroupBoard, SMALL } from "./detail.js";
 import { renderDetailSkeleton } from "./skeleton.js";
@@ -22,7 +22,7 @@ import { renderDetailSkeleton } from "./skeleton.js";
 
 const FLAGS = ["nonleader_can_rename", "nonleader_can_vote", "nonleader_can_leave", "groups_visible"];
 const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "formation_mode", "signup_opens_at", "signup_closes_at", "min_size", "max_size", ...FLAGS];
-const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog"];
+const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog", "ga-decline-dialog", "ga-leader-dialog"];
 const REASON = "Give a reason. It is kept with the change.";
 
 const byName = (a, b) => a.name.localeCompare(b.name);
@@ -136,6 +136,103 @@ function render(panel) {
     panel.part("[data-ga-action=\"copy-from\"]").hidden = !open || activities.length === 0;
 
     renderBoard(panel);
+    loadProposals(panel);
+
+}
+
+/*
+|--------------------------------------------------------------------------
+| Proposals queue (screen 4B, student-proposed mode only)
+|--------------------------------------------------------------------------
+*/
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+async function loadProposals(panel) {
+
+    const box = panel.part("[data-ga-proposals]");
+
+    if (!box) {
+        return;
+    }
+
+    box.hidden = panel.detail.config?.formation_mode !== "proposed";
+
+    if (box.hidden) {
+        box.innerHTML = "";
+
+        return;
+    }
+
+    const guard = beginLoad(box, renderDetailSkeleton("Loading the proposed groups…"), 0);
+
+    try {
+        const queue = await fetchActivityProposals(panel.id);
+
+        if (guard.current()) {
+            guard.finish();
+            box.innerHTML = renderProposals(queue, canWrite(panel));
+        }
+    } catch (error) {
+        console.error(error);
+
+        if (guard.current()) {
+            guard.finish();
+            showLoadError(box, "the proposed groups", () => loadProposals(panel));
+        }
+    }
+
+}
+
+function renderProposals({ proposals, minSize, summary }, write) {
+
+    const rows = proposals.map((p) => {
+        const count = p.member_names.length;
+        const chips = p.member_names.map((n) => `<span class="rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#1A1C1E]">${escapeHtml(n)}</span>`).join("");
+        const name = escapeHtml(p.name);
+        const actions = write ? `
+            <div class="flex flex-wrap gap-2 max-sm:w-full max-sm:*:flex-1">
+                ${p.meetsMinimum ? `<button type="button" class="${SMALL} bg-brand text-white hover:bg-brand-dark" data-ga-action="approve" data-group="${p.id}" aria-label="Approve ${name}">Approve</button>` : ""}
+                <button type="button" class="${SMALL} border border-brand text-brand hover:bg-brand-tint" data-ga-action="decline" data-group="${p.id}" aria-label="Decline ${name}">Decline</button>
+            </div>` : "";
+
+        return `
+            <li class="flex flex-wrap items-start justify-between gap-3 border-t border-gray-100 py-3 first:border-t-0" data-ga-proposal="${p.id}">
+                <div class="flex min-w-0 flex-col gap-1.5">
+                    <span class="text-sm text-[#3D3D3D]"><b>${name}</b> proposed by ${escapeHtml(p.proposer)}</span>
+                    <span class="flex flex-wrap items-center gap-1.5">${chips}${p.meetsMinimum ? badge(`${count}, minimum met`, "success") : badge(`${count}, below minimum ${minSize}`, "warning")}</span>
+                    ${p.pending_names.length ? `<span class="text-xs text-[#646464]">Waiting for: ${p.pending_names.map(escapeHtml).join(", ")}</span>` : ""}
+                </div>
+                ${actions}
+            </li>`;
+    }).join("");
+
+    const list = proposals.length
+        ? `<ul class="flex flex-col">${rows}</ul>`
+        : "<p class=\"text-sm text-[#646464]\">No proposals are waiting. Students propose groups while signup is open.</p>";
+
+    const { belowMinimum, ungrouped } = summary;
+    const facts = [
+        belowMinimum.length ? badge(`${plural(belowMinimum.length, "group", "groups")} below minimum`, "warning") : "",
+        ungrouped.length ? badge(`${plural(ungrouped.length, "student", "students")} ungrouped`, "warning") : "",
+    ].join(" ");
+    const after = belowMinimum.length || ungrouped.length ? `
+        <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3" data-ga-summary>
+            <b class="text-sm text-[#1A1C1E]">Still to sort out</b>
+            <span class="flex flex-wrap gap-1.5">${facts}</span>
+            ${belowMinimum.length ? `<span class="text-xs text-[#646464]">Below minimum: ${belowMinimum.map((g) => escapeHtml(g.name)).join(", ")}</span>` : ""}
+            <span class="text-xs text-[#646464]">Resolve them here, or <a class="font-semibold text-brand underline" href="#ga-board">place students by hand</a>.</span>
+        </div>` : "";
+
+    return `<div class="flex flex-col gap-3"><h4 class="font-heading text-xs font-semibold uppercase tracking-wide text-[#646464]">Proposed groups (${proposals.length})</h4>${list}${after}</div>`;
+
+}
+
+function leaderBadge(group) {
+
+    const leader = group.leader?.final ? group.members.find((m) => m.student_user_id === group.leader.id) : null;
+
+    return leader ? `<span data-ga-leader>${badge(`★ Leader: ${leader.name}`, "neutral")}</span>` : "";
 
 }
 
@@ -153,12 +250,19 @@ function renderBoard(panel) {
         set: config,
         canEdit: write,
         emptyText: "No groups have been added to this activity.",
-        decorate: (group) => (group.frozen ? {
-            locked: true,
-            badge: badge("Frozen", "neutral"),
-            actions: `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="unlock" data-group="${group.id}" aria-label="Unlock ${escapeHtml(group.name)}">Unlock</button>`
-                + (ungrouped.length > 0 ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="late-member" data-group="${group.id}" aria-label="Add a late enrollee to ${escapeHtml(group.name)}">Add late enrollee</button>` : ""),
-        } : {}),
+        decorate: (group) => {
+            // The instructor can set the leader at any time, frozen or not (D15).
+            const setLeader = group.members.length > 0
+                ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="set-leader" data-group="${group.id}" aria-label="Set the leader of ${escapeHtml(group.name)}">Set leader</button>`
+                : "";
+
+            return group.frozen ? {
+                locked: true,
+                badge: badge("Frozen", "neutral") + leaderBadge(group),
+                actions: setLeader + `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="unlock" data-group="${group.id}" aria-label="Unlock ${escapeHtml(group.name)}">Unlock</button>`
+                    + (ungrouped.length > 0 ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="late-member" data-group="${group.id}" aria-label="Add a late enrollee to ${escapeHtml(group.name)}">Add late enrollee</button>` : ""),
+            } : { badge: leaderBadge(group), actions: setLeader };
+        },
     });
 
 }
@@ -230,6 +334,10 @@ async function saveSetting(panel, name, value, confirmed) {
         putBack(panel, name);
         applyFieldErrors(form, {});
         announce(panel, "Group activity settings saved");
+
+        if (name === "formation_mode") {
+            loadProposals(panel);
+        }
     } else if (errors.confirm_required && !confirmed) {
         putBack(panel, name);
         panel.pending = { kind: "policy", name, value };
@@ -370,6 +478,12 @@ function onAction(panel, button) {
             openDialog(panel, "ga-unlock-dialog", `Unlock ${group.name}?`, button);
             panel.pending = { kind: "unlock", groupId };
             break;
+        case "set-leader": {
+            const form = openDialog(panel, "ga-leader-dialog", `Set the leader of ${group.name}`, button);
+            form.elements.student_user_id.replaceChildren(...group.members.map((s) => new Option(s.name, String(s.student_user_id), false, s.student_user_id === group.leader?.id)));
+            panel.pending = { kind: "leader", groupId };
+            break;
+        }
         case "late-member": {
             const form = openDialog(panel, "ga-late-dialog", `Add a late enrollee to ${group.name}`, button);
             form.elements.student_user_id.replaceChildren(...panel.detail.ungrouped.map((s) => new Option(s.name, String(s.student_user_id))));
@@ -377,6 +491,33 @@ function onAction(panel, button) {
             break;
         }
     }
+
+}
+
+/** Approve needs no confirmation: it only makes the proposed group a normal one, which the instructor can still edit. */
+async function approve(panel, button) {
+
+    const name = button.closest("[data-ga-proposal]").querySelector("b").textContent;
+
+    button.disabled = true;
+
+    try {
+        const result = await send(panel, "POST", `/groups/${button.dataset.group}/approve`);
+
+        if (result.ok) {
+            announce(panel, `${name} was approved`);
+            await load(panel);
+
+            return;
+        }
+
+        showToast(result.body.message ?? FAILED, { tone: "danger" });
+    } catch (error) {
+        console.error(error);
+        showToast(NETWORK, { tone: "danger" });
+    }
+
+    button.disabled = false;
 
 }
 
@@ -428,6 +569,11 @@ function bind(panel) {
         } else if (action?.dataset.gaAction === "copy-from") {
             const form = openDialog(panel, "ga-copy-dialog", "Copy groups from another activity", action);
             form.elements.from_assessment_id.replaceChildren(...panel.detail.activities.map((a) => new Option(a.title, String(a.assessment_id))));
+        } else if (action?.dataset.gaAction === "approve") {
+            approve(panel, action);
+        } else if (action?.dataset.gaAction === "decline") {
+            panel.pending = { kind: "decline", groupId: Number(action.dataset.group), name: action.closest("[data-ga-proposal]").querySelector("b").textContent };
+            openDialog(panel, "ga-decline-dialog", `Decline ${panel.pending.name}?`, action);
         } else if (button && root.contains(button)) {
             onAction(panel, button);
         }
@@ -601,6 +747,39 @@ function bind(panel) {
             renderBoard(panel);
             close(panel, "ga-late-dialog");
             announce(panel, `${student.name} was added to ${group.name}`);
+        }
+
+        return result;
+    });
+
+    onSubmit(form("ga-decline-dialog"), async (data) => {
+        const reason = requireReason(form("ga-decline-dialog"), data);
+
+        if (reason === "") {
+            return null;
+        }
+
+        const { groupId, name } = panel.pending;
+        const result = await send(panel, "POST", `/groups/${groupId}/decline`, { reason });
+
+        if (result.ok) {
+            await reload("ga-decline-dialog", `${name} was declined`);
+        }
+
+        return result;
+    });
+
+    onSubmit(form("ga-leader-dialog"), async (data) => {
+        const studentId = Number(data.get("student_user_id"));
+        const { groupId } = panel.pending;
+        const group = panel.detail.groups.find((g) => g.id === groupId);
+        const result = await send(panel, "POST", `/groups/${groupId}/leader`, { student_user_id: studentId });
+
+        if (result.ok) {
+            group.leader = { id: studentId, final: true };
+            renderBoard(panel);
+            close(panel, "ga-leader-dialog");
+            announce(panel, `${studentById(panel.detail, studentId).name} leads ${group.name}`);
         }
 
         return result;

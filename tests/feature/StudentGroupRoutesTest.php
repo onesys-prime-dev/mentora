@@ -268,6 +268,146 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertFalse($state['myGroup']['canLeave']);
     }
 
+    public function testVotingShowsTheTallyAndAMajorityMakesTheLeader(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+
+        [, $json] = $this->api($this->me, 'GET');
+        $this->assertSame(['id' => null, 'final' => false, 'votes' => [], 'needed' => 2, 'myVote' => null], $json['myGroup']['leader']);
+        $this->assertSame('active', $json['myGroup']['status']);
+        $this->assertTrue($json['myGroup']['canRename']);
+
+        [$status, $json] = $this->api($this->me, 'POST', '/vote', ['candidate_id' => (int) $this->mate->id]);
+        $this->assertSame(200, $status, (string) json_encode($json));
+        $leader = $this->api($this->me, 'GET')[1]['myGroup']['leader'];
+        $this->assertSame([['candidateId' => (int) $this->mate->id, 'count' => 1]], $leader['votes']);
+        $this->assertSame((int) $this->mate->id, $leader['myVote']);
+        $this->assertFalse($leader['final']);
+
+        $this->assertSame(200, $this->api($this->mate, 'POST', '/vote', ['candidate_id' => (int) $this->mate->id])[0]);
+        $leader = $this->api($this->me, 'GET')[1]['myGroup']['leader'];
+        $this->assertSame((int) $this->mate->id, $leader['id']);
+        $this->assertTrue($leader['final']);
+
+        // A vote for someone outside the group, or by a student without a group, is a broken rule.
+        $this->assertSame(422, $this->api($this->me, 'POST', '/vote', ['candidate_id' => (int) $this->loner->id])[0]);
+        $this->assertSame(422, $this->api($this->loner, 'POST', '/vote', ['candidate_id' => (int) $this->me->id])[0]);
+    }
+
+    public function testRenameIsOpenUntilALeaderIsFinalThenOnlyTheLeaderOrTheToggle(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+
+        $this->assertSame(200, $this->api($this->me, 'POST', '/rename', ['name' => 'Night Owls'])[0]);
+        $this->assertSame('Night Owls', $this->api($this->me, 'GET')[1]['myGroup']['name']);
+
+        db_connect()->table('student_groups')->where('id', $this->a)->update(['leader_user_id' => $this->mate->id, 'leader_finalized_at' => date('Y-m-d H:i:s')]);
+        $this->assertFalse($this->api($this->me, 'GET')[1]['myGroup']['canRename']);
+        $this->assertTrue($this->api($this->mate, 'GET')[1]['myGroup']['canRename']);
+        [$status, $json] = $this->api($this->me, 'POST', '/rename', ['name' => 'Mine']);
+        $this->assertSame(422, $status);
+        $this->assertSame('Only the group leader can rename the group.', $json['message']);
+        $this->assertSame(200, $this->api($this->mate, 'POST', '/rename', ['name' => 'Leaders'])[0]);
+
+        $this->settings(['nonleader_can_rename' => 1]);
+        $this->assertTrue($this->api($this->me, 'GET')[1]['myGroup']['canRename']);
+        $this->assertSame(200, $this->api($this->me, 'POST', '/rename', ['name' => 'Ours'])[0]);
+
+        $this->assertSame(422, $this->api($this->me, 'POST', '/rename', ['name' => ' '])[0]);
+        $this->assertSame(422, $this->api($this->loner, 'POST', '/rename', ['name' => 'Hijack'])[0]);
+        $this->assertSame('Ours', db_connect()->table('student_groups')->where('id', $this->a)->get()->getRow()->name);
+    }
+
+    private function proposalMode(): void
+    {
+        $this->settings(['formation_mode' => 'proposed', 'min_size' => 2, 'max_size' => 3]);
+    }
+
+    public function testProposeInviteAcceptAndDecline(): void
+    {
+        $this->proposalMode();
+
+        [, $json] = $this->api($this->me, 'GET');
+        $this->assertEqualsCanonicalizing([(int) $this->loner->id, (int) $this->mate->id], array_column($json['invitable'], 'id'), 'the ungrouped pool without me or outsiders');
+
+        foreach ($json['invitable'] as $s) {
+            $this->assertSame(['id', 'name'], array_keys($s));
+        }
+
+        [$status, $json] = $this->api($this->me, 'POST', '/propose', ['name' => 'Our team', 'invitee_ids' => [(int) $this->mate->id, (int) $this->loner->id]]);
+        $this->assertSame(200, $status, (string) json_encode($json));
+        $groupId = (int) $json['id'];
+
+        [, $mine] = $this->api($this->me, 'GET');
+        $this->assertSame('proposed', $mine['myGroup']['status']);
+        $this->assertSame('Our team', $mine['myGroup']['name']);
+        $this->assertCount(2, $mine['myGroup']['proposal']['pending']);
+        $this->assertSame([], $mine['invitable'], 'a grouped student invites nobody');
+
+        [, $theirs] = $this->api($this->mate, 'GET');
+        $this->assertNull($theirs['myGroup']);
+        $this->assertSame($groupId, $theirs['pendingInvitations'][0]['groupId']);
+        $this->assertSame(['groupId', 'name', 'proposer', 'members'], array_keys($theirs['pendingInvitations'][0]));
+        $this->assertSame('Our team', $theirs['pendingInvitations'][0]['name']);
+
+        $this->assertSame(200, $this->api($this->mate, 'POST', "/invitations/{$groupId}/accept")[0]);
+        $this->assertSame(200, $this->api($this->loner, 'POST', "/invitations/{$groupId}/decline")[0]);
+        $this->assertSame(422, $this->api($this->loner, 'POST', "/invitations/{$groupId}/accept")[0], 'a declined invitation is gone');
+
+        [, $mine] = $this->api($this->me, 'GET');
+        $this->assertCount(2, $mine['myGroup']['members']);
+        $this->assertSame([], $mine['myGroup']['proposal']['pending']);
+        $this->assertSame([], $this->api($this->loner, 'GET')[1]['pendingInvitations']);
+
+        foreach ($mine['myGroup']['members'] as $member) {
+            $this->assertSame(['id', 'name'], array_keys($member));
+        }
+    }
+
+    public function testProposalRulesAre422AndForeignInvitationsAre404(): void
+    {
+        $this->proposalMode();
+
+        $this->assertSame(422, $this->api($this->me, 'POST', '/propose', ['name' => 'X', 'invitee_ids' => [(int) $this->outsider->id]])[0]);
+        $this->assertSame(422, $this->api($this->me, 'POST', '/propose', ['name' => '', 'invitee_ids' => [(int) $this->mate->id]])[0]);
+
+        $this->assertSame(404, $this->api($this->mate, 'POST', '/invitations/999999/accept')[0]);
+        $this->assertSame(404, $this->api($this->mate, 'POST', "/invitations/{$this->a}/accept", [], null, $this->other)[0]);
+
+        // A proposal of another activity of this course is not found through this activity.
+        $second = CourseFactory::assessment($this->offering, $this->teacher, CourseFactory::module($this->offering, 'published', 3), null, 'Assignment');
+        $config = (new ActivityGroupService())->attachAssessment($second, null, [], (int) $this->teacher->id);
+        db_connect()->table('activity_group_configs')->where('id', $config)->update(['formation_mode' => 'proposed', 'min_size' => 1, 'max_size' => 3]);
+        $theirs = (new \App\Services\Groups\GroupProposalService())->propose($config, (int) $this->loner->id, [(int) $this->mate->id], 'Elsewhere');
+        $this->assertSame(404, $this->api($this->mate, 'POST', "/invitations/{$theirs}/accept")[0]);
+        $this->assertSame(404, $this->api($this->mate, 'POST', "/invitations/{$theirs}/decline")[0]);
+
+        // Outside proposal mode there is nothing to invite and proposing is refused.
+        $this->settings(['formation_mode' => 'self_signup']);
+        $this->assertSame([], $this->api($this->me, 'GET')[1]['invitable']);
+        $this->assertSame(422, $this->api($this->me, 'POST', '/propose', ['name' => 'X', 'invitee_ids' => [(int) $this->mate->id]])[0]);
+    }
+
+    public function testNewWritesAreRefusedToStaffOutsidersAndOnAFinalizedOffering(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+
+        foreach (['/vote', '/rename', '/propose', "/invitations/{$this->a}/accept"] as $tail) {
+            $this->assertNotSame(200, $this->api($this->teacher, 'POST', $tail, ['candidate_id' => (int) $this->me->id, 'name' => 'X'])[0], $tail);
+            $this->assertNotSame(200, $this->api($this->outsider, 'POST', $tail, ['candidate_id' => (int) $this->me->id, 'name' => 'X'])[0], $tail);
+        }
+
+        db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $this->offering, 'finalized_by' => 1, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
+        $this->assertSame(422, $this->api($this->me, 'POST', '/vote', ['candidate_id' => (int) $this->me->id])[0]);
+        $this->assertSame(422, $this->api($this->me, 'POST', '/rename', ['name' => 'Late'])[0]);
+        $this->assertFalse($this->api($this->me, 'GET')[1]['myGroup']['canRename']);
+        $this->assertSame('Team 1', db_connect()->table('student_groups')->where('id', $this->a)->get()->getRow()->name);
+        $this->assertSame(0, db_connect()->table('student_group_leader_votes')->countAllResults());
+    }
+
     public function testTheModuleLearningItemOfAGroupAssignmentCarriesTheStudentCard(): void
     {
         $module = (int) db_connect()->table('assessments')->where('id', $this->assignment)->get()->getRow()->module_id;

@@ -53,6 +53,9 @@ function sectionHtml() {
             ${dialog("ga-delete-confirm", "<form><p data-form-error hidden></p><button type=\"submit\">Delete group</button></form>")}
             ${dialog("ga-recopy-confirm", "<form><p data-form-error hidden></p><button type=\"submit\">Re-copy</button></form>")}
             ${dialog("ga-copy-dialog", `<form data-ga-copy-form>${field("from_assessment_id", "<select name=\"from_assessment_id\"></select>")}<p data-form-error hidden></p><button type="submit">Copy groups</button></form>`)}
+            <div data-ga-proposals hidden></div>
+            ${dialog("ga-decline-dialog", `<form>${field("reason", "<textarea name=\"reason\"></textarea>")}<p data-form-error hidden></p><button type="submit">Decline proposal</button></form>`)}
+            ${dialog("ga-leader-dialog", `<form>${field("student_user_id", "<select name=\"student_user_id\"></select>")}<p data-form-error hidden></p><button type="submit">Set leader</button></form>`)}
         </section>`;
 }
 
@@ -441,6 +444,145 @@ describe("the card's states", () => {
         expect(root().querySelector("[data-ga-fields]").disabled).toBe(true);
         expect(root().querySelector("[data-ga-lock]").hidden).toBe(false);
         expect(root().querySelector("[data-ga-lock] [data-lock] > span").textContent).toBe("View only.");
+    });
+
+});
+
+describe("proposals and leaders", () => {
+
+    const proposedDetail = (over = {}) => ({ ...detail(over), config: config({ formation_mode: "proposed", min_size: 3, max_size: 4 }) });
+    const queue = (over = {}) => ({
+        success: true, minSize: 3, maxSize: 4, closesAt: null,
+        proposals: [
+            { id: 21, name: "Night owls", proposer: "Ana", member_names: ["Ana", "Ben", "Cai"], pending_names: [], meetsMinimum: true },
+            { id: 22, name: "Bug hunters", proposer: "Gil", member_names: ["Gil", "Hana"], pending_names: ["Ivo"], meetsMinimum: false },
+        ],
+        summary: { belowMinimum: [{ id: 22, name: "Bug hunters" }, { id: 12, name: "Team 2" }], ungrouped: [{ id: 103, name: "Cai Ortiz" }, { id: 104, name: "Dan Uy" }] },
+        ...over,
+    });
+
+    it("renders the queue: proposer, members, the minimum badge, pending invitees and the after-window summary", async () => {
+        server({ "GET /": () => json(proposedDetail()), "GET /proposals": () => json(queue()) });
+
+        await initializeActivityGroups(root());
+        await flush();
+
+        const box = root().querySelector("[data-ga-proposals]");
+        const rows = box.querySelectorAll("[data-ga-proposal]");
+
+        expect(box.hidden).toBe(false);
+        expect(box.textContent).toContain("Proposed groups (2)");
+        expect(rows[0].textContent).toContain("Night owls");
+        expect(rows[0].textContent).toContain("proposed by Ana");
+        expect(rows[0].textContent).toContain("3, minimum met");
+        expect(rows[0].querySelector("[data-ga-action=approve]")).not.toBeNull();
+        expect(rows[1].textContent).toContain("2, below minimum 3");
+        expect(rows[1].textContent).toContain("Waiting for: Ivo");
+        expect(rows[1].querySelector("[data-ga-action=approve]")).toBeNull();
+        expect(rows[1].querySelector("[data-ga-action=decline]")).not.toBeNull();
+
+        const summary = box.querySelector("[data-ga-summary]");
+
+        expect(summary.textContent).toContain("2 groups below minimum");
+        expect(summary.textContent).toContain("2 students ungrouped");
+        expect(summary.querySelector("a[href=\"#ga-board\"]")).not.toBeNull();
+    });
+
+    it("Approve sends and refreshes the groups and the queue", async () => {
+        let approved = false;
+        const fetch = server({
+            "GET /": () => json(proposedDetail()),
+            "GET /proposals": () => json(approved ? queue({ proposals: [queue().proposals[1]] }) : queue()),
+            "POST /groups/21/approve": () => {
+                approved = true;
+
+                return json({ success: true });
+            },
+        });
+
+        await initializeActivityGroups(root());
+        await flush();
+        root().querySelector("[data-ga-action=approve][data-group=\"21\"]").click();
+        await flush();
+
+        expect(sent(fetch, "POST", "/groups/21/approve").length).toBe(1);
+        expect(sent(fetch, "GET", "/groups").length).toBe(2);
+        expect(root().querySelectorAll("[data-ga-proposal]").length).toBe(1);
+        expect(root().querySelector("[data-groups-live]").textContent).toBe("Night owls was approved");
+    });
+
+    it("Decline needs a reason before anything is sent, then sends it", async () => {
+        const fetch = server({
+            "GET /": () => json(proposedDetail()),
+            "GET /proposals": () => json(queue()),
+            "POST /groups/22/decline": () => json({ success: true }),
+        });
+
+        await initializeActivityGroups(root());
+        await flush();
+        root().querySelector("[data-ga-action=decline][data-group=\"22\"]").click();
+
+        const form = document.querySelector("#ga-decline-dialog form");
+
+        expect(document.querySelector("#ga-decline-dialog").hidden).toBe(false);
+        form.requestSubmit();
+        await flush();
+
+        expect(sent(fetch, "POST", "/groups/22/decline").length).toBe(0);
+        expect(form.querySelector("[data-field=reason] [data-field-error]").hidden).toBe(false);
+
+        form.elements.reason.value = "Join an existing team";
+        form.requestSubmit();
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/groups/22/decline")[0][1].body)).toEqual({ reason: "Join an existing team" });
+    });
+
+    it("Set leader picks a member and sends them; a final leader shows a star on the card", async () => {
+        let set = false;
+        const withLeader = () => {
+            const d = detail();
+
+            d.groups[0].leader = set ? { id: 101, final: true } : { id: null, final: false };
+            d.groups[1].leader = { id: null, final: false };
+
+            return d;
+        };
+        const fetch = server({
+            "GET /": () => json(withLeader()),
+            "POST /groups/11/leader": () => {
+                set = true;
+
+                return json({ success: true });
+            },
+        });
+
+        await initializeActivityGroups(root());
+        await flush();
+
+        expect(root().querySelector("[data-group-action=set-leader][data-group=\"12\"]")).toBeNull();
+        root().querySelector("[data-group-action=set-leader][data-group=\"11\"]").click();
+
+        const form = document.querySelector("#ga-leader-dialog form");
+
+        expect(Array.from(form.elements.student_user_id.options).map((o) => o.textContent)).toEqual(["Ana Cruz"]);
+        form.requestSubmit();
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/groups/11/leader")[0][1].body)).toEqual({ student_user_id: 101 });
+        expect(root().querySelector("[data-group-card=\"11\"] [data-ga-leader]").textContent).toContain("Ana Cruz");
+    });
+
+    it("read-only: the queue is listed without Approve, Decline or Set leader", async () => {
+        server({ "GET /": () => json(proposedDetail({ canWrite: false })), "GET /proposals": () => json(queue()) });
+
+        await initializeActivityGroups(root());
+        await flush();
+
+        expect(root().querySelectorAll("[data-ga-proposal]").length).toBe(2);
+        expect(root().querySelector("[data-ga-action=approve]")).toBeNull();
+        expect(root().querySelector("[data-ga-action=decline]")).toBeNull();
+        expect(root().querySelector("[data-group-action=set-leader]")).toBeNull();
     });
 
 });

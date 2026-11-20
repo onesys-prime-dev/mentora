@@ -56,6 +56,15 @@ $copyForm = '<form class="flex flex-col gap-4" novalidate data-ga-copy-form>'
     . $field(['name' => 'from_assessment_id', 'label' => 'Copy from', 'type' => 'select'])
     . $formError . $buttons('Copy groups', 'danger') . '</form>';
 
+$declineForm = '<form class="flex flex-col gap-4" novalidate data-ga-decline-form>'
+    . '<p class="text-sm text-[#646464]">The proposal is removed and its members are free to join or propose another group. The reason is kept with the change.</p>'
+    . $field(['name' => 'reason', 'label' => 'Reason', 'type' => 'textarea', 'required' => true, 'maxlength' => 500])
+    . $formError . $buttons('Decline proposal', 'danger') . '</form>';
+
+$leaderForm = '<form class="flex flex-col gap-4" novalidate data-ga-leader-form>'
+    . $field(['name' => 'student_user_id', 'label' => 'Leader', 'type' => 'select', 'required' => true, 'help' => 'This replaces any leader the group chose. The change is recorded.'])
+    . $formError . $buttons('Set leader') . '</form>';
+
 $confirm = static fn (string $id, string $title, string $text, string $button, string $tone = 'danger'): string => view('components/confirm', [
     'id' => $id, 'title' => $title, 'text' => $text, 'action' => '#', 'confirmLabel' => $button, 'tone' => $tone, 'ajax' => true,
 ], ['saveData' => false]);
@@ -128,7 +137,9 @@ $confirm = static fn (string $id, string $title, string $text, string $button, s
             </fieldset>
         </form>
 
-        <div data-ga-board></div>
+        <div data-ga-proposals hidden></div>
+
+        <div id="ga-board" data-ga-board></div>
 
     </div>
 
@@ -140,6 +151,8 @@ $confirm = static fn (string $id, string $title, string $text, string $button, s
     <?= view('components/dialog', ['id' => 'ga-name-dialog', 'title' => 'Add group', 'body' => $nameForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'ga-move-dialog', 'title' => 'Move student', 'body' => $moveForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'ga-copy-dialog', 'title' => 'Copy groups from another activity', 'body' => $copyForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'ga-decline-dialog', 'title' => 'Decline this proposal?', 'body' => $declineForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'ga-leader-dialog', 'title' => 'Set leader', 'body' => $leaderForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
     <?= $confirm('ga-detach-confirm', 'Stop using groups here?', 'This removes the activity\'s groups. The group set itself is kept.', 'Remove groups') ?>
     <?= $confirm('ga-policy-confirm', 'Change what happens to students without a group?', 'A group has already submitted.', 'Change it', 'primary') ?>
     <?= $confirm('ga-delete-confirm', 'Delete this group?', 'Its members go back to Ungrouped.', 'Delete group') ?>
