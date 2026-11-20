@@ -48,6 +48,7 @@ class ActivityGroupMembershipService
     public function addLateEnrollee(int $groupId, int $studentId, string $reason, int $userId): void
     {
         $this->add($groupId, $studentId, $userId, true, $this->reason($reason));
+        (new GroupGradingService())->onMemberAdded($groupId, $studentId);
     }
 
     public function moveMember(int $studentId, int $toGroupId, int $actorId): void
@@ -200,7 +201,7 @@ class ActivityGroupMembershipService
     public function onStudentDropped(int $offeringId, int $studentId): void
     {
         GroupSetService::refuseIfFinalized($offeringId);
-        // Phase 7 adds the keep-or-excuse decision for graded groups here; until grading exists a drop always removes.
+        // A graded member's score row stays (= "keep"); the instructor may excuse it later with GroupGradingService::resolveDropped.
 
         $rows = db_connect()->table('student_group_members m')->select('m.id, m.group_id, m.set_id, m.config_id')
             ->join('group_sets gs', 'gs.id = m.set_id', 'left')->join('activity_group_configs c', 'c.id = m.config_id', 'left')

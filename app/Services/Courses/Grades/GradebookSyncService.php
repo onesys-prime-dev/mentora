@@ -82,9 +82,12 @@ class GradebookSyncService
             return 0;
         }
 
-        $studentIds = array_unique(array_map('intval', array_column(
-            $this->submissionModel->select('student_id')->where('assessment_id', $assessmentId)->findAll(),
-            'student_id'
+        // Group members who did not hand in themselves have a member score on the group's row instead.
+        $studentIds = array_unique(array_map('intval', array_merge(
+            array_column($this->submissionModel->select('student_id')->where('assessment_id', $assessmentId)->findAll(), 'student_id'),
+            array_column(db_connect()->table('group_member_scores gms')->select('gms.student_user_id')
+                ->join('assessment_submissions s', 's.id = gms.submission_id')->where('s.assessment_id', $assessmentId)
+                ->get()->getResultArray(), 'student_user_id')
         )));
 
         $written = 0;
@@ -156,13 +159,30 @@ class GradebookSyncService
             ->orderBy('id', 'ASC')
             ->findAll();
 
-        $result = (new AssessmentResultService())->resultFor($this->isQuiz($assessment), $attempts);
+        $results = new AssessmentResultService();
+
+        // A group member's own final stands in for the shared row (Task 7.3); other work passes through unchanged.
+        $result = $results->resultFor($this->isQuiz($assessment), $results->memberAttempts((int) $assessment['id'], $studentId, $attempts));
 
         $counted = $result['counted'];
 
         if ($counted === null) {
             $this->scoreModel->where('grade_item_id', $item['id'])->where('student_id', $studentId)->delete();
             return false;
+        }
+
+        // An excused group member is let off the item, as a manual excuse is (is_missing, which the engine skips).
+        if (!empty($counted['excused'])) {
+            $this->scoreModel->upsertScore((int) $scheme['course_offering_id'], $studentId, (int) $item['id'], [
+                'assessment_submission_id' => $counted['id'],
+                'raw_score' => null,
+                'raw_percentage' => null,
+                'is_missing' => 1,
+                'graded_by' => $counted['graded_by'] ?? null,
+                'graded_at' => $counted['graded_at'] ?? date('Y-m-d H:i:s'),
+            ]);
+
+            return true;
         }
 
         $max = (float) $item['max_points'];

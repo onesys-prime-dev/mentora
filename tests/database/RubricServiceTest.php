@@ -385,4 +385,68 @@ final class RubricServiceTest extends DatabaseTestCase
         $this->assertEquals(17, $row['score']);
         $this->assertSame('Graded', $row['status']);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Criterion scope (group or individual)
+    |--------------------------------------------------------------------------
+    */
+
+    public function testDefaultScopeIndividualKeepsExistingRubricsWorking(): void
+    {
+        $rubric = $this->create(['title' => 'R', 'criteria' => [['title' => 'A', 'max_points' => 5]]])['rubric'];
+        $added = $this->service->createCriterion((int) $rubric['id'], ['title' => 'B', 'max_points' => 2])['criterion'];
+
+        $this->assertSame('individual', $rubric['criteria'][0]['scope']);
+        $this->assertSame('individual', $added['scope']);
+        $this->assertSame('individual', $this->service->getRubric((int) $rubric['id'])['rubric']['criteria'][0]['scope']);
+    }
+
+    public function testScopeSavedAndReturned(): void
+    {
+        $rubric = $this->create(['title' => 'R', 'criteria' => [
+            ['title' => 'A', 'max_points' => 5, 'scope' => 'group'],
+            ['title' => 'B', 'max_points' => 5, 'scope' => 'individual'],
+        ]])['rubric'];
+
+        $this->assertSame(['group', 'individual'], array_column($rubric['criteria'], 'scope'));
+
+        $added = $this->service->createCriterion((int) $rubric['id'], ['title' => 'C', 'scope' => 'group'])['criterion'];
+        $this->assertSame('group', $added['scope']);
+
+        $second = (int) $rubric['criteria'][1]['id'];
+        $this->assertSame('group', $this->service->updateCriterion($second, ['scope' => 'group'])['criterion']['scope']);
+        $this->assertSame('group', $this->service->updateCriterion($second, ['title' => 'Renamed'])['criterion']['scope'], 'not sent, so kept');
+    }
+
+    public function testInvalidScopeRefused(): void
+    {
+        $rubric = $this->create(['title' => 'Keep', 'criteria' => [['title' => 'A', 'max_points' => 5]]])['rubric'];
+        $criterion = (int) $rubric['criteria'][0]['id'];
+
+        $refusals = [
+            $this->create(['title' => 'New', 'criteria' => [['title' => 'X', 'max_points' => 1, 'scope' => 'team']]]),
+            $this->service->createCriterion((int) $rubric['id'], ['title' => 'X', 'scope' => 'everyone']),
+            $this->service->updateCriterion($criterion, ['scope' => 'nope']),
+        ];
+
+        foreach ($refusals as $refusal) {
+            $this->assertFalse($refusal['success']);
+            $this->assertSame('Scope must be group or individual.', $refusal['message']);
+        }
+
+        $this->assertSame('individual', $this->criteriaOf((int) $rubric['id'])[0]['scope']);
+        $this->assertCount(1, $this->criteriaOf((int) $rubric['id']));
+        $this->assertSame((int) $rubric['id'], (int) $this->rubricsOf($this->assignment)[0]['id'], 'a refused create keeps the current rubric');
+    }
+
+    public function testScopePreservedWhenRubricCopied(): void
+    {
+        $other = $this->assignment();
+        $source = $this->create(['title' => 'Shared', 'criteria' => [['title' => 'A', 'max_points' => 4, 'scope' => 'group'], ['title' => 'B', 'max_points' => 6]]], $other)['rubric'];
+
+        $copy = $this->service->selectRubric($this->instructor, $this->assignment, (int) $source['id'])['rubric'];
+
+        $this->assertSame(['group', 'individual'], array_column($copy['criteria'], 'scope'));
+    }
 }

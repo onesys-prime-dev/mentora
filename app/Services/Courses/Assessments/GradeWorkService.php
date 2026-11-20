@@ -17,9 +17,13 @@ use App\Models\Files\FileModel;
 use App\Models\Assessments\AssessmentFeedbackModel;
 use App\Services\Courses\Grades\GradebookSyncService;
 use App\Services\Courses\Grades\GradeFinalizationService;
+use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupSubmissionResolver;
 
 class GradeWorkService
 {
+    public const GROUP_SUBMISSION = 'This is a group submission. Grade it from the group view.';
+
     protected AssessmentModel $assessmentModel;
     protected AssessmentSubmissionModel $submissionModel;
     protected AssessmentRubricModel $rubricModel;
@@ -54,6 +58,12 @@ class GradeWorkService
         }
 
         $isQuiz = $this->isQuizAssessment($assessment);
+
+        // A group activity is graded group by group (screen 2B); only a student in no group (solo policy) opens here alone.
+        if (!$isQuiz && (new ActivityGroupService())->findByAssessment($assessmentId) !== null
+            && ($studentId === null || (new GroupSubmissionResolver())->groupFor($assessmentId, $studentId) !== null)) {
+            return ['html' => view('pages/courses/features/assessments/group-grade-work', ['currentAssessment' => $assessment], ['saveData' => false])];
+        }
 
         $rubric = $this->rubricModel->findByAssessment($assessmentId);
 
@@ -245,12 +255,33 @@ class GradeWorkService
         return $offeringId === null ? null : (new GradeFinalizationService())->lockRefusal($offeringId);
     }
 
+    /**
+     * A group's work is graded once for every member from the group view; grading its row here would leave the
+     * members without their score rows. Shared rows carry the group; a per-member row belongs to a student in a group.
+     */
+    private function groupRefusal(array $submission): ?array
+    {
+        $assessmentId = (int) $submission['assessment_id'];
+
+        if ((new ActivityGroupService())->findByAssessment($assessmentId) === null) {
+            return null;
+        }
+
+        $grouped = $submission['group_id'] !== null || (new GroupSubmissionResolver())->groupFor($assessmentId, (int) $submission['student_id']) !== null;
+
+        return $grouped ? ['success' => false, 'message' => self::GROUP_SUBMISSION, 'code' => 'group_submission'] : null;
+    }
+
     public function reopenGrading(User $user, int $submissionId): array
     {
         $submission = $this->submissionModel->find($submissionId);
 
         if (!$submission) {
             return ['success' => false, 'message' => 'Submission not found.'];
+        }
+
+        if ($refused = $this->groupRefusal($submission)) {
+            return $refused;
         }
 
         if ($submission['status'] !== 'Graded') {
@@ -291,6 +322,10 @@ class GradeWorkService
             return $this->notHandedIn();
         }
 
+        if ($refused = $this->groupRefusal($submission)) {
+            return $refused;
+        }
+
 
         // Opening work to grade — including a quiz whose auto-gradable part
         // is already scored — moves it to Grading.
@@ -322,6 +357,10 @@ class GradeWorkService
 
         if (!$this->wasHandedIn($submission)) {
             return $this->notHandedIn();
+        }
+
+        if ($refused = $this->groupRefusal($submission)) {
+            return $refused;
         }
 
         if ($locked = $this->lockRefusal($submission)) {
@@ -463,6 +502,10 @@ class GradeWorkService
 
         if (!$this->wasHandedIn($submission)) {
             return $this->notHandedIn();
+        }
+
+        if ($refused = $this->groupRefusal($submission)) {
+            return $refused;
         }
 
         if ($locked = $this->lockRefusal($submission)) {

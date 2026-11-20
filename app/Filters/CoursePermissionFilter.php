@@ -38,6 +38,7 @@ class CoursePermissionFilter implements FilterInterface
         ['#^discussions/\d+/(pin|lock)$#', 'discussions.manage'],
         ['#^announcements(/|$)#', 'announcements.manage'],
         ['#^(grades|submissions)(/|$)#', 'grading.manage'],
+        ['#^assessments/\d+/group-grading(/|$)#', 'grading.manage'], // Grade Work's group view grades, like submissions/
         ['#^group-sets(/|$)#', 'courses.manage'], // groups reuse course-content editing; no new permission
     ];
 

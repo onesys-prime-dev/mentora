@@ -137,12 +137,14 @@ class AssessmentService
 
         // The score shown is the attempt that counts: the best quiz attempt,
         // or the latest graded assignment submission.
-        $scoreResult = (new AssessmentResultService())->resultFor(
+        // A group member's result is the group's work carrying their own final (only theirs).
+        $results = new AssessmentResultService();
+        $scoreResult = $results->resultFor(
             !$isAssignment,
-            $this->submissionModel
+            $results->memberAttempts($assessmentId, (int) $user->id, $this->submissionModel
                 ->where('assessment_id', $assessmentId)
                 ->where('student_id', $user->id)
-                ->findAll()
+                ->findAll())
         );
 
         $submission = $scoreResult['counted'] ?? $scoreResult['latest'];
@@ -228,6 +230,7 @@ class AssessmentService
                     'previousAssessment' => $data['previousAssessment'],
                     'nextAssessment' => $data['nextAssessment'],
                     'currentRubric' => $currentRubric,
+                    'isGroupActivity' => (new \App\Models\Groups\ActivityGroupConfigModel())->where('assessment_id', $assessmentId)->countAllResults() > 0,
                     'currentQuestions' => $currentQuestions,
                     'totalPointsSource' => $derivedTotal['source'] ?? null,
                 ]
@@ -1837,6 +1840,7 @@ class AssessmentService
                         'criteria_title' => $criterion['criteria_title'],
                         'description' => $criterion['description'],
                         'max_points' => $criterion['max_points'],
+                        'scope' => $criterion['scope'],
                         'order_index' => $criterion['order_index'],
                         'created_at' => $now,
                     ]);

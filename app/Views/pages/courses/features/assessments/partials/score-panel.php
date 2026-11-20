@@ -70,6 +70,30 @@ $canCompose = !empty($submission) && ($isInstructor ? ! \App\Services\Courses\Co
 
 $scoreCaption = null;
 
+// A group member's own breakdown (AssessmentResultService::memberAttempts): only ever this student's row.
+$memberScore = $isGraded ? ($scored['member_score'] ?? null) : null;
+
+$points = static fn ($value): string => rtrim(rtrim(number_format((float) $value, 2), '0'), '.');
+
+$groupRubric = [];
+
+if ($memberScore !== null) {
+
+    $shared = is_string($scored['rubric_scores'] ?? null) ? (json_decode($scored['rubric_scores'], true) ?? []) : (array) ($scored['rubric_scores'] ?? []);
+
+    foreach ($currentRubric['criteria'] ?? [] as $criterion) {
+
+        $individual = ($criterion['scope'] ?? 'individual') === 'individual';
+        $given = $individual ? ($memberScore['individual_rubric_scores'][$criterion['id']] ?? null) : ($shared[$criterion['id']] ?? null);
+
+        if ($given !== null) {
+            $groupRubric[] = ['title' => $criterion['criteria_title'] ?? '', 'scope' => $individual ? 'Individual' : 'Group', 'points' => $given, 'max' => $criterion['max_points'] ?? 0];
+        }
+
+    }
+
+}
+
 if ($isGraded && $scoreResult !== null) {
 
     $scoreCaption = $scoreResult['policy'] === 'highest'
@@ -100,19 +124,68 @@ if ($isGraded && $scoreResult !== null) {
 
                 <div class="w-full <?= $scoreBoxClass ?> p-10 flex flex-col justify-center items-center bg-[#F9F9FC] border-1 border-[#DBDBDB] rounded-2xl gap-2">
 
-                    <span class="font-bold text-4xl text-brand">
-                        <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
-                    </span>
+                    <?php if (!empty($scored['excused'])): ?>
 
-                    <span class="text-sm font-semibold text-[#646464]">
-                        <?= esc((float) ($scored['percentage'] ?? 0)) ?>%
-                    </span>
+                        <span class="font-bold text-2xl text-brand">Excused</span>
+
+                        <span class="text-center text-xs text-[#646464]">This work does not count toward your grade.</span>
+
+                    <?php else: ?>
+
+                        <span class="font-bold text-4xl text-brand">
+                            <?= esc((int) $scored['score']) ?>/<?= esc((int) $totalPoints) ?>
+                        </span>
+
+                        <span class="text-sm font-semibold text-[#646464]">
+                            <?= esc((float) ($scored['percentage'] ?? 0)) ?>%
+                        </span>
+
+                    <?php endif; ?>
 
                     <?php if ($scoreCaption): ?>
                         <span class="text-center text-xs text-[#646464]"><?= esc($scoreCaption) ?></span>
                     <?php endif; ?>
 
                 </div>
+
+                <?php if ($memberScore !== null && empty($scored['excused'])): ?>
+
+                    <!-- Group activity: this student's own parts of the grade -->
+                    <dl class="flex flex-col gap-2 rounded-2xl border border-[#DBDBDB] bg-[#F9F9FC] p-4 text-sm text-[#646464]" data-group-result>
+
+                        <?php if ($memberScore['group_points'] !== null): ?>
+                            <div class="flex justify-between gap-3"><dt>Group part</dt><dd class="font-semibold text-brand"><?= esc($points($memberScore['group_points'])) ?></dd></div>
+                        <?php endif; ?>
+
+                        <?php if ($memberScore['individual_points'] !== null): ?>
+                            <div class="flex justify-between gap-3"><dt>Your individual part</dt><dd class="font-semibold text-brand"><?= esc($points($memberScore['individual_points'])) ?></dd></div>
+                        <?php endif; ?>
+
+                        <?php foreach ($groupRubric as $line): ?>
+                            <div class="flex justify-between gap-3 text-xs">
+                                <dt class="min-w-0 wrap-anywhere"><?= esc($line['title']) ?> <span class="text-[#8A8A8A]">· <?= esc($line['scope']) ?></span></dt>
+                                <dd><?= esc($points($line['points'])) ?>/<?= esc($points($line['max'])) ?></dd>
+                            </div>
+                        <?php endforeach; ?>
+
+                        <?php if ((float) $memberScore['adjustment'] != 0.0): ?>
+                            <div class="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                                <dt>Your adjustment</dt>
+                                <dd class="font-semibold text-brand"><?= esc(((float) $memberScore['adjustment'] > 0 ? '+' : '') . $points($memberScore['adjustment'])) ?></dd>
+                                <dd class="w-full text-xs whitespace-pre-line"><?= esc((string) $memberScore['adjustment_reason']) ?></dd>
+                            </div>
+                        <?php endif; ?>
+
+                        <?php if (trim((string) $memberScore['private_note']) !== ''): ?>
+                            <div class="flex flex-col gap-1">
+                                <dt class="font-semibold">Note from your instructor</dt>
+                                <dd class="text-xs whitespace-pre-line"><?= esc((string) $memberScore['private_note']) ?></dd>
+                            </div>
+                        <?php endif; ?>
+
+                    </dl>
+
+                <?php endif; ?>
 
             <?php elseif (!empty($scoreResult['partial'])): ?>
 

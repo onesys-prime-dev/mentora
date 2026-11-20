@@ -217,6 +217,13 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
+        // Grade Work's group view (screen 2B): the activity's groups, one group, the atomic save, reopen and the post-grading decisions (4D).
+        $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::grade/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/reopen', 'Courses\Groups\GroupGradeController::reopen/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/members/(:num)/late-decision', 'Courses\Groups\GroupGradeController::lateDecision/$1/$2/$3/$4');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/members/(:num)/drop-decision', 'Courses\Groups\GroupGradeController::dropDecision/$1/$2/$3/$4');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -469,6 +476,8 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
         $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
         $routes->get('(:num)/assessments/(:num)/groups/proposals', 'Courses\Groups\ActivityGroupsController::proposals/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -697,6 +706,13 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
+        // Grade Work's group view (screen 2B): the activity's groups, one group, the atomic save, reopen and the post-grading decisions (4D).
+        $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::grade/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/reopen', 'Courses\Groups\GroupGradeController::reopen/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/members/(:num)/late-decision', 'Courses\Groups\GroupGradeController::lateDecision/$1/$2/$3/$4');
+        $routes->post('(:num)/assessments/(:num)/group-grading/(:num)/members/(:num)/drop-decision', 'Courses\Groups\GroupGradeController::dropDecision/$1/$2/$3/$4');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

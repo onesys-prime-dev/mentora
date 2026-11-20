@@ -8,6 +8,7 @@ use App\Models\Assessments\AssessmentFeedbackModel;
 use App\Models\Assessments\AssessmentModel;
 use App\Services\Courses\CourseMembership;
 use App\Models\Assessments\AssessmentSubmissionModel;
+use App\Services\Groups\GroupSubmissionResolver;
 
 /**
  * A submission's feedback thread: the instructor starts it (bundled with
@@ -45,7 +46,12 @@ class AssessmentFeedbackService
             ? $user->inGroup('instructor')
             : in_array((new CourseMembership())->roleIn($user, $offeringId), ['instructor', 'chairperson'], true);
 
-        if (!$isInstructor && (int) $submission['student_id'] !== (int) $user->id) {
+        // A group's shared submission is every member's: any of them may reply on its thread.
+        $sharedGroup = $isInstructor || $submission['group_id'] === null ? null
+            : (new GroupSubmissionResolver())->sharedGroup((int) $submission['assessment_id'], (int) $user->id);
+        $isMember    = $sharedGroup !== null && (int) $sharedGroup['id'] === (int) $submission['group_id'];
+
+        if (!$isInstructor && !$isMember && (int) $submission['student_id'] !== (int) $user->id) {
             return ['success' => false, 'message' => 'You can only reply to your own submission.'];
         }
 

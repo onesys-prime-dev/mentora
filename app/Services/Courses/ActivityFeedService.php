@@ -3,6 +3,7 @@
 namespace App\Services\Courses;
 
 use App\Services\Courses\Assessments\AssessmentOverviewService;
+use App\Services\Courses\Assessments\AssessmentResultService;
 
 /**
  * The course Overview's "Recent Activity" feed.
@@ -76,19 +77,22 @@ class ActivityFeedService
         if ($byId !== []) {
 
             $graded = db_connect()->table('assessment_submissions')
-                ->select(['assessment_id', 'score', 'graded_at'])
+                ->select(['assessment_submissions.assessment_id', 'assessment_submissions.graded_at'])
+                // A group member's own final, never a teammate's (AssessmentResultService).
+                ->select(AssessmentResultService::MEMBER_SCORE_SQL, false)
                 ->select(
                     "(SELECT message FROM assessment_feedbacks
                         WHERE submission_id = assessment_submissions.id
                         ORDER BY id DESC LIMIT 1) AS feedback",
                     false
                 )
-                ->where('student_id', $studentId)
-                ->where('is_graded', 1)
-                ->whereIn('assessment_id', array_keys($byId))
-                ->where('graded_at >=', $since)
-                ->where('graded_at <=', date('Y-m-d H:i:s', $now))
-                ->orderBy('graded_at', 'DESC')
+                ->join('group_member_scores gms', AssessmentResultService::memberJoinSql($studentId), 'left', false)
+                ->where(AssessmentResultService::memberRowSql($studentId), null, false)
+                ->where('assessment_submissions.is_graded', 1)
+                ->whereIn('assessment_submissions.assessment_id', array_keys($byId))
+                ->where('assessment_submissions.graded_at >=', $since)
+                ->where('assessment_submissions.graded_at <=', date('Y-m-d H:i:s', $now))
+                ->orderBy('assessment_submissions.graded_at', 'DESC')
                 ->get()
                 ->getResultArray();
 

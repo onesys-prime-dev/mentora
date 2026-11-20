@@ -66,6 +66,10 @@ import {
 } from "./grading/grading.js";
 
 import {
+    initializeGroupGrading,
+} from "../../groups/grading.js";
+
+import {
     initializeQuizTaking,
 } from "./quiz-taking/quiz-taking.js";
 
@@ -1225,6 +1229,17 @@ export async function loadGradeWork(
                 "click",
                 (event) => viewStudentGrade(event.currentTarget.dataset.viewStudentGrade, refresh)
             );
+
+        // A group activity draws the group view (screen 2B); a solo student's own work opens on the per-student page.
+        const groupView = document.querySelector("[data-group-grading]");
+
+        if (groupView) {
+            initializeGroupGrading(groupView, {
+                gradeStudent: (nextStudentId) => loadGradeWork(offeringId, assessmentId, nextStudentId, refresh, { pushState: true, mode: "navigate" }),
+            });
+
+            return;
+        }
 
         initializeGradeWork(
             offeringId,

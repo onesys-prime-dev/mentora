@@ -910,7 +910,7 @@ class LearningProgressService
         foreach ($assessments as $assessment) {
 
             $itemId  = (int) $assessment['learning_item_id'];
-            $counted = $results->resultFor(($type[$itemId] ?? '') === 'quiz', $attempts[(int) $assessment['id']] ?? [])['counted'];
+            $counted = $results->resultFor(($type[$itemId] ?? '') === 'quiz', $results->memberAttempts((int) $assessment['id'], $userId, $attempts[(int) $assessment['id']] ?? []))['counted'];
             $total   = (float) ($assessment['total_points'] ?? 0);
 
             $percent = null;

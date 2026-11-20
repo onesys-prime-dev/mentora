@@ -112,7 +112,11 @@ class AssignmentSubmissionService
         };
 
         // The latest graded submission is the one that counts.
-        $result = (new AssessmentResultService())->resultFor(false, $attempts);
+        // On a group activity each attempt carries this student's own final (never a teammate's).
+        $results = new AssessmentResultService();
+        $attemptsUsed = count($attempts);
+        $attempts = $results->memberAttempts($assessmentId, (int) $user->id, $attempts);
+        $result = $results->resultFor(false, $attempts);
 
         $extension = $shared ? (new GroupExtensionService())->extensionFor((int) $shared['id'], $assessmentId) : null;
 
@@ -132,7 +136,7 @@ class AssignmentSubmissionService
             'latest' => $attempts[0] ?? null,
             'counted' => $result['counted'],
             'result' => $result,
-            'attemptsUsed' => count($attempts),
+            'attemptsUsed' => $attemptsUsed,
             'attemptLimit' => $attemptLimit,
             'allowed' => $allowed,
             'canSubmit' => $reason === null,

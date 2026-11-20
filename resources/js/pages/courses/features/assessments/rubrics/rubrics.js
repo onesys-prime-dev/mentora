@@ -23,6 +23,7 @@ const state = {
     offeringId: null,
     assessmentId: null,
     refresh: null,
+    groupActivity: false,
 
     // "create" | "editor" — which rubric modal the criteria flow belongs to
     criteriaContext: null,
@@ -49,6 +50,14 @@ export function initializeRubrics(offeringId, assessmentId, refresh) {
     state.offeringId = offeringId;
     state.assessmentId = assessmentId;
     state.refresh = refresh;
+
+    // The "Scored" choice only matters when the assessment is a group activity.
+    state.groupActivity =
+        document.querySelector("#rubric-editor-container")?.dataset.groupActivity === "1";
+
+    document
+        .querySelectorAll("[data-rubric-scope-field]")
+        .forEach((field) => field.classList.toggle("hidden", !state.groupActivity));
 
     modals = {
 
@@ -646,6 +655,11 @@ function renderCriteriaCard(criterion, key, context) {
                 ${escapeHtml(description)}
             </span>
 
+            ${state.groupActivity ? `
+            <span class="text-xs font-medium text-[#767676]">
+                Scored: ${criterion.scope === "group" ? "Group" : "Per student"}
+            </span>` : ""}
+
         </div>
     `;
 
@@ -716,6 +730,9 @@ function bindCriteriaCreateModal() {
                 document.querySelector("[data-criteria-create-max-points]")?.value
             );
 
+        const scope =
+            document.querySelector("[data-criteria-create-scope]")?.value || "individual";
+
         if (!title) {
             return;
         }
@@ -726,7 +743,7 @@ function bindCriteriaCreateModal() {
                 await createRubricCriterion(
                     state.offeringId,
                     state.editorRubricId,
-                    { title, description, max_points: maxPoints }
+                    { title, description, max_points: maxPoints, scope }
                 );
 
             state.editorCriteria =
@@ -742,6 +759,7 @@ function bindCriteriaCreateModal() {
                 title,
                 description,
                 max_points: maxPoints,
+                scope,
             });
 
             renderStagedCriteria();
@@ -803,6 +821,13 @@ function openCriteriaEditorModal(context, key) {
         maxPointsInput.value = criterion.max_points ?? 0;
     }
 
+    const scopeInput =
+        document.querySelector("[data-criteria-editor-scope]");
+
+    if (scopeInput) {
+        scopeInput.value = criterion.scope ?? "individual";
+    }
+
     modals.criteriaEditor.open();
 
 }
@@ -827,6 +852,9 @@ function bindCriteriaEditorModal() {
                 document.querySelector("[data-criteria-editor-max-points]")?.value
             );
 
+        const scope =
+            document.querySelector("[data-criteria-editor-scope]")?.value || "individual";
+
         if (!title) {
             return;
         }
@@ -837,7 +865,7 @@ function bindCriteriaEditorModal() {
                 await updateRubricCriterion(
                     state.offeringId,
                     state.editorCriterionEditId,
-                    { title, description, max_points: maxPoints }
+                    { title, description, max_points: maxPoints, scope }
                 );
 
             state.editorCriteria =
@@ -853,6 +881,7 @@ function bindCriteriaEditorModal() {
                 title,
                 description,
                 max_points: maxPoints,
+                scope,
             };
 
             renderStagedCriteria();
