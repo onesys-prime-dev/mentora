@@ -277,10 +277,14 @@ function renderMine(card, state) {
         ? `<div class="flex flex-col gap-2" data-sg-waiting>${alertHtml(card, "info", "Waiting for your instructor to approve this group.")}${pending.length ? `<p class="text-sm text-[#646464]">Invited: ${pending.map(escapeHtml).join(", ")}</p>` : ""}</div>`
         : "";
 
+    const extended = group.extension
+        ? `<div data-sg-extension>${alertHtml(card, "info", `Deadline extended for your group to ${formatDateTime(group.extension.until)}. Reason: ${group.extension.reason}`)}</div>`
+        : "";
+
     return `
         <h3 class="font-heading text-base font-semibold text-brand">Your group: ${escapeHtml(group.name)}</h3>
         <div class="flex flex-wrap gap-2" role="list" aria-label="Members of ${escapeHtml(group.name)}">${chips}</div>
-        ${waiting}${proposed || !group.leader ? "" : leaderRow(group)}${notice}${actions}${switchList}${errorSlot}`;
+        ${extended}${waiting}${proposed || !group.leader ? "" : leaderRow(group)}${notice}${actions}${switchList}${errorSlot}`;
 
 }
 

@@ -316,6 +316,59 @@ final class ActivityGroupsRoutesTest extends RouteTestCase
         $this->assertSame(200, $this->api($this->chair, 'chairperson', 'DELETE')[0]);
     }
 
+    public function testInstructorExtendsAGroupsDeadlineAndTheDetailCarriesIt(): void
+    {
+        $detail = $this->attach();
+        $g1     = (int) $detail['groups'][0]['id'];
+        $until  = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+        $this->assertNull($detail['groups'][0]['extension']);
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/extension", ['until' => date('Y-m-d\TH:i', strtotime($until)), 'reason' => 'Server outage']);
+        $this->assertSame(200, $status, (string) json_encode($json));
+
+        $shown = $this->api($this->teacher, 'instructor', 'GET')[1];
+        $this->assertSame('Server outage', $shown['groups'][0]['extension']['reason']);
+        $this->assertSame(substr($until, 0, 16), substr($shown['groups'][0]['extension']['until'], 0, 16));
+        $this->assertArrayHasKey('dueDate', $shown);
+        $this->assertNotNull(db_connect()->table('audit_logs')->where('action', 'groups.deadline_extended')->get()->getRowArray());
+
+        // The dean reads it too.
+        $this->assertSame('Server outage', $this->api($this->dean(), 'dean', 'GET')[1]['groups'][0]['extension']['reason']);
+    }
+
+    public function testAnExtensionNeedsAReasonAndALaterDate(): void
+    {
+        $g1 = (int) $this->attach()['groups'][0]['id'];
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/extension", ['until' => date('Y-m-d H:i:s', strtotime('+30 days')), 'reason' => '  ']);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('reason', $json['errors']);
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/extension", ['until' => date('Y-m-d H:i:s', strtotime('-1 day')), 'reason' => 'x']);
+        $this->assertSame(422, $status);
+        $this->assertArrayHasKey('until', $json['errors']);
+        $this->assertSame(0, db_connect()->table('group_extensions')->countAllResults());
+    }
+
+    public function testExtensionRoutesRefuseForeignIdsRolesAndAFinalizedOffering(): void
+    {
+        $g1   = (int) $this->attach()['groups'][0]['id'];
+        $body = ['until' => date('Y-m-d H:i:s', strtotime('+30 days')), 'reason' => 'Late laptop'];
+
+        $this->assertSame(404, $this->api($this->teacher, 'instructor', 'POST', '/groups/999999/extension', $body)[0]);
+        $this->assertSame(404, $this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/extension", $body, $this->assignment + 999)[0]);
+        $this->assertContains($this->api($this->stranger, 'instructor', 'POST', "/groups/{$g1}/extension", $body)[0], [403, 404]);
+        $this->assertContains($this->api($this->student, 'student', 'POST', "/groups/{$g1}/extension", $body)[0], [403, 404, 405]);
+        $this->assertContains($this->api($this->dean(), 'dean', 'POST', "/groups/{$g1}/extension", $body)[0], [403, 404, 405]);
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'POST', "/groups/{$g1}/extension", $body)[0]);
+
+        db_connect()->table('group_extensions')->emptyTable();
+        db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $this->offering, 'finalized_by' => $this->teacher->id, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
+        $this->assertContains($this->api($this->teacher, 'instructor', 'POST', "/groups/{$g1}/extension", $body)[0], [403, 409, 422, 423]);
+        $this->assertSame(0, db_connect()->table('group_extensions')->countAllResults());
+    }
+
     public function testAFinalizedOfferingRefusesEveryWrite(): void
     {
         $detail = $this->attach();

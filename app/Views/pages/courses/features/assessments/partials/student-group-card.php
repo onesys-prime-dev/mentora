@@ -29,7 +29,7 @@ $proposeForm = '<form class="flex flex-col gap-4" novalidate>'
     . $buttons('Send invitations') . '</form>';
 ?>
 
-<div class="flex flex-col gap-3" data-student-group data-assessment-id="<?= esc((string) $currentAssessment['id']) ?>" hidden>
+<div class="flex flex-col gap-3" id="student-group" data-student-group data-assessment-id="<?= esc((string) $currentAssessment['id']) ?>" hidden>
 
     <div class="flex items-center gap-3">
         <?= icon('users', 'h-5 w-5') ?>

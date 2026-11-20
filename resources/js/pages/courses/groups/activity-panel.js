@@ -5,7 +5,7 @@ import { showLoadError } from "../../../shared/spa/error-state.js";
 
 import { fetchActivityGroups, fetchActivityProposals, sendActivityChange } from "./api.js";
 import { applyMove, bindDragMoves, FAILED, fillMoveSelect, groupOf, NETWORK, onSubmit, studentById } from "./board.js";
-import { badge, escapeHtml, renderGroupBoard, SMALL } from "./detail.js";
+import { badge, escapeHtml, formatDateTime, renderGroupBoard, SMALL } from "./detail.js";
 import { renderDetailSkeleton } from "./skeleton.js";
 
 /*
@@ -22,7 +22,7 @@ import { renderDetailSkeleton } from "./skeleton.js";
 
 const FLAGS = ["nonleader_can_rename", "nonleader_can_vote", "nonleader_can_leave", "groups_visible"];
 const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "formation_mode", "signup_opens_at", "signup_closes_at", "min_size", "max_size", ...FLAGS];
-const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog", "ga-decline-dialog", "ga-leader-dialog"];
+const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog", "ga-decline-dialog", "ga-leader-dialog", "ga-extend-dialog"];
 const REASON = "Give a reason. It is kept with the change.";
 
 const byName = (a, b) => a.name.localeCompare(b.name);
@@ -256,12 +256,15 @@ function renderBoard(panel) {
                 ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="set-leader" data-group="${group.id}" aria-label="Set the leader of ${escapeHtml(group.name)}">Set leader</button>`
                 : "";
 
+            const extended = group.extension ? `<span data-ga-extension>${badge(`Extended to ${formatDateTime(group.extension.until)}`, "neutral")}</span>` : "";
+            const extend = `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="extend" data-group="${group.id}" aria-label="Extend the deadline of ${escapeHtml(group.name)}">Extend deadline</button>`;
+
             return group.frozen ? {
                 locked: true,
-                badge: badge("Frozen", "neutral") + leaderBadge(group),
-                actions: setLeader + `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="unlock" data-group="${group.id}" aria-label="Unlock ${escapeHtml(group.name)}">Unlock</button>`
+                badge: badge("Frozen", "neutral") + leaderBadge(group) + extended,
+                actions: setLeader + extend + `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="unlock" data-group="${group.id}" aria-label="Unlock ${escapeHtml(group.name)}">Unlock</button>`
                     + (ungrouped.length > 0 ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="late-member" data-group="${group.id}" aria-label="Add a late enrollee to ${escapeHtml(group.name)}">Add late enrollee</button>` : ""),
-            } : { badge: leaderBadge(group), actions: setLeader };
+            } : { badge: leaderBadge(group) + extended, actions: setLeader + extend };
         },
     });
 
@@ -482,6 +485,17 @@ function onAction(panel, button) {
             const form = openDialog(panel, "ga-leader-dialog", `Set the leader of ${group.name}`, button);
             form.elements.student_user_id.replaceChildren(...group.members.map((s) => new Option(s.name, String(s.student_user_id), false, s.student_user_id === group.leader?.id)));
             panel.pending = { kind: "leader", groupId };
+            break;
+        }
+        case "extend": {
+            const form = openDialog(panel, "ga-extend-dialog", `Extend the deadline for ${group.name}`, button);
+            const current = group.extension?.until ?? panel.detail.dueDate;
+
+            panel.part("[data-ga-extend-current]").textContent = current
+                ? `The current deadline for this group is ${formatDateTime(current)}.`
+                : "This assignment has no due date yet.";
+            form.elements.until.value = "";
+            panel.pending = { kind: "extend", groupId };
             break;
         }
         case "late-member": {
@@ -747,6 +761,30 @@ function bind(panel) {
             renderBoard(panel);
             close(panel, "ga-late-dialog");
             announce(panel, `${student.name} was added to ${group.name}`);
+        }
+
+        return result;
+    });
+
+    onSubmit(form("ga-extend-dialog"), async (data) => {
+        const until = String(data.get("until") ?? "");
+        const reason = requireReason(form("ga-extend-dialog"), data);
+
+        if (until === "" || reason === "") {
+            applyFieldErrors(form("ga-extend-dialog"), { ...(until === "" ? { until: "Choose the new date and time." } : {}), ...(reason === "" ? { reason: REASON } : {}) });
+
+            return null;
+        }
+
+        const { groupId } = panel.pending;
+        const group = panel.detail.groups.find((g) => g.id === groupId);
+        const result = await send(panel, "POST", `/groups/${groupId}/extension`, { until, reason });
+
+        if (result.ok) {
+            group.extension = { until: `${until.replace("T", " ")}:00`, reason };
+            renderBoard(panel);
+            close(panel, "ga-extend-dialog");
+            announce(panel, `${group.name} has until ${formatDateTime(group.extension.until)}`);
         }
 
         return result;

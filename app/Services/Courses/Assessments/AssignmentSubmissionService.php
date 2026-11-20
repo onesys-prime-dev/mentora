@@ -13,6 +13,10 @@ use App\Models\Assessments\AssessmentTypeModel;
 use App\Models\Files\FileModel;
 use App\Services\Courses\CourseMembership;
 use App\Services\Courses\LearningProgressService;
+use App\Services\Groups\ActivityGroupMembershipService;
+use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupExtensionService;
+use App\Services\Groups\GroupSubmissionResolver;
 use App\Services\Storage\StorageService;
 
 /**
@@ -32,9 +36,11 @@ class AssignmentSubmissionService
     protected AssessmentTypeModel $typeModel;
     protected FileModel $fileModel;
     protected StorageService $storageService;
+    protected GroupSubmissionResolver $resolver;
 
     public function __construct()
     {
+        $this->resolver = new GroupSubmissionResolver();
         $this->assessmentModel = new AssessmentModel();
         $this->settingsModel = new AssessmentSettingsModel();
         $this->submissionModel = new AssessmentSubmissionModel();
@@ -47,8 +53,9 @@ class AssignmentSubmissionService
      * @return array{
      *     attempts: array, latest: ?array, attemptsUsed: int, attemptLimit: int,
      *     allowed: array{file: bool, text: bool, link: bool},
-     *     canSubmit: bool, reason: ?string
-     * }
+     *     canSubmit: bool, reason: ?string,
+     *     group?: array{name: ?string, canSubmit: bool, blockedReason: ?string, blockedCode: ?string, submittedBy: ?string, extensionUntil: ?string, extensionReason: ?string, leaderName: ?string}
+     * } `group` only on a group activity; attempts carry `submitted_by` for a shared group submission
      */
     public function getState(User $user, int $assessmentId): array
     {
@@ -61,9 +68,12 @@ class AssignmentSubmissionService
             'link' => (bool) ($settings['allow_link_entry'] ?? false),
         ];
 
+        // A shared group submission belongs to the whole group: its rows, attempts and deadline are the group's.
+        $shared = $this->resolver->sharedGroup($assessmentId, (int) $user->id);
+
         $attempts = $this->submissionModel
             ->where('assessment_id', $assessmentId)
-            ->where('student_id', $user->id)
+            ->where($shared ? 'group_id' : 'student_id', $shared ? $shared['id'] : $user->id)
             ->where('status !=', 'In Progress')
             ->orderBy('attempt_number', 'DESC')
             ->orderBy('id', 'DESC')
@@ -73,8 +83,19 @@ class AssignmentSubmissionService
             $attempt['file'] = !empty($attempt['submission_file_id'])
                 ? $this->fileModel->retrieveFile((int) $attempt['submission_file_id'])
                 : null;
+
+            if ($shared) {
+                $attempt['submitted_by'] = $this->nameOf((int) ($attempt['submitted_by_user_id'] ?? $attempt['student_id']));
+            }
         }
         unset($attempt);
+
+        $config = $assessment ? (new ActivityGroupService())->findByAssessment($assessmentId) : null;
+        $verdict = $this->resolver->canSubmit($assessmentId, (int) $user->id);
+
+        if ($assessment) {
+            $assessment['due_date'] = $this->resolver->effectiveDueDate($assessmentId, (int) $user->id);
+        }
 
         $attemptLimit = max(1, (int) ($assessment['attempt_limit'] ?? 1));
 
@@ -87,11 +108,24 @@ class AssignmentSubmissionService
         $reason = match (true) {
             !$assessment => 'This assignment could not be found.',
             $lock !== null => $lock['message'],
-            default => $this->blockingReason($assessment, $settings, $allowed, count($attempts), $attemptLimit),
+            default => $this->blockingReason($assessment, $settings, $allowed, count($attempts), $attemptLimit) ?? $verdict['reason'],
         };
 
         // The latest graded submission is the one that counts.
         $result = (new AssessmentResultService())->resultFor(false, $attempts);
+
+        $extension = $shared ? (new GroupExtensionService())->extensionFor((int) $shared['id'], $assessmentId) : null;
+
+        $group = $config === null ? [] : ['group' => [
+            'name' => $this->resolver->groupFor($assessmentId, (int) $user->id)['name'] ?? null,
+            'canSubmit' => $verdict['allowed'],
+            'blockedReason' => $verdict['reason'],
+            'blockedCode' => $verdict['allowed'] ? null : $verdict['code'],
+            'submittedBy' => $attempts[0]['submitted_by'] ?? null,
+            'extensionUntil' => $extension['until_at'] ?? null,
+            'extensionReason' => $extension['reason'] ?? null,
+            'leaderName' => $verdict['code'] === 'leader_only' ? $this->nameOf((int) ($this->resolver->groupFor($assessmentId, (int) $user->id)['leader_user_id'] ?? 0)) : null,
+        ]];
 
         return [
             'attempts' => $attempts,
@@ -103,7 +137,7 @@ class AssignmentSubmissionService
             'allowed' => $allowed,
             'canSubmit' => $reason === null,
             'reason' => $reason,
-        ];
+        ] + $group;
     }
 
     public function submit(User $user, int $assessmentId, array $data, ?UploadedFile $file = null): array
@@ -183,11 +217,8 @@ class AssignmentSubmissionService
 
         }
 
-        $lastAttemptNumber = (int) ($this->submissionModel
-            ->selectMax('attempt_number')
-            ->where('assessment_id', $assessmentId)
-            ->where('student_id', $user->id)
-            ->first()['attempt_number'] ?? 0);
+        $shared = $this->resolver->sharedGroup($assessmentId, (int) $user->id);
+        $dueDate = $this->resolver->effectiveDueDate($assessmentId, (int) $user->id);
 
         $now = date('Y-m-d H:i:s');
 
@@ -197,13 +228,15 @@ class AssignmentSubmissionService
             $saved = $this->submissionModel->insert([
                 'assessment_id' => $assessmentId,
                 'student_id' => $user->id,
-                'attempt_number' => $lastAttemptNumber + 1,
+                'group_id' => $shared ? $shared['id'] : null,
+                'submitted_by_user_id' => $shared ? $user->id : null,
+                'attempt_number' => $this->resolver->attemptNumberFor($assessmentId, (int) $user->id),
                 'started_at' => $now,
                 'submitted_at' => $now,
                 'submission_text' => $text !== '' ? $text : null,
                 'submission_link' => $link !== '' ? $link : null,
                 'submission_file_id' => $fileId,
-                'is_late_submission' => !empty($assessment['due_date']) && strtotime($now) > strtotime($assessment['due_date']),
+                'is_late_submission' => !empty($dueDate) && strtotime($now) > strtotime($dueDate),
                 'status' => 'Submitted',
             ]);
         } catch (DatabaseException $e) {
@@ -226,8 +259,19 @@ class AssignmentSubmissionService
                 : 'Your work could not be saved. Try again.'];
         }
 
-        // Handing the work in completes its item in the module.
-        (new LearningProgressService())->completeOnSubmission((int) $user->id, $assessmentId);
+        // The group's first hand-in (any style) locks its membership.
+        if ($group = $this->resolver->groupFor($assessmentId, (int) $user->id)) {
+            (new ActivityGroupMembershipService())->freezeGroup((int) $group['id']);
+        }
+
+        // Handing the work in completes its item in the module, for every member when the group submits as one.
+        $members = $shared
+            ? array_column(db_connect()->table('student_group_members')->select('student_user_id')->where('group_id', $shared['id'])->get()->getResultArray(), 'student_user_id')
+            : [$user->id];
+
+        foreach ($members as $memberId) {
+            (new LearningProgressService())->completeOnSubmission((int) $memberId, $assessmentId);
+        }
 
         return ['success' => true, 'message' => 'Your work was submitted.'];
     }
@@ -290,6 +334,13 @@ class AssignmentSubmissionService
     {
         return filter_var($url, FILTER_VALIDATE_URL) !== false
             && in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true);
+    }
+
+    private function nameOf(int $userId): string
+    {
+        $row = db_connect()->table('users u')->select('u.username, up.first_name, up.last_name')->join('user_profiles up', 'up.user_id = u.id', 'left')->where('u.id', $userId)->get()->getRowArray();
+
+        return $row === null ? '' : (trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')) ?: (string) $row['username']);
     }
 
     private function formatDate(string $datetime): string

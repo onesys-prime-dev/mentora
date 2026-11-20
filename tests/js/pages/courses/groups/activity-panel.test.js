@@ -55,6 +55,7 @@ function sectionHtml() {
             ${dialog("ga-copy-dialog", `<form data-ga-copy-form>${field("from_assessment_id", "<select name=\"from_assessment_id\"></select>")}<p data-form-error hidden></p><button type="submit">Copy groups</button></form>`)}
             <div data-ga-proposals hidden></div>
             ${dialog("ga-decline-dialog", `<form>${field("reason", "<textarea name=\"reason\"></textarea>")}<p data-form-error hidden></p><button type="submit">Decline proposal</button></form>`)}
+            ${dialog("ga-extend-dialog", `<form data-ga-extend-form><p data-ga-extend-current></p>${field("until", "<input name=\"until\" type=\"datetime-local\">")}${field("reason", "<textarea name=\"reason\"></textarea>")}<p data-form-error hidden></p><button type="submit">Extend deadline</button></form>`)}
             ${dialog("ga-leader-dialog", `<form>${field("student_user_id", "<select name=\"student_user_id\"></select>")}<p data-form-error hidden></p><button type="submit">Set leader</button></form>`)}
         </section>`;
 }
@@ -64,16 +65,17 @@ const config = (over = {}) => ({
     formation_mode: "manual", signup_opens_at: null, signup_closes_at: null, min_size: 1, max_size: 3, nonleader_can_rename: 0, nonleader_can_vote: 0, nonleader_can_leave: 1, groups_visible: 0, ...over,
 });
 
-const detail = ({ attached = true, frozen = false, canWrite = true } = {}) => ({
+const detail = ({ attached = true, frozen = false, canWrite = true, extension = null, dueDate = "2026-12-01 23:59:00" } = {}) => ({
     success: true,
     config: attached ? config() : null,
     groups: attached ? [
-        { id: 11, name: "Team 1", frozen, members: [{ student_user_id: 101, name: "Ana Cruz" }] },
+        { id: 11, name: "Team 1", frozen, extension, members: [{ student_user_id: 101, name: "Ana Cruz" }] },
         { id: 12, name: "Team 2", frozen: false, members: [] },
     ] : [],
     ungrouped: attached ? [{ student_user_id: 103, name: "Cai Ortiz" }] : [],
     sets: [{ id: 5, name: "Project teams", group_count: 2 }],
     activities: [],
+    dueDate,
     flags: { frozenGroups: frozen, canWrite, offeringFinalized: false },
     lockReason: canWrite ? "" : "View only.",
 });
@@ -331,6 +333,82 @@ describe("how groups are formed", () => {
 
         expect(form.elements.signup_closes_at.value).toBe("");
         expect(form.querySelector("[data-field=\"signup_closes_at\"] [data-field-error]").textContent).toBe("Sign-up must close after it opens.");
+    });
+
+});
+
+describe("extending a group's deadline", () => {
+
+    const open = async () => {
+        await initializeActivityGroups(root());
+        root().querySelector("[data-group-card=\"11\"] [data-group-action=\"extend\"]").click();
+
+        return document.querySelector("[data-ga-extend-form]");
+    };
+
+    it("states the current due date, needs a date and a reason, then posts both", async () => {
+        const fetch = server({
+            "GET /": () => json(detail()),
+            "POST /groups/11/extension": () => json({ success: true }),
+        });
+        const form = await open();
+
+        expect(document.querySelector("#ga-extend-dialog").hidden).toBe(false);
+        expect(document.querySelector("[data-ga-extend-current]").textContent).toContain("1 Dec 2026, 11:59 PM");
+
+        form.requestSubmit();
+        await flush();
+
+        expect(sent(fetch, "POST", "/extension")).toHaveLength(0);
+        expect(form.querySelector("[data-field=\"until\"] [data-field-error]").hidden).toBe(false);
+        expect(form.querySelector("[data-field=\"reason\"] [data-field-error]").hidden).toBe(false);
+
+        form.elements.until.value = "2026-12-14T23:59";
+        form.requestSubmit();
+        await flush();
+
+        expect(sent(fetch, "POST", "/extension")).toHaveLength(0);
+
+        form.elements.reason.value = "Server outage";
+        form.requestSubmit();
+        await flush();
+
+        expect(JSON.parse(sent(fetch, "POST", "/extension")[0][1].body)).toEqual({ until: "2026-12-14T23:59", reason: "Server outage" });
+        expect(root().querySelector("[data-group-card=\"11\"]").textContent).toContain("Extended to 14 Dec 2026, 11:59 PM");
+        expect(document.querySelector("#ga-extend-dialog").hidden).toBe(true);
+    });
+
+    it("shows an extension already given, and the date it replaces", async () => {
+        server({ "GET /": () => json(detail({ extension: { until: "2026-12-14 23:59:00", reason: "Server outage" } })) });
+        const form = await open();
+
+        expect(root().querySelector("[data-group-card=\"11\"]").textContent).toContain("Extended to 14 Dec 2026, 11:59 PM");
+        expect(document.querySelector("[data-ga-extend-current]").textContent).toContain("14 Dec 2026, 11:59 PM");
+        expect(form.elements.until.value).toBe("");
+    });
+
+    it("keeps the dialog open with the server's reason when it refuses", async () => {
+        server({
+            "GET /": () => json(detail()),
+            "POST /groups/11/extension": () => json({ success: false, message: "x", errors: { until: "The new deadline must be later than the current one." } }, 422),
+        });
+        const form = await open();
+        form.elements.until.value = "2026-11-01T10:00";
+        form.elements.reason.value = "Why";
+        form.requestSubmit();
+        await flush();
+
+        expect(form.querySelector("[data-field=\"until\"] [data-field-error]").textContent).toContain("must be later");
+        expect(document.querySelector("#ga-extend-dialog").hidden).toBe(false);
+    });
+
+    it("read only: the extension is shown but nothing can be changed", async () => {
+        server({ "GET /": () => json(detail({ canWrite: false, extension: { until: "2026-12-14 23:59:00", reason: "Server outage" } })) });
+
+        await initializeActivityGroups(root());
+
+        expect(root().querySelector("[data-group-card=\"11\"]").textContent).toContain("Extended to 14 Dec 2026, 11:59 PM");
+        expect(root().querySelector("[data-group-action=\"extend\"]")).toBeNull();
     });
 
 });

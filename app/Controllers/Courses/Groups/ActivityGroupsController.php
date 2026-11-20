@@ -9,6 +9,7 @@ use App\Models\Assessments\AssessmentModel;
 use App\Models\Groups\StudentGroupModel;
 use App\Services\Groups\ActivityGroupMembershipService;
 use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupExtensionService;
 use App\Services\Groups\GroupLeaderService;
 use App\Services\Groups\GroupProposalService;
 use App\Services\Institutions\StructureException;
@@ -45,6 +46,12 @@ class ActivityGroupsController extends BaseController
                 $byGroup[(int) $m['group_id']][] = ['student_user_id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
             }
 
+            $extensions = [];
+
+            foreach (db_connect()->table('group_extensions')->where('assessment_id', $assessmentId)->get()->getResultArray() as $x) {
+                $extensions[(int) $x['group_id']] = ['until' => $x['until_at'], 'reason' => $x['reason']];
+            }
+
             // Proposed groups wait in the proposals queue (GET groups/proposals); declined ones are history.
             $groups = array_map(static fn (array $g) => [
                 'id'      => (int) $g['id'],
@@ -53,6 +60,7 @@ class ActivityGroupsController extends BaseController
                 'frozen'  => $g['frozen_at'] !== null,
                 'leader'  => ['id' => $g['leader_user_id'] === null ? null : (int) $g['leader_user_id'], 'final' => $g['leader_finalized_at'] !== null],
                 'members' => $byGroup[(int) $g['id']] ?? [],
+                'extension' => $extensions[(int) $g['id']] ?? null,
             ], (new StudentGroupModel())->where('config_id', $configId)->where('status', 'active')->orderBy('id', 'ASC')->findAll());
 
             // Members of a pending proposal are not free either.
@@ -83,6 +91,7 @@ class ActivityGroupsController extends BaseController
         return $this->response->setJSON([
             'success'    => true,
             'config'     => $config,
+            'dueDate'    => db_connect()->table('assessments')->select('due_date')->where('id', $assessmentId)->get()->getRow()?->due_date,
             'groups'     => $groups,
             'ungrouped'  => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name']], $ungrouped),
             'sets'       => array_map(static fn (array $s) => ['id' => (int) $s['id'], 'name' => $s['name'], 'group_count' => (int) $s['group_count']], $sets),
@@ -198,6 +207,15 @@ class ActivityGroupsController extends BaseController
         $this->group($offeringId, $assessmentId, $groupId);
 
         return $this->run(fn () => (new GroupLeaderService())->setLeader($groupId, (int) ($this->body()['student_user_id'] ?? 0), $this->actor()));
+    }
+
+    /** More time for one group on this assignment; the reason is required and kept in the audit log. */
+    public function extend(int $offeringId, int $assessmentId, int $groupId): ResponseInterface
+    {
+        $this->group($offeringId, $assessmentId, $groupId);
+        $body = $this->body();
+
+        return $this->run(fn () => (new GroupExtensionService())->extend($groupId, $assessmentId, (string) ($body['until'] ?? ''), (string) ($body['reason'] ?? ''), $this->actor()));
     }
 
     public function deleteGroup(int $offeringId, int $assessmentId, int $groupId): ResponseInterface

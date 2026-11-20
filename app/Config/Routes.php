@@ -216,6 +216,7 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/approve', 'Courses\Groups\ActivityGroupsController::approve/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -695,6 +696,7 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/approve', 'Courses\Groups\ActivityGroupsController::approve/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

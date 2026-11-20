@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Models\Assessments\AssessmentModel;
 use App\Services\Courses\Grades\GradeFinalizationService;
 use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupExtensionService;
 use App\Services\Groups\GroupLeaderService;
 use App\Services\Groups\GroupProposalService;
 use App\Services\Groups\GroupSignupService;
@@ -168,6 +169,14 @@ class StudentGroupController extends BaseController
         return $row === null ? throw new StructureException('You are not in a group.') : (int) $row['group_id'];
     }
 
+    /** @return array{until:string,reason:string}|null */
+    private function extensionOf(int $groupId, int $assessmentId): ?array
+    {
+        $x = (new GroupExtensionService())->extensionFor($groupId, $assessmentId);
+
+        return $x === null ? null : ['until' => $x['until_at'], 'reason' => $x['reason']];
+    }
+
     /** @return list<array{id:int,name:string}> students of the activity who are in no group (or proposal) yet, except me */
     private function invitable(int $configId, int $me): array
     {
@@ -248,6 +257,7 @@ class StudentGroupController extends BaseController
             // D14: anyone renames until the leader is final, then only the leader unless the instructor allows it.
             'canRename'      => $open && (!$final || $isLeader || (int) $config['nonleader_can_rename'] === 1),
             'canVote'        => $open && $g['status'] === 'active' && (!$final || (int) $config['nonleader_can_vote'] === 1),
+            'extension'      => $this->extensionOf($g['id'], (int) $config['assessment_id']),
             'leader'         => ['id' => $state['leaderId'], 'final' => $state['final'], 'votes' => $votes, 'needed' => $state['needed'], 'myVote' => $state['myVote']],
         ];
 

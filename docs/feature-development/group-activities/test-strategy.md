@@ -51,3 +51,9 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - Red phases shown: GroupProposalService (15 errors), GroupLeaderService (20 errors), routes (6 failures + 3 errors), student-card Vitest (7 failed), activity-panel Vitest (5 failed).
 - NOT run: Playwright `group-activity-leader.spec.js` (e2e DB :3306 broken); no browser/dark-mode/360 px check.
 - Known gaps: destination group of a move/switch is not recounted for a leader majority; an instructor-set leader with no votes is kept; instructor board shows only active groups (proposed ones live in the proposals queue); Approve has no confirm dialog; leader shown as a badge on the group card, not a star on the chip.
+
+### Phase 6 (2026-11-21)
+- `phpunit` full suite: Tests 9895, Assertions 39117, OK (the one-off `GradeReportRoutesTest:224` failure seen in an implementer's `Student` filter run did not reproduce in the full suite). `npx vitest run`: 118 files, 1211 tests passed. eslint clean; phpstan on changed files (implementers): no errors.
+- Red phases shown: resolver + extension (20 errors), GroupAssignmentSubmission (10 failures + 1 error), 6.3 PHP (6 failures + 3 errors), 6.3 Vitest (5 failed).
+- NOT run: Playwright TC-GAS-07 and the other group e2e specs (e2e DB :3306 broken); no browser/dark-mode/360 px check. Student block messages are rendered server-side (assignment-work.php) and covered by PHP feature tests, not Vitest.
+- Known limits: in a finalized offering a group submission still goes through (same as solo hand-ins today); teammates see no grade/score panel until Phase 7; old solo rows made before joining a group are hidden from the group history; group block message wins over closed/unpublished reasons.

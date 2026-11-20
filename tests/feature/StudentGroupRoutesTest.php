@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Groups\ActivityGroupService;
+use App\Services\Groups\GroupExtensionService;
 use App\Services\Groups\GroupSetService;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -406,6 +407,119 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertFalse($this->api($this->me, 'GET')[1]['myGroup']['canRename']);
         $this->assertSame('Team 1', db_connect()->table('student_groups')->where('id', $this->a)->get()->getRow()->name);
         $this->assertSame(0, db_connect()->table('student_group_leader_votes')->countAllResults());
+    }
+
+    public function testMyGroupCarriesTheExtensionAndMembersStayIdAndName(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+
+        $this->assertNull($this->api($this->me, 'GET')[1]['myGroup']['extension']);
+
+        (new GroupExtensionService())->extend($this->a, $this->assignment, date('Y-m-d H:i:s', strtotime('+30 days')), 'Power cut', (int) $this->teacher->id);
+        $group = $this->api($this->me, 'GET')[1]['myGroup'];
+
+        $this->assertSame('Power cut', $group['extension']['reason']);
+        $this->assertSame(date('Y-m-d H:i', strtotime('+30 days')), substr($group['extension']['until'], 0, 16));
+
+        foreach ($group['members'] as $member) {
+            $this->assertSame(['id', 'name'], array_keys($member));
+        }
+    }
+
+    /** Published, with text entry on, so the only thing that can stop a student is the group. */
+    private function openAssignment(): void
+    {
+        $db = db_connect();
+
+        if ($db->table('assessment_settings')->where('assessment_id', $this->assignment)->countAllResults() === 0) {
+            $db->table('assessment_settings')->insert(['assessment_id' => $this->assignment, 'allow_file_upload' => 0, 'allow_text_entry' => 1, 'allow_link_entry' => 0, 'created_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $db->table('assessment_settings')->where('assessment_id', $this->assignment)->update(['allow_text_entry' => 1]);
+    }
+
+    /** The assignment as a student's page draws it: the server writes the message and keeps the form, disabled. */
+    private function pageFor(User $student): string
+    {
+        $this->openAssignment();
+
+        $module = (int) db_connect()->table('assessments')->where('id', $this->assignment)->get()->getRow()->module_id;
+        [$item] = CourseFactory::items(CourseFactory::unit($module), [['title' => 'Team project', 'type' => 'assignment']]);
+        db_connect()->table('assessments')->where('id', $this->assignment)->update(['learning_item_id' => $item, 'status' => 'Published']);
+
+        $this->loggedInAs($student);
+        $res  = $this->withHeaders(['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])->call('get', "student/api/courses/{$this->offering}/modules/items/{$item}");
+        $body = json_decode((string) $res->response()->getBody(), true);
+
+        return html_entity_decode(implode(' ', array_filter((array) $body, 'is_string')), ENT_QUOTES);
+    }
+
+    public function testAnUngroupedStudentSeesTheJoinWarningAndADisabledForm(): void
+    {
+        $html = $this->pageFor($this->loner);
+
+        $this->assertStringContainsString("You're not in a group yet. You can't submit until you join one.", $html);
+        $this->assertStringContainsString('data-assignment-submission-form', $html);
+        $this->assertMatchesRegularExpression('/<fieldset[^>]*disabled/', $html);
+        $this->assertStringContainsString('data-sg-jump', $html);
+    }
+
+    public function testANonLeaderSeesWhoCanSubmit(): void
+    {
+        $this->settings(['submission_style' => 'leader_only']);
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+        db_connect()->table('student_groups')->where('id', $this->a)->update(['leader_user_id' => $this->mate->id, 'leader_finalized_at' => date('Y-m-d H:i:s')]);
+        $name = (string) db_connect()->query("SELECT COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username) AS n FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = ?", [$this->mate->id])->getRow()->n;
+
+        $html = $this->pageFor($this->me);
+
+        $this->assertStringContainsString("Only {$name} can submit for your group.", $html);
+        $this->assertMatchesRegularExpression('/<fieldset[^>]*disabled/', $html);
+    }
+
+    public function testAStudentOutsideThePoolIsToldTheActivityWasNotAssignedToThem(): void
+    {
+        $this->openAssignment();
+        db_connect()->table('assessment_settings')->where('assessment_id', $this->assignment)->update(['assign_to_specific_students' => 1]);
+        db_connect()->table('assessment_assignees')->insert(['assessment_id' => $this->assignment, 'student_user_id' => $this->mate->id]);
+
+        $this->assertStringContainsString('This activity was not assigned to you.', $this->pageFor($this->loner));
+    }
+
+    public function testSoloPolicyUngroupedStudentSeesNoBlockingMessage(): void
+    {
+        $this->settings(['ungrouped_policy' => 'solo']);
+
+        $html = $this->pageFor($this->loner);
+
+        $this->assertStringNotContainsString("You're not in a group yet", $html);
+        $this->assertDoesNotMatchRegularExpression('/<fieldset[^>]*disabled/', $html);
+    }
+
+    public function testMembersSeeTheExtensionNoticeAndWhoSubmitted(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+        (new GroupExtensionService())->extend($this->a, $this->assignment, date('Y-m-d H:i:s', strtotime('+30 days')), 'Power cut', (int) $this->teacher->id);
+
+        $html = $this->pageFor($this->me);
+
+        $this->assertStringContainsString('Deadline extended for your group to ' . date('M j, Y g:i A', strtotime('+30 days')), $html);
+        $this->assertStringContainsString('Reason: Power cut', $html);
+    }
+
+    public function testAMemberSeesWhoSubmittedForTheGroup(): void
+    {
+        $this->seat($this->a, $this->me);
+        $this->seat($this->a, $this->mate);
+        $when = '2026-11-20 14:30:00';
+        db_connect()->table('assessment_submissions')->insert(['assessment_id' => $this->assignment, 'student_id' => $this->mate->id, 'group_id' => $this->a, 'submitted_by_user_id' => $this->mate->id,
+            'attempt_number' => 1, 'status' => 'Submitted', 'submission_text' => 'Our work', 'started_at' => $when, 'submitted_at' => $when]);
+        $name = (string) db_connect()->query("SELECT COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username) AS n FROM users u LEFT JOIN user_profiles p ON p.user_id = u.id WHERE u.id = ?", [$this->mate->id])->getRow()->n;
+
+        $this->assertStringContainsString("Submitted by {$name} on Nov 20, 2026 2:30 PM.", $this->pageFor($this->me));
     }
 
     public function testTheModuleLearningItemOfAGroupAssignmentCarriesTheStudentCard(): void

@@ -111,3 +111,18 @@ test("TC-GAS-06 The card fits a 360 px phone with full-width buttons, and axe fi
     const results = await new AxeBuilder({ page }).include("[data-student-group]").withTags(["wcag2a", "wcag2aa"]).analyze();
     expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical").map((v) => v.id)).toEqual([]);
 });
+
+test("TC-GAS-07 An ungrouped student sees the join warning with the submit form shown disabled, and an extended deadline is told", async ({ page }) => {
+    await openAssignment(page, LAB);
+
+    await expect(page.getByText("You're not in a group yet. You can't submit until you join one.").first()).toBeVisible();
+    await expect(page.locator("[data-assignment-submit]")).toBeDisabled();
+
+    await card(page).locator("[data-sg-candidate]").first().getByRole("button", { name: "Join" }).click();
+    runSql("INSERT INTO group_extensions (group_id, assessment_id, until_at, reason, created_at) SELECT m.group_id, c.assessment_id, DATE_ADD(NOW(), INTERVAL 30 DAY), 'Power cut', NOW() FROM student_group_members m JOIN activity_group_configs c ON c.id = m.config_id JOIN auth_identities i ON i.user_id = m.student_user_id WHERE i.secret = 'student1@mentora.test' LIMIT 1");
+    await page.reload();
+
+    await expect(card(page).getByText("Reason: Power cut")).toBeVisible();
+
+    runSql("DELETE FROM group_extensions");
+});

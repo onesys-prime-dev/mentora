@@ -175,6 +175,26 @@ describe("the card's states", () => {
         expect(card().querySelector("[data-sg-reason]").textContent).toContain("chosen its leader");
     });
 
+    it("an extended deadline is told with its date and reason", async () => {
+        server({ "GET /": () => json(inGroup({}, { extension: { until: "2026-12-14 23:59:00", reason: "Server <b>outage</b>" } })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        const notice = card().querySelector("[data-sg-extension]");
+        expect(notice.textContent).toContain("Deadline extended for your group to 14 Dec 2026, 11:59 PM. Reason: Server <b>outage</b>");
+        expect(notice.querySelector("b")).toBeNull();
+    });
+
+    it("no extension: no notice", async () => {
+        server({ "GET /": () => json(inGroup({}, { extension: null })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        expect(card().querySelector("[data-sg-extension]")).toBeNull();
+    });
+
     it("frozen: the membership-frozen notice and no Leave or Switch", async () => {
         server({ "GET /": () => json(inGroup({ candidates: [] }, { frozen: true, canLeave: false })) });
 
