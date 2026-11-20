@@ -27,9 +27,9 @@ export const fetchGroupSet = (setId) => getJson(`${base()}/group-sets/${setId}`,
  * A change. Resolves { ok, status, body } and never throws for an answer the server gave
  * (a 422 carries { message, errors }); a network failure rejects.
  */
-export async function sendChange(method, path, body = {}) {
+export async function sendChange(method, path, body = {}, root = "/group-sets") {
 
-    const response = await fetch(`${base()}/group-sets${path}`, {
+    const response = await fetch(`${base()}${root}${path}`, {
         method,
         headers: { ...HEADERS, "Content-Type": "application/json" },
         credentials: "same-origin",
@@ -39,3 +39,9 @@ export async function sendChange(method, path, body = {}) {
     return { ok: response.ok, status: response.status, body: await response.json().catch(() => ({})) };
 
 }
+
+/** An assignment's groups: { config|null, groups, ungrouped, sets, activities, flags, lockReason }. */
+export const fetchActivityGroups = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/groups`, "the activity's groups");
+
+/** A change to an assignment's groups; answers as sendChange. */
+export const sendActivityChange = (assessmentId, method, path, body = {}) => sendChange(method, path, body, `/assessments/${assessmentId}/groups`);

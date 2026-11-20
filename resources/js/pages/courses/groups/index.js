@@ -4,6 +4,7 @@ import { applyFieldErrors, createDialog } from "../../../shared/dialog.js";
 import { showToast } from "../../../shared/toast.js";
 
 import { bindGenerate } from "./generate.js";
+import { applyMove, bindDragMoves, FAILED, fillMoveSelect, groupOf as groupIn, NETWORK, onSubmit, studentById as studentIn } from "./board.js";
 import { fetchGroupSet, fetchGroupsTab, sendChange } from "./api.js";
 import { renderDetailSkeleton, renderGroupsSkeleton } from "./skeleton.js";
 import { renderDetailError, renderSetDetail, SIGNUP_MODES } from "./detail.js";
@@ -18,8 +19,6 @@ import { renderDetailError, renderSetDetail, SIGNUP_MODES } from "./detail.js";
 | keyboard and phone path) or by dragging their name onto a group.
 */
 
-const NETWORK = "We could not reach the server. Nothing was saved. Check your connection and try again.";
-const FAILED = "That did not work. Nothing was saved. Please try again.";
 
 const state = {
     page: null,
@@ -180,10 +179,9 @@ function syncListRow() {
 
 }
 
-const groupOf = (studentId) => state.detail.groups.find((g) => g.members.some((m) => m.student_user_id === studentId)) ?? null;
+const groupOf = (studentId) => groupIn(state.detail, studentId);
 
-const studentById = (studentId) => groupOf(studentId)?.members.find((m) => m.student_user_id === studentId)
-    ?? state.detail.ungrouped.find((m) => m.student_user_id === studentId);
+const studentById = (studentId) => studentIn(state.detail, studentId);
 
 const byName = (a, b) => a.name.localeCompare(b.name);
 
@@ -206,36 +204,12 @@ function announce(message) {
 export async function moveStudent(studentId, toGroupId) {
 
     const setId = state.detail.set.id;
-    const from = groupOf(studentId);
-    const to = toGroupId === null ? null : state.detail.groups.find((g) => g.id === toGroupId) ?? null;
+    const { result, student, to, unchanged } = await applyMove(state.detail, studentId, toGroupId, (method, path, body) => sendChange(method, `/${setId}${path}`, body));
 
-    if ((from?.id ?? null) === (to?.id ?? null)) {
-        return { ok: true, status: 200, body: {} };
+    if (result.ok && !unchanged) {
+        render();
+        announce(to ? `${student.name} moved to ${to.name}` : `${student.name} is no longer in a group`);
     }
-
-    const result = from === null
-        ? await sendChange("POST", `/${setId}/groups/${to.id}/members`, { student_user_id: studentId })
-        : to === null
-            ? await sendChange("DELETE", `/${setId}/members/${studentId}`)
-            : await sendChange("POST", `/${setId}/members/move`, { student_user_id: studentId, to_group_id: to.id });
-
-    if (!result.ok) {
-        return result;
-    }
-
-    const student = studentById(studentId);
-
-    if (from) {
-        from.members = from.members.filter((m) => m.student_user_id !== studentId);
-    } else {
-        state.detail.ungrouped = state.detail.ungrouped.filter((m) => m.student_user_id !== studentId);
-    }
-
-    (to ? to.members : state.detail.ungrouped).push(student);
-    (to ? to.members : state.detail.ungrouped).sort(byName);
-
-    render();
-    announce(to ? `${student.name} moved to ${to.name}` : `${student.name} is no longer in a group`);
 
     return result;
 
@@ -367,28 +341,7 @@ function openMoveDialog(studentId, opener) {
     applyFieldErrors(form, {});
     title.textContent = `Move ${student.name}`;
 
-    const options = state.detail.groups.map((g) => {
-        const option = new Option(`${g.name} (${g.members.length} / ${max})`, String(g.id));
-        option.disabled = g.id !== current?.id && g.members.length >= max;
-        option.selected = g.id === current?.id;
-
-        return option;
-    });
-
-    // Ungrouped is where a member goes when taken out of their group.
-    const none = new Option("Ungrouped (not in a group)", "");
-    none.selected = current === null;
-
-    select.replaceChildren(...options, none);
-
-    if (current === null) {
-        // Start on the first group with room, so Move does something.
-        const free = options.find((o) => !o.disabled);
-
-        if (free) {
-            free.selected = true;
-        }
-    }
+    fillMoveSelect(select, state.detail.groups, current, max);
 
     state.pending = { kind: "move", studentId };
     state.dialogs["group-move-dialog"].open(opener);
@@ -408,36 +361,6 @@ const fromLocalInput = (value) => (value ? `${value.replace("T", " ")}:00` : nul
 function showSignupWindow(form) {
 
     form.querySelector("[data-signup-window]").hidden = !SIGNUP_MODES.includes(form.elements.formation_mode.value);
-
-}
-
-/** Disables the buttons while it runs; shows a refusal beside the fields, keeping what was typed. */
-function onSubmit(form, send) {
-
-    form.addEventListener("submit", async (event) => {
-
-        event.preventDefault();
-
-        const buttons = Array.from(form.querySelectorAll("button[type=submit]"));
-
-        buttons.forEach((b) => (b.disabled = true));
-        form.setAttribute("aria-busy", "true");
-
-        try {
-            const result = await send(new FormData(form));
-
-            if (result && !result.ok) {
-                applyFieldErrors(form, result.body.errors ?? {}, result.body.message ?? FAILED);
-            }
-        } catch (error) {
-            console.error(error);
-            applyFieldErrors(form, {}, NETWORK);
-        } finally {
-            buttons.forEach((b) => (b.disabled = false));
-            form.removeAttribute("aria-busy");
-        }
-
-    });
 
 }
 
@@ -550,48 +473,15 @@ function bindForms(page) {
 |--------------------------------------------------------------------------
 */
 
-const HOVER = ["ring-2", "ring-brand/50"];
-
 function bindDrag(page) {
 
-    const clear = () => page.querySelectorAll("[data-drop-zone]").forEach((z) => z.classList.remove(...HOVER));
-
-    page.addEventListener("dragstart", (event) => {
-        const chip = event.target.closest?.("[data-member][draggable=true]");
-
-        if (chip) {
-            event.dataTransfer.setData("text/plain", chip.dataset.member);
-            event.dataTransfer.effectAllowed = "move";
-        }
-    });
-
-    page.addEventListener("dragover", (event) => {
-        const zone = event.target.closest?.("[data-drop-zone]");
-
-        if (zone) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-            clear();
-            zone.classList.add(...HOVER);
-        }
-    });
-
-    page.addEventListener("dragend", clear);
-
-    page.addEventListener("drop", async (event) => {
-        const zone = event.target.closest?.("[data-drop-zone]");
-        const studentId = Number(event.dataTransfer.getData("text/plain"));
-
-        clear();
-
-        if (!zone || !studentId || !state.detail) {
+    bindDragMoves(page, async (studentId, toGroupId) => {
+        if (!state.detail) {
             return;
         }
 
-        event.preventDefault();
-
         try {
-            const result = await moveStudent(studentId, zone.dataset.dropZone === "" ? null : Number(zone.dataset.dropZone));
+            const result = await moveStudent(studentId, toGroupId);
 
             if (!result.ok) {
                 showToast(result.body.message ?? FAILED, { tone: "danger" });

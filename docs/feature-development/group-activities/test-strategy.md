@@ -32,3 +32,9 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - `npx vitest run`: 116 files, 1165 tests passed (7 new in generate.test.js; true red phase 7 failed before wiring). eslint clean.
 - PHP red phases shown for the generator service (16 errors); the route/controller tests were written after the controller (no PHP red phase).
 - NOT run: Playwright TC-GRP-03 (e2e DB :3306 broken); phpstan on Phase 2 files timed out and was not verified; finalized-offering route test accepts 403/409/422/423 (status not pinned); no browser check.
+
+### Phase 3 (2026-11-21)
+- `phpunit` full suite: Tests 9688, Assertions 38471, OK. `npx vitest run`: 117 files, 1177 tests passed. eslint clean; phpstan on the 4 changed PHP classes (implementer): no errors.
+- Red phases shown: ActivityGroupService (19 errors), ActivityGroupMembershipService (16 errors + 1 failure), activity routes (12 failures + 2 errors), activity-panel Vitest (module missing). Task 3.1 wrote the service first, then removed it to record the red run.
+- NOT run: Playwright `group-activity.spec.js` (e2e DB :3306 broken); no browser check. Unlock and late-enrollee are covered by PHPUnit/Vitest only (nothing freezes a group in the app until Phase 6).
+- Known limits: drop after a finalized offering leaves group rows (all group writes refused); the dean has no editor route, only the GET JSON endpoint; keep/excuse dialog (4D) deferred to Phase 7; proposals queue (4B) deferred to Phase 5; `activity_group_configs.frozen_at` column unused (freeze lives on student_groups).

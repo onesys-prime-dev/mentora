@@ -308,4 +308,7 @@
 
     <?= $this->include('pages/courses/features/assessments/partials/modals/submission-type') ?>
 
+    <!-- Group activity (assignments only: a quiz is never group work) -->
+    <?= $this->include('pages/courses/features/assessments/partials/group-activity-section') ?>
+
 </div>

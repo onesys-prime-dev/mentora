@@ -138,6 +138,10 @@ final class GroupSchemaTest extends DatabaseTestCase
                 $migration->up();
             }
 
+            // Recreating the tables dropped their keys to activity_group_configs: put them back.
+            require_once APPPATH . 'Database/Migrations/2026-12-01-000005_AddConfigForeignKeysToGroups.php';
+            (new \App\Database\Migrations\AddConfigForeignKeysToGroups())->up();
+
             db_connect()->resetDataCache();
         }
 

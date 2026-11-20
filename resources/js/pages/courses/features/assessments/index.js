@@ -44,6 +44,8 @@ import {
     initializeInspectorPanel,
 } from "./inspector/inspector.js";
 
+import { initializeActivityGroups } from "../../groups/activity-panel.js";
+
 import { bindPasswordGate } from "./quiz-taking/password-gate.js";
 
 import {
@@ -1024,6 +1026,11 @@ export async function loadAssessmentEditor(
             offeringId,
             assessmentId,
             returnToList
+        );
+
+        // Assignments only: the quiz editor has no group activity card.
+        initializeActivityGroups(
+            document.querySelector("[data-group-activity]")
         );
 
         bindDeleteAssessmentModal(

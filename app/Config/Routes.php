@@ -185,6 +185,21 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
         $routes->post('(:num)/group-sets/(:num)/generate/preview', 'Courses\Groups\GroupSetsController::generatePreview/$1/$2');
         $routes->post('(:num)/group-sets/(:num)/generate', 'Courses\Groups\GroupSetsController::generateSave/$1/$2');
+        // Activity groups: an assignment's own copy of groups (group activities, screen 2A).
+        $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/attach', 'Courses\Groups\ActivityGroupsController::attach/$1/$2');
+        $routes->put('(:num)/assessments/(:num)/groups/settings', 'Courses\Groups\ActivityGroupsController::settings/$1/$2');
+        $routes->delete('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::detach/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/recopy', 'Courses\Groups\ActivityGroupsController::recopy/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/copy-from', 'Courses\Groups\ActivityGroupsController::copyFrom/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/groups', 'Courses\Groups\ActivityGroupsController::addGroup/$1/$2');
+        $routes->put('(:num)/assessments/(:num)/groups/groups/(:num)', 'Courses\Groups\ActivityGroupsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/assessments/(:num)/groups/groups/(:num)', 'Courses\Groups\ActivityGroupsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/members', 'Courses\Groups\ActivityGroupsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/members/move', 'Courses\Groups\ActivityGroupsController::moveMember/$1/$2');
+        $routes->delete('(:num)/assessments/(:num)/groups/members/(:num)', 'Courses\Groups\ActivityGroupsController::removeMember/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/unlock', 'Courses\Groups\ActivityGroupsController::unlock/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/late-members', 'Courses\Groups\ActivityGroupsController::addLateMember/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -435,6 +450,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/groups', 'Courses\Groups\GroupsTabController::show/$1');
         $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
         $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
+        $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -643,6 +659,21 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
         $routes->post('(:num)/group-sets/(:num)/generate/preview', 'Courses\Groups\GroupSetsController::generatePreview/$1/$2');
         $routes->post('(:num)/group-sets/(:num)/generate', 'Courses\Groups\GroupSetsController::generateSave/$1/$2');
+        // Activity groups: an assignment's own copy of groups (group activities, screen 2A).
+        $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/attach', 'Courses\Groups\ActivityGroupsController::attach/$1/$2');
+        $routes->put('(:num)/assessments/(:num)/groups/settings', 'Courses\Groups\ActivityGroupsController::settings/$1/$2');
+        $routes->delete('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::detach/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/recopy', 'Courses\Groups\ActivityGroupsController::recopy/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/copy-from', 'Courses\Groups\ActivityGroupsController::copyFrom/$1/$2');
+        $routes->post('(:num)/assessments/(:num)/groups/groups', 'Courses\Groups\ActivityGroupsController::addGroup/$1/$2');
+        $routes->put('(:num)/assessments/(:num)/groups/groups/(:num)', 'Courses\Groups\ActivityGroupsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/assessments/(:num)/groups/groups/(:num)', 'Courses\Groups\ActivityGroupsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/members', 'Courses\Groups\ActivityGroupsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/members/move', 'Courses\Groups\ActivityGroupsController::moveMember/$1/$2');
+        $routes->delete('(:num)/assessments/(:num)/groups/members/(:num)', 'Courses\Groups\ActivityGroupsController::removeMember/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/unlock', 'Courses\Groups\ActivityGroupsController::unlock/$1/$2/$3');
+        $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/late-members', 'Courses\Groups\ActivityGroupsController::addLateMember/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

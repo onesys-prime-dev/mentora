@@ -201,7 +201,8 @@ class GroupSetService
         return (int) $this->find((int) $group['set_id'])['offering_id'];
     }
 
-    private function groupName(string $name): string
+    /** Shared with ActivityGroupService. */
+    public static function groupName(string $name): string
     {
         $name = trim($name);
 

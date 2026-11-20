@@ -50,8 +50,8 @@ function renderDetailShape() {
 }
 
 /** One set loading inside the detail card. */
-export function renderDetailSkeleton() {
+export function renderDetailSkeleton(label = "Loading the group set…") {
 
-    return `<div class="flex animate-pulse flex-col gap-3" role="status" aria-busy="true" data-detail-skeleton><span class="sr-only">Loading the group set…</span>${renderDetailShape()}</div>`;
+    return `<div class="flex animate-pulse flex-col gap-3" role="status" aria-busy="true" data-detail-skeleton><span class="sr-only">${label}</span>${renderDetailShape()}</div>`;
 
 }

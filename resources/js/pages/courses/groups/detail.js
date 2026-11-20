@@ -25,7 +25,7 @@ const TONES = {
     neutral: "bg-gray-100 text-[#646464]",
 };
 
-const SMALL = "rounded-full px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11";
+export const SMALL = "rounded-full px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11";
 
 const SECONDARY = "inline-flex items-center justify-center gap-2 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11";
 
@@ -35,7 +35,7 @@ export const escapeHtml = (text) => String(text ?? "").replace(/[&<>"']/g, (c) =
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]
 ));
 
-const badge = (label, tone) => `<span class="${BADGE} ${TONES[tone]}" data-status-badge>${escapeHtml(label)}</span>`;
+export const badge = (label, tone) => `<span class="${BADGE} ${TONES[tone]}" data-status-badge>${escapeHtml(label)}</span>`;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -77,12 +77,18 @@ function memberChip(student, canEdit, ungrouped) {
 
 }
 
-function groupCard(group, set, canEdit) {
+/**
+ * decorate(group) lets a screen add to a card: { badge, actions } (html) and locked (members cannot be moved
+ * and the card's own actions replace Rename/Delete). The activity groups use it for frozen groups.
+ */
+function groupCard(group, set, canEdit, decorate) {
 
     const name = escapeHtml(group.name);
+    const extra = decorate?.(group) ?? {};
+    const memberEdit = canEdit && !extra.locked;
     const members = group.members.length === 0
         ? "<p class=\"text-xs text-[#646464]\">No members yet.</p>"
-        : `<ul class="flex flex-wrap gap-1.5" aria-label="Members of ${name}">${group.members.map((s) => memberChip(s, canEdit, false)).join("")}</ul>`;
+        : `<ul class="flex flex-wrap gap-1.5" aria-label="Members of ${name}">${group.members.map((s) => memberChip(s, memberEdit, false)).join("")}</ul>`;
 
     return `
         <article class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 transition" data-group-card="${group.id}" data-drop-zone="${group.id}" aria-label="${name}">
@@ -90,13 +96,53 @@ function groupCard(group, set, canEdit) {
                 <h4 class="font-semibold text-[#1A1C1E]" data-group-name>${name}</h4>
                 <div class="flex flex-wrap items-center gap-1" data-group-count="${group.id}">
                     ${capacityBadge(group.members.length, set)}
+                    ${extra.badge ?? ""}
                     ${canEdit ? `
                         <button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="rename-group" data-group="${group.id}" aria-label="Rename ${name}">Rename</button>
-                        <button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="delete-group" data-group="${group.id}" aria-label="Delete ${name}">Delete</button>` : ""}
+                        ${extra.locked ? (extra.actions ?? "") : `<button type="button" class="${SMALL} text-[#C33939] hover:bg-[#FDEDEC]" data-group-action="delete-group" data-group="${group.id}" aria-label="Delete ${name}">Delete</button>`}` : ""}
                 </div>
             </div>
             ${members}
         </article>`;
+
+}
+
+/**
+ * The groups and the ungrouped students: the Groups tab's set detail and the activity editor's groups share it.
+ * set carries min_size/max_size for the size badges.
+ */
+export function renderGroupBoard({ groups, ungrouped, set, canEdit, decorate = null, emptyText = "The instructor has not added any groups to this set." }) {
+
+    const groupList = groups.length === 0
+        ? `<div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-6 py-8 text-center" data-groups-empty>
+                <span class="text-sm font-semibold text-[#646464]">No groups yet</span>
+                <span class="text-xs text-[#646464]">${canEdit ? "Add a group, then place students in it." : emptyText}</span>
+           </div>`
+        : groups.map((g) => groupCard(g, set, canEdit, decorate)).join("");
+
+    const pool = ungrouped.length === 0
+        ? "<p class=\"text-xs text-[#646464]\">Everyone is in a group.</p>"
+        : `<ul class="flex flex-wrap gap-1.5" aria-label="Ungrouped students">${ungrouped.map((s) => memberChip(s, canEdit, true)).join("")}</ul>
+           <p class="text-xs text-[#6F4A00]">Not in a group yet.</p>`;
+
+    return `
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+
+                <div class="flex min-w-0 flex-col gap-3">
+                    <h4 class="${LABEL}">Groups</h4>
+                    ${groupList}
+                    ${canEdit ? `<div><button type="button" class="${SECONDARY}" data-group-action="add-group">Add group</button></div>` : ""}
+                </div>
+
+                <div class="flex min-w-0 flex-col gap-3">
+                    <h4 class="${LABEL}">Ungrouped (<span data-ungrouped-count>${ungrouped.length}</span>)</h4>
+                    <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 transition" data-drop-zone="">
+                        ${pool}
+                    </div>
+                    ${canEdit ? "<p class=\"text-xs text-[#646464]\">Use Move… to pick a group for a student. Dragging a name onto a group works too.</p>" : ""}
+                </div>
+
+            </div>`;
 
 }
 
@@ -118,18 +164,6 @@ export function renderSetDetail(detail, canEdit) {
 
     facts.push(`${placed} of ${total} students placed`);
 
-    const groupList = groups.length === 0
-        ? `<div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 px-6 py-8 text-center" data-groups-empty>
-                <span class="text-sm font-semibold text-[#646464]">No groups yet</span>
-                <span class="text-xs text-[#646464]">${canEdit ? "Add a group, then place students in it." : "The instructor has not added any groups to this set."}</span>
-           </div>`
-        : groups.map((g) => groupCard(g, set, canEdit)).join("");
-
-    const pool = ungrouped.length === 0
-        ? "<p class=\"text-xs text-[#646464]\">Everyone is in a group.</p>"
-        : `<ul class="flex flex-wrap gap-1.5" aria-label="Ungrouped students">${ungrouped.map((s) => memberChip(s, canEdit, true)).join("")}</ul>
-           <p class="text-xs text-[#6F4A00]">Not in a group yet.</p>`;
-
     return `
         <div class="flex flex-col gap-4" data-set-detail="${set.id}">
 
@@ -146,23 +180,7 @@ export function renderSetDetail(detail, canEdit) {
                     </div>` : ""}
             </div>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
-
-                <div class="flex min-w-0 flex-col gap-3">
-                    <h4 class="${LABEL}">Groups</h4>
-                    ${groupList}
-                    ${canEdit ? `<div><button type="button" class="${SECONDARY}" data-group-action="add-group">Add group</button></div>` : ""}
-                </div>
-
-                <div class="flex min-w-0 flex-col gap-3">
-                    <h4 class="${LABEL}">Ungrouped (<span data-ungrouped-count>${ungrouped.length}</span>)</h4>
-                    <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 transition" data-drop-zone="">
-                        ${pool}
-                    </div>
-                    ${canEdit ? "<p class=\"text-xs text-[#646464]\">Use Move… to pick a group for a student. Dragging a name onto a group works too.</p>" : ""}
-                </div>
-
-            </div>
+            ${renderGroupBoard({ groups, ungrouped, set, canEdit })}
 
         </div>`;
 
