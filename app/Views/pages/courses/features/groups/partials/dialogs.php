@@ -41,6 +41,38 @@ $moveForm = '<form class="flex flex-col gap-4" novalidate data-group-move-form>'
     . $formError
     . $buttons('Move')
     . '</form>';
+$pairEditor = static fn (string $kind, string $label, string $help): string => '<fieldset class="flex flex-col gap-2" data-pairs="' . $kind . '">'
+    . '<legend class="font-heading text-xs font-semibold uppercase tracking-wide text-[#646464]">' . esc($label) . '</legend>'
+    . '<p class="text-xs text-[#646464]">' . esc($help) . '</p>'
+    . '<div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">'
+    . $field(['name' => $kind . '_a', 'label' => 'First student', 'type' => 'select', 'options' => []])
+    . $field(['name' => $kind . '_b', 'label' => 'Second student', 'type' => 'select', 'options' => []])
+    . '<button type="button" data-pair-add="' . $kind . '" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Add pair</button>'
+    . '</div>'
+    . '<ul class="flex flex-col gap-1" data-pair-list="' . $kind . '" aria-label="' . esc($label) . '"></ul>'
+    . '</fieldset>';
+
+$generateForm = '<div data-generate-step1><form class="flex flex-col gap-4" novalidate data-group-generate-form>'
+    . '<p class="text-sm text-[#646464]" data-generate-pool></p>'
+    . '<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">'
+    . $field(['name' => 'by', 'label' => 'Split by', 'type' => 'select', 'options' => ['size' => 'Group size', 'count' => 'Number of groups']])
+    . $field(['name' => 'n', 'label' => 'How many', 'type' => 'number', 'value' => '4', 'attrs' => 'min="1" max="50"'])
+    . '</div>'
+    . $pairEditor('together', 'Keep together', 'These students always land in the same group.')
+    . $pairEditor('apart', 'Keep apart', 'These students never share a group.')
+    . $formError
+    . $buttons('Preview')
+    . '</form></div>'
+    . '<div data-generate-step2 hidden><form class="flex flex-col gap-4" novalidate data-group-generate-save-form>'
+    . '<p class="text-sm font-semibold text-[#3D3D3D]" data-generate-status>Step 2 of 2 · Preview. Nothing has been saved yet.</p>'
+    . '<div class="flex flex-col gap-3" data-generate-preview></div>'
+    . '<div class="flex flex-col gap-2" data-generate-alerts></div>'
+    . $formError
+    . '<div class="flex flex-wrap items-center justify-end gap-3">'
+    . '<button type="button" data-generate-back class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Back</button>'
+    . '<button type="button" data-generate-shuffle class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Shuffle again</button>'
+    . $submit('Save groups')
+    . '</div></form></div>';
 ?>
 
 <?= view('components/dialog', ['id' => 'group-set-dialog', 'title' => 'New group set', 'body' => $setForm], ['saveData' => false]) ?>
@@ -65,6 +97,18 @@ $moveForm = '<form class="flex flex-col gap-4" novalidate data-group-move-form>'
     'text'         => 'Its members go back to Ungrouped.',
     'action'       => '#',
     'confirmLabel' => 'Delete group',
+    'tone'         => 'danger',
+    'ajax'         => true,
+], ['saveData' => false]) ?>
+
+<?= view('components/dialog', ['id' => 'group-generate-dialog', 'title' => 'Generate groups', 'body' => $generateForm, 'size' => 'lg'], ['saveData' => false]) ?>
+
+<?= view('components/confirm', [
+    'id'           => 'group-generate-replace-confirm',
+    'title'        => 'Replace the existing groups?',
+    'text'         => 'The groups in this set are deleted and replaced by the previewed ones. Their members become ungrouped first.',
+    'action'       => '#',
+    'confirmLabel' => 'Replace groups',
     'tone'         => 'danger',
     'ajax'         => true,
 ], ['saveData' => false]) ?>

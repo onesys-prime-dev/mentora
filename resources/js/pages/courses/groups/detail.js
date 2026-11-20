@@ -140,6 +140,7 @@ export function renderSetDetail(detail, canEdit) {
                 </div>
                 ${canEdit ? `
                     <div class="flex flex-wrap gap-2 max-xs:w-full max-xs:*:flex-1">
+                        <button type="button" class="${SECONDARY}" data-group-action="generate">Generate groups</button>
                         <button type="button" class="${SECONDARY}" data-group-action="edit-set">Edit set</button>
                         <button type="button" class="${SECONDARY}" data-group-action="archive-set">Archive</button>
                     </div>` : ""}

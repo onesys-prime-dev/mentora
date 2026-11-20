@@ -3,6 +3,7 @@ import { showLoadError } from "../../../shared/spa/error-state.js";
 import { applyFieldErrors, createDialog } from "../../../shared/dialog.js";
 import { showToast } from "../../../shared/toast.js";
 
+import { bindGenerate } from "./generate.js";
 import { fetchGroupSet, fetchGroupsTab, sendChange } from "./api.js";
 import { renderDetailSkeleton, renderGroupsSkeleton } from "./skeleton.js";
 import { renderDetailError, renderSetDetail, SIGNUP_MODES } from "./detail.js";
@@ -27,6 +28,7 @@ const state = {
     detail: null,
     dialogs: {},
     pending: null,
+    generate: {},
 };
 
 export async function initialize({ setId = null } = {}) {
@@ -68,6 +70,7 @@ async function bindPage(page, setId) {
     state.detail = null;
     state.setId = null;
     state.dialogs = {};
+    state.generate = {};
 
     if (!page) {
         return;
@@ -76,7 +79,7 @@ async function bindPage(page, setId) {
     page.addEventListener("click", onClick);
 
     if (state.canEdit) {
-        for (const id of ["group-set-dialog", "group-name-dialog", "group-move-dialog", "group-set-archive-confirm", "group-delete-confirm"]) {
+        for (const id of ["group-set-dialog", "group-name-dialog", "group-move-dialog", "group-set-archive-confirm", "group-delete-confirm", "group-generate-dialog", "group-generate-replace-confirm"]) {
             const el = page.querySelector(`#${id}`);
 
             if (el) {
@@ -85,6 +88,7 @@ async function bindPage(page, setId) {
         }
 
         bindForms(page);
+        state.generate = bindGenerate({ page, dialogs: state.dialogs, getDetail: () => state.detail, onSubmit, onSaved: () => openSet(state.detail.set.id) });
         bindDrag(page);
     }
 
@@ -268,6 +272,9 @@ function onClick(event) {
             break;
         case "edit-set":
             openSetDialog(state.detail.set, button);
+            break;
+        case "generate":
+            state.generate.open?.(button);
             break;
         case "archive-set":
             openConfirm("group-set-archive-confirm", { kind: "archive" }, `Archive ${state.detail.set.name}?`, "It leaves this list. Its groups and members are kept.", button);

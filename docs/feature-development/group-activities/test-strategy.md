@@ -26,3 +26,9 @@ Foreign id returns 404; wrong role refused; read-only institution refused; final
 The XAMPP MySQL data directory fails to start (InnoDB "log sequence number is in the future"; do not force-recover, it holds the user's other databases). Tests run against a throwaway MariaDB on port 3307 whose datadir is in the Claude scratchpad (`mysql-data`), database `mentora_test`:
 `env 'database.tests.port=3307' 'database.tests.hostname=127.0.0.1' vendor/bin/phpunit --filter <Name>`
 Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=3307 --standalone` (see progress.md). Baseline `AssessmentAssigneesTest`: 15 tests, 30 assertions, OK.
+
+### Phase 2 (2026-11-21)
+- `phpunit` full suite: Tests 9555, Assertions 38111, OK. `--filter Group`: 191 tests / 1115 assertions.
+- `npx vitest run`: 116 files, 1165 tests passed (7 new in generate.test.js; true red phase 7 failed before wiring). eslint clean.
+- PHP red phases shown for the generator service (16 errors); the route/controller tests were written after the controller (no PHP red phase).
+- NOT run: Playwright TC-GRP-03 (e2e DB :3306 broken); phpstan on Phase 2 files timed out and was not verified; finalized-offering route test accepts 403/409/422/423 (status not pinned); no browser check.

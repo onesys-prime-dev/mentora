@@ -90,3 +90,36 @@ test("TC-GRP-02 The Groups tab fits a 360 px phone and axe finds nothing serious
     await page.setViewportSize({ width: 1440, height: 900 });
     expect(await seriousProblems(page)).toEqual([]);
 });
+
+test("TC-GRP-03 Generate groups previews without saving, then saves after confirming the replacement", async ({ page }) => {
+    await openGroups(page);
+
+    const detail = page.locator("[data-group-set-detail]");
+    const cards = detail.locator("[data-group-card]");
+    const before = await cards.count();
+
+    await detail.getByRole("button", { name: "Generate groups" }).click();
+    const dialog = page.getByRole("dialog", { name: "Generate groups" });
+    await expect(dialog.getByText(/^Pool: \d+ students?$/)).toBeVisible();
+
+    await dialog.getByLabel("Split by").selectOption("count");
+    await dialog.getByLabel("How many").fill("2");
+    await dialog.getByRole("button", { name: "Preview" }).click();
+
+    await expect(dialog.getByText("Step 2 of 2 · Preview. Nothing has been saved yet.")).toBeVisible();
+    await expect(dialog.locator("[data-preview-group]")).toHaveCount(2);
+    expect(await cards.count()).toBe(before); // nothing saved yet
+
+    await dialog.getByRole("button", { name: "Shuffle again" }).click();
+    await expect(dialog.locator("[data-preview-group]")).toHaveCount(2);
+
+    await dialog.getByRole("button", { name: "Save groups" }).click();
+
+    // The set already has groups from TC-GRP-01: replacing needs the confirmation.
+    const confirm = page.getByRole("dialog", { name: "Replace the existing groups?" });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "Replace groups" }).click();
+
+    await expect(cards).toHaveCount(2);
+    await expect(dialog).toBeHidden();
+});

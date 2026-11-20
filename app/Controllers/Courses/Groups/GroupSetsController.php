@@ -7,6 +7,7 @@ namespace App\Controllers\Courses\Groups;
 use App\Controllers\BaseController;
 use App\Models\Groups\GroupSetModel;
 use App\Models\Groups\StudentGroupModel;
+use App\Services\Groups\GroupGeneratorService;
 use App\Services\Groups\GroupLimits;
 use App\Services\Groups\GroupMembershipService;
 use App\Services\Groups\GroupSetService;
@@ -130,6 +131,54 @@ class GroupSetsController extends BaseController
         $this->set($offeringId, $setId);
 
         return $this->run(fn () => (new GroupMembershipService())->removeFromSet($studentId, $setId, $this->actor()));
+    }
+
+    /** Proposes groups for the set's pool. Writes nothing; the instructor edits and saves it with generateSave. */
+    public function generatePreview(int $offeringId, int $setId): ResponseInterface
+    {
+        $set  = $this->set($offeringId, $setId);
+        $body = $this->body();
+        $pair = static fn ($list): array => array_values(array_filter(
+            array_map(static fn ($p) => is_array($p) && count($p) === 2 ? [(int) $p[0], (int) $p[1]] : null, (array) $list),
+        ));
+
+        return $this->run(function () use ($offeringId, $setId, $set, $body, $pair) {
+            $result = (new GroupGeneratorService())->preview($offeringId, (new GroupMembershipService())->poolForOffering($offeringId), [
+                'by'       => ($body['by'] ?? '') === 'count' ? 'count' : 'size',
+                'n'        => (int) ($body['n'] ?? 0),
+                'together' => $pair($body['together'] ?? []),
+                'apart'    => $pair($body['apart'] ?? []),
+                'max'      => (int) $set['max_size'],
+                'seed'     => isset($body['seed']) ? (int) $body['seed'] : null,
+            ]);
+
+            $ids   = array_merge($result['ungrouped'], ...$result['groups']);
+            $names = $ids === [] ? [] : array_column(db_connect()->table('users u')
+                ->select("u.id, COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username) AS name", false)
+                ->join('user_profiles p', 'p.user_id = u.id', 'left')
+                ->whereIn('u.id', $ids)->get()->getResultArray(), 'name', 'id');
+            $person = static fn (int $id): array => ['student_user_id' => $id, 'name' => (string) ($names[$id] ?? '')];
+
+            return [
+                'groups'    => array_map(static fn (array $g) => ['members' => array_map($person, $g)], $result['groups']),
+                'ungrouped' => array_map($person, $result['ungrouped']),
+                'conflicts' => $result['conflicts'],
+                'replaces'  => (new StudentGroupModel())->where('set_id', $setId)->countAllResults(),
+            ];
+        });
+    }
+
+    /** Stores a previewed (possibly edited) grouping; replacing existing groups needs replace=true. */
+    public function generateSave(int $offeringId, int $setId): ResponseInterface
+    {
+        $this->set($offeringId, $setId);
+        $body = $this->body();
+
+        return $this->run(function () use ($setId, $body) {
+            (new GroupSetService())->saveGenerated($setId, ['groups' => (array) ($body['groups'] ?? [])], ($body['replace'] ?? false) === true, $this->actor());
+
+            return ['count' => count((array) ($body['groups'] ?? []))];
+        });
     }
 
     /** Runs a change: success (with what it returned), or 422 with the rule that was broken. */

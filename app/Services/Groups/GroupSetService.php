@@ -91,6 +91,74 @@ class GroupSetService
         return $id;
     }
 
+    /**
+     * Stores a (possibly edited) GroupGeneratorService preview as "Group 1".."Group N" in one transaction.
+     *
+     * @param array{groups?: list<list<int>>} $preview
+     */
+    public function saveGenerated(int $setId, array $preview, bool $replace, int $userId): void
+    {
+        $set        = $this->find($setId);
+        $offeringId = (int) $set['offering_id'];
+        self::refuseIfFinalized($offeringId);
+
+        $old = (new StudentGroupModel())->where('set_id', $setId)->findAll();
+
+        if ($old !== [] && !$replace) {
+            throw new StructureException('This set already has groups. Confirm to replace them.');
+        }
+
+        $groups = array_values(array_map(static fn ($g) => array_map('intval', (array) $g), $preview['groups'] ?? []));
+        $all    = array_merge([], ...$groups);
+        $limit  = min((int) $set['max_size'], GroupLimits::MAX_MEMBERS);
+
+        if ($groups === [] || count($groups) > GroupLimits::MAX_GROUPS_PER_ACTIVITY) {
+            throw new StructureException('Choose between 1 and ' . GroupLimits::MAX_GROUPS_PER_ACTIVITY . ' groups to save.');
+        }
+
+        if (array_diff($all, (new GroupMembershipService())->poolForOffering($offeringId)) !== [] || count($all) !== count(array_unique($all))) {
+            throw new StructureException('Every student must be enrolled in this course and in only one group.');
+        }
+
+        foreach ($groups as $g) {
+            if ($g === [] || count($g) > $limit) {
+                throw new StructureException("A group needs between 1 and {$limit} students.");
+            }
+        }
+
+        $db = db_connect();
+        $db->transStart();
+
+        try {
+            if ($old !== []) {
+                $db->table('student_group_members')->where('set_id', $setId)->delete();
+                $db->table('student_groups')->where('set_id', $setId)->delete();
+            }
+
+            $now = date('Y-m-d H:i:s');
+
+            foreach ($groups as $i => $members) {
+                $groupId = (int) (new StudentGroupModel())->insert(['set_id' => $setId, 'name' => 'Group ' . ($i + 1), 'status' => 'active'], true);
+
+                foreach ($members as $studentId) {
+                    $db->table('student_group_members')->insert(['group_id' => $groupId, 'set_id' => $setId, 'config_id' => null, 'student_user_id' => $studentId, 'joined_at' => $now]);
+                }
+            }
+        } catch (\Throwable $e) {
+            $db->transRollback();
+
+            throw new StructureException('The groups could not be saved. Nothing was changed.');
+        }
+
+        $db->transComplete();
+
+        if (!$db->transStatus()) {
+            throw new StructureException('The groups could not be saved. Nothing was changed.');
+        }
+
+        self::audit('groups.generated', $userId, $setId, 'group_set', ['new' => ['groups' => count($groups), 'students' => count($all)], 'replaced' => $old !== [], 'old_group_count' => count($old)]);
+    }
+
     public function renameGroup(int $groupId, string $name, int $userId): void
     {
         $group = $this->group($groupId);

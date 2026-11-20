@@ -220,8 +220,114 @@ final class GroupSetsRoutesTest extends RouteTestCase
         $this->assertContains($status, [302, 401, 403, 404]);
     }
 
+    /** @return list<User> */
+    private function moreStudents(int $n): array
+    {
+        $out = [];
+
+        for ($i = 0; $i < $n; $i++) {
+            $u = CourseFactory::user('student');
+            CourseFactory::enroll($this->offering, $u);
+            $out[] = $u;
+        }
+
+        return $out;
+    }
+
+    public function testPreviewWritesNothingAndSaveCreatesTheGroups(): void
+    {
+        $this->moreStudents(3); // pool of 4
+        $set    = $this->createSet();
+        $before = [db_connect()->table('student_groups')->countAllResults(), db_connect()->table('student_group_members')->countAllResults()];
+
+        [$status, $p] = $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate/preview", ['by' => 'count', 'n' => 2, 'seed' => 7]);
+
+        $this->assertSame(200, $status, (string) json_encode($p));
+        $this->assertCount(2, $p['groups']);
+        $this->assertSame(0, $p['replaces']);
+        $this->assertNotSame('', $p['groups'][0]['members'][0]['name']);
+        $this->assertSame($before, [db_connect()->table('student_groups')->countAllResults(), db_connect()->table('student_group_members')->countAllResults()]);
+
+        $ids = array_map(static fn ($g) => array_column($g['members'], 'student_user_id'), $p['groups']);
+        [$status] = $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate", ['groups' => $ids, 'replace' => false]);
+
+        $this->assertSame(200, $status);
+        $this->assertSame(2, db_connect()->table('student_groups')->where('set_id', $set)->countAllResults());
+        $this->assertSame(4, db_connect()->table('student_group_members')->where('set_id', $set)->countAllResults());
+
+        [, $again] = $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate/preview", ['by' => 'count', 'n' => 2]);
+        $this->assertSame(2, $again['replaces']);
+    }
+
+    public function testSavingOverExistingGroupsNeedsReplace(): void
+    {
+        $set = $this->createSet();
+        $this->api($this->teacher, 'instructor', 'POST', "/{$set}/groups", ['name' => 'Old']);
+        $ids = [[(int) $this->student->id]];
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate", ['groups' => $ids]);
+        $this->assertSame(422, $status);
+        $this->assertNotSame('', (string) $json['message']);
+        $this->assertSame(1, db_connect()->table('student_groups')->where('set_id', $set)->countAllResults());
+
+        $this->assertSame(200, $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate", ['groups' => $ids, 'replace' => true])[0]);
+        $this->assertSame('Group 1', db_connect()->table('student_groups')->where('set_id', $set)->get()->getRow()->name);
+    }
+
+    public function testPreviewWithBadInputIs422(): void
+    {
+        $set = $this->createSet();
+
+        $this->assertSame(422, $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate/preview", ['by' => 'size', 'n' => 0])[0]);
+    }
+
+    public function testGenerateIsRefusedForTheWrongPeople(): void
+    {
+        $set    = $this->createSet();
+        $theirs = (new GroupSetService())->create($this->other, ['name' => 'Theirs'], (int) $this->stranger->id);
+        $body   = ['by' => 'size', 'n' => 1, 'groups' => [[(int) $this->student->id]]];
+
+        foreach (['/generate/preview', '/generate'] as $tail) {
+            $this->assertSame(404, $this->api($this->teacher, 'instructor', 'POST', "/{$theirs}{$tail}", $body)[0], 'set of another offering');
+            $this->assertSame(404, $this->api($this->stranger, 'instructor', 'POST', "/{$set}{$tail}", $body)[0], 'instructor of another course');
+            $this->assertContains($this->api($this->student, 'student', 'POST', "/{$set}{$tail}", $body)[0], [403, 404]);
+            $this->assertContains($this->api($this->student, 'instructor', 'POST', "/{$set}{$tail}", $body)[0], [302, 403, 404]);
+        }
+
+        $inst    = (int) db_connect()->query('SELECT t.institution_id FROM course_offerings o JOIN academic_terms t ON t.id = o.term_id WHERE o.id = ?', [$this->offering])->getRow()->institution_id;
+        $college = (int) db_connect()->query('SELECT d.college_id FROM course_offerings o JOIN courses c ON c.id = o.course_id JOIN programs p ON p.id = c.program_id JOIN departments d ON d.id = p.department_id WHERE o.id = ?', [$this->offering])->getRow()->college_id;
+        $dean    = DeanFactory::dean($inst, $college);
+
+        foreach (['/generate/preview', '/generate'] as $tail) {
+            $this->assertContains($this->api($dean, 'dean', 'POST', "/{$set}{$tail}", $body)[0], [403, 404, 405]);
+        }
+
+        $this->assertSame(0, db_connect()->table('student_groups')->where('set_id', $set)->countAllResults());
+    }
+
+    public function testSaveIsRefusedOnceGradesAreFinalized(): void
+    {
+        $set = $this->createSet();
+        db_connect()->table('grade_finalizations')->insert(['course_offering_id' => $this->offering, 'finalized_by' => $this->teacher->id, 'finalized_at' => date('Y-m-d H:i:s'), 'open_marker' => 1]);
+
+        $status = $this->api($this->teacher, 'instructor', 'POST', "/{$set}/generate", ['groups' => [[(int) $this->student->id]]])[0];
+
+        $this->assertContains($status, [403, 409, 422, 423]);
+        $this->assertSame(0, db_connect()->table('student_groups')->where('set_id', $set)->countAllResults());
+    }
+
+    public function testTheChairpersonCanGenerate(): void
+    {
+        $set = $this->createSet('chairperson', $this->chair);
+
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'POST', "/{$set}/generate/preview", ['by' => 'size', 'n' => 1])[0]);
+        $this->assertSame(200, $this->api($this->chair, 'chairperson', 'POST', "/{$set}/generate", ['groups' => [[(int) $this->student->id]]])[0]);
+    }
+
     public function testTheFilterAsksTheContentPermissionForGroupWrites(): void
     {
         $this->assertSame('courses.manage', CoursePermissionFilter::required('group-sets/4/groups'));
+        $this->assertSame('courses.manage', CoursePermissionFilter::required('group-sets/4/generate'));
+        $this->assertSame('courses.manage', CoursePermissionFilter::required('group-sets/4/generate/preview'));
     }
 }

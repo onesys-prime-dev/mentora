@@ -183,6 +183,8 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/group-sets/(:num)/groups/(:num)/members', 'Courses\Groups\GroupSetsController::addMember/$1/$2/$3');
         $routes->post('(:num)/group-sets/(:num)/members/move', 'Courses\Groups\GroupSetsController::moveMember/$1/$2');
         $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/generate/preview', 'Courses\Groups\GroupSetsController::generatePreview/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/generate', 'Courses\Groups\GroupSetsController::generateSave/$1/$2');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -639,6 +641,8 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/group-sets/(:num)/groups/(:num)/members', 'Courses\Groups\GroupSetsController::addMember/$1/$2/$3');
         $routes->post('(:num)/group-sets/(:num)/members/move', 'Courses\Groups\GroupSetsController::moveMember/$1/$2');
         $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/generate/preview', 'Courses\Groups\GroupSetsController::generatePreview/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/generate', 'Courses\Groups\GroupSetsController::generateSave/$1/$2');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
