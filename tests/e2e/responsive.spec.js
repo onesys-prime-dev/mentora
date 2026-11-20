@@ -3310,8 +3310,13 @@ test.describe("student", () => {
             await open(page, overview, "light");
 
             const sticky = page.locator("[data-course-sticky]");
-            await page.evaluate(() => globalThis.scrollTo(0, 600));
-            await expect(sticky).toHaveAttribute("data-collapsed", "true");
+            // A scroll before the page script has attached its listener does nothing (a slow runner), so scroll
+            // up and down again until the banner folds.
+            await expect(async () => {
+                await page.evaluate(() => globalThis.scrollTo(0, 0));
+                await page.evaluate(() => globalThis.scrollTo(0, 600));
+                await expect(sticky).toHaveAttribute("data-collapsed", "true", { timeout: 2_000 });
+            }).toPass({ timeout: 20_000 });
 
             const strip = page.getByRole("tablist", { name: "Course sections" });
             const header = await box(page.locator("[data-app-header]").first());

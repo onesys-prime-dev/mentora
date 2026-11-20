@@ -35,12 +35,14 @@ class DeanDashboardController extends BaseController
         }
 
         return view('pages/dean/dashboard', [
-            'title'     => 'Dashboard',
-            'page'      => 'dashboard',
-            'user'      => $user,
-            'overview'  => $overview,
-            'profile'   => (new UserProfileModel())->retrieveUserProfile($user) ?? [],
-            'loadError' => $loadError,
+            'title'      => 'Dashboard',
+            'page'       => 'dashboard',
+            'user'       => $user,
+            'overview'   => $overview,
+            'profile'    => (new UserProfileModel())->retrieveUserProfile($user) ?? [],
+            'loadError'  => $loadError,
+            // The cards scroll inside the locked page (lg:h-full in the view) instead of growing it.
+            'fullHeight' => true,
         ]);
     }
 }
