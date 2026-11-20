@@ -2605,9 +2605,11 @@ test.describe("instructor", () => {
                 await down(second).tap();
                 expect((await again).ok()).toBe(true);
                 await expect(down(second)).toBeFocused();
+                // Listening starts before the tap: a quick save can answer before a listener started after it.
+                const last = page.waitForResponse((r) => r.url().includes("/modules/reorder"));
                 await up(second).tap();
                 await expect(page.locator("[data-module-move-status]")).toHaveText("Module moved to position 1 of 3.");
-                await page.waitForResponse((r) => r.url().includes("/modules/reorder"));
+                await last;
 
                 await page.reload();
                 await expect(page.locator(modules.scope)).toBeVisible();
