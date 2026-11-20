@@ -68,8 +68,8 @@ $hasCourses = (int) ($totals['courses'] ?? 0) > 0;
 
 // What leaves is what is on screen: the same filters, grouping and sort go in the address.
 $exportQuery = http_build_query($filters->toQuery());
-$exportClass = 'rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$exportSolid = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+$exportClass = 'inline-flex items-center pointer-coarse:min-h-11 rounded-full border border-gray-300 px-4 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$exportSolid = 'inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
 // The Grades page that goes with this one (the same permission opens both), for the term shown.
 $gradesLink  = site_url('dean/grades') . (($filters->base->termId ?? null) === null ? '' : '?term=' . (int) $filters->base->termId);
 $gradesLinks = '<a data-grade-records href="' . esc($gradesLink, 'attr') . '" class="' . $exportClass . '">View grade records →</a>';
@@ -117,7 +117,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the college's numbers</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($base) ?>" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif (! $hasCourses): ?>
@@ -148,12 +148,12 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Completion per <?= $filters->compare === 'program' ? 'program' : 'department' ?></p>
                 <p class="mb-3 text-xs text-[#646464]">Share of learning items finished by enrolled students.</p>
-                <div class="relative h-64"><canvas id="monitor-program-completion-chart"></canvas></div>
+                <div class="relative h-64"><canvas id="monitor-program-completion-chart" class="max-w-full"></canvas></div>
             </div>
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Grade distribution</p>
                 <p class="mb-3 text-xs text-[#646464]">Students per grade band across the college.</p>
-                <div class="relative h-64"><canvas id="monitor-program-grade-chart"></canvas></div>
+                <div class="relative h-64"><canvas id="monitor-program-grade-chart" class="max-w-full"></canvas></div>
             </div>
             <div class="min-w-0 rounded-2xl bg-white p-5 shadow-sm lg:col-span-2">
                 <p class="text-sm font-semibold text-[#1A1C1E]">Instructor activity</p>
@@ -161,7 +161,7 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                 <?php if ($instructorActivity === []): ?>
                     <p class="py-10 text-center text-sm text-[#646464]" data-instructor-activity-empty>No instructors teach in this scope yet.</p>
                 <?php else: ?>
-                    <div class="relative h-64"><canvas id="monitor-program-activity-chart" role="img" aria-label="Content updates and announcements per instructor"></canvas></div>
+                    <div class="relative h-64"><canvas id="monitor-program-activity-chart" class="max-w-full" role="img" aria-label="Content updates and announcements per instructor"></canvas></div>
                 <?php endif; ?>
             </div>
         </div>
@@ -173,20 +173,21 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                     <?php foreach (['department' => 'Departments', 'program' => 'Programs'] as $mode => $label): ?>
                         <a href="<?= esc($link(['compare' => $mode, 'sort' => null, 'dir' => null])) ?>"
                            <?= $filters->compare === $mode ? 'aria-current="true"' : '' ?>
-                           class="rounded-full px-3 py-1.5 font-semibold <?= $filters->compare === $mode ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
+                           class="inline-flex items-center rounded-full px-3 py-1.5 font-semibold pointer-coarse:min-h-11 <?= $filters->compare === $mode ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
                             <?= esc($label) ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
+            <?php // The shared pinned scroller (shared/scroll-x.js), the department or program column pinned; below lg cells keep to one line so the table scrolls instead of squeezing. ?>
+            <div class="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55" tabindex="0" role="region" aria-label="College figures per <?= $filters->compare === 'program' ? 'program' : 'department' ?>" data-scroll-x data-sticky-first>
+                <table class="w-full text-left text-sm max-lg:whitespace-nowrap" data-college-comparison>
                     <caption class="sr-only">College figures per <?= $filters->compare === 'program' ? 'program' : 'department' ?></caption>
                     <thead>
                         <tr class="border-b border-gray-100 text-xs text-[#646464]">
                             <?php foreach ($columns as $column => $label): ?>
-                                <th scope="col" class="px-3 py-2 font-semibold" <?= $filters->sort === $column ? 'aria-sort="' . ($filters->dir === 'asc' ? 'ascending' : 'descending') . '"' : '' ?>>
+                                <th scope="col" class="px-3 py-2 font-semibold<?= $column === 'name' ? ' sticky left-0 z-[2] bg-white max-lg:w-36 max-lg:whitespace-normal' : '' ?>" <?= $filters->sort === $column ? 'aria-sort="' . ($filters->dir === 'asc' ? 'ascending' : 'descending') . '"' : '' ?>>
                                     <a href="<?= esc($sortLink($column)) ?>" class="inline-flex items-center gap-1 hover:text-brand">
                                         <?= esc($label) ?><?= $filters->sort === $column ? ($filters->dir === 'asc' ? ' ▲' : ' ▼') : '' ?>
                                     </a>
@@ -197,9 +198,9 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                     <tbody>
                         <?php foreach ($groups as $group): ?>
                             <tr class="border-b border-gray-50 hover:bg-gray-50" data-group="<?= (int) $group['id'] ?>">
-                                <th scope="row" class="px-3 py-2 font-semibold text-[#1A1C1E]">
+                                <th scope="row" class="sticky left-0 z-[1] bg-white px-3 py-2 font-semibold max-lg:w-36 max-lg:whitespace-normal text-[#1A1C1E]">
                                     <?php if ($filters->compare === 'program'): ?>
-                                        <a data-program-link class="text-brand hover:underline" href="<?= esc(site_url('dean/monitor-college/programs/' . (int) $group['id']) . (($carry = http_build_query($filters->base->toQuery())) === '' ? '' : '?' . $carry)) ?>"><?= esc($group['name']) ?></a>
+                                        <a data-program-link class="text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url('dean/monitor-college/programs/' . (int) $group['id']) . (($carry = http_build_query($filters->base->toQuery())) === '' ? '' : '?' . $carry)) ?>"><?= esc($group['name']) ?></a>
                                     <?php else: ?>
                                         <?= esc($group['name']) ?>
                                     <?php endif; ?>
@@ -228,14 +229,14 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                     <?php foreach ($atRisk as $student): ?>
                         <li class="flex items-center justify-between gap-3 py-2 text-sm">
                             <div>
-                                <a class="font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? 'course'))) ?>">
+                                <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url('dean/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? 'course'))) ?>">
                                     <?= esc($student['name']) ?>
                                 </a>
                                 <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                             </div>
                             <div class="flex items-center gap-3">
-                                <a data-follow-up-link class="text-xs font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $student['offering_id'], 'student' => (int) $student['student_id'], 'reason' => 'at_risk'])) ?>">Follow up</a>
-                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#C33939]/10 text-[#C33939]' : 'bg-[#946200]/10 text-[#946200]' ?>">
+                                <a data-follow-up-link class="inline-flex items-center justify-center pointer-coarse:min-w-11 text-xs font-semibold text-brand hover:underline pointer-coarse:min-h-11" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $student['offering_id'], 'student' => (int) $student['student_id'], 'reason' => 'at_risk'])) ?>">Follow up</a>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#FBE8E2] text-[#A63A18]' : 'bg-[#FFF7E6] text-[#946200]' ?>">
                                     <?= $student['reason'] === 'inactive'
                                         ? ($student['days_since'] === null ? 'Never active' : $student['days_since'] . ' days silent')
                                         : $student['progress'] . '% complete' ?>
@@ -256,46 +257,44 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
             <?php if ($audit['rows'] === []): ?>
                 <p class="text-sm text-[#646464]" data-audit-empty>No changes recorded<?= $filters->isFiltered() ? ' for these filters' : ' yet' ?>.</p>
             <?php else: ?>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <caption class="sr-only">Changes chairpersons made in the college's courses, newest first</caption>
-                        <thead>
-                            <tr class="border-b border-gray-100 text-xs text-[#646464]">
-                                <th scope="col" class="px-3 py-2 font-semibold">Who</th>
-                                <th scope="col" class="px-3 py-2 font-semibold">What</th>
-                                <th scope="col" class="px-3 py-2 font-semibold">Course</th>
-                                <th scope="col" class="px-3 py-2 font-semibold">Acting as</th>
-                                <th scope="col" class="px-3 py-2 font-semibold">When</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($audit['rows'] as $entry): ?>
-                                <tr class="border-b border-gray-50" data-audit-entry>
-                                    <td class="px-3 py-2"><?= esc($entry['actor'] ?? '—') ?></td>
-                                    <td class="px-3 py-2"><?= esc($entry['description']) ?></td>
-                                    <td class="px-3 py-2">
-                                        <?php if ($entry['offering_id'] !== null && $entry['slug'] !== null): ?>
-                                            <a class="font-semibold text-brand hover:underline" href="<?= esc(site_url('dean/courses/' . $entry['offering_id'] . '/' . $entry['slug'])) ?>"><?= esc($entry['course_code']) ?> <?= esc($entry['section_code']) ?></a>
-                                        <?php else: ?>
-                                            —
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="px-3 py-2"><?= esc(ucfirst((string) ($entry['acting_role'] ?? '—'))) ?></td>
-                                    <td class="px-3 py-2 text-[#646464]"><?= esc($entry['created_at']) ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                <?php // components/data-table: phone rows (What over Who and Course), Acting as and When in the row sheet. ?>
+                <?= view('components/data-table', [
+                    'id'      => 'audit-log',
+                    'caption' => "Changes chairpersons made in the college's courses, newest first",
+                    'avatar'  => false,
+                    'columns' => [
+                        ['key' => 'who', 'label' => 'Who', 'role' => 'status', 'class' => 'max-md:text-xs'],
+                        ['key' => 'what', 'label' => 'What', 'role' => 'primary'],
+                        ['key' => 'course', 'label' => 'Course', 'role' => 'secondary'],
+                        ['key' => 'acting', 'label' => 'Acting as'],
+                        ['key' => 'when', 'label' => 'When'],
+                    ],
+                    'rows' => array_map(static fn (array $entry): array => [
+                        'id'    => $entry['id'] ?? null,
+                        'label' => $entry['description'] . ', ' . ($entry['actor'] ?? '—') . ', ' . $entry['created_at'],
+                        'cells' => [
+                            'who'    => $entry['actor'] ?? '—',
+                            // The hook sits in a cell the row sheet never copies, so each entry is counted once. The hidden
+                            // words name the ⋯ button "Details for <what>, <who>, <when>" (data-table names it after this cell).
+                            'what'   => ['html' => '<span data-audit-entry title="' . esc((string) $entry['description'], 'attr') . '">' . esc((string) $entry['description']) . '</span>'
+                                . '<span class="sr-only">, ' . esc((string) ($entry['actor'] ?? '—')) . ', ' . esc((string) $entry['created_at']) . '</span>'],
+                            'course' => $entry['offering_id'] !== null && $entry['slug'] !== null
+                                ? ['html' => '<a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc(site_url('dean/courses/' . $entry['offering_id'] . '/' . $entry['slug']), 'attr') . '">' . esc((string) $entry['course_code']) . ' ' . esc((string) $entry['section_code']) . '</a>']
+                                : '—',
+                            'acting' => ucfirst((string) ($entry['acting_role'] ?? '—')),
+                            'when'   => (string) $entry['created_at'],
+                        ],
+                    ], $audit['rows']),
+                ], ['saveData' => false]) ?>
 
                 <nav class="flex items-center justify-between text-sm" aria-label="Audit log pages">
                     <span class="text-gray-600">Page <?= esc((string) $auditPage) ?> of <?= esc((string) $auditPages) ?> · <?= esc(number_format($audit['total'])) ?> in all</span>
                     <span class="flex gap-3">
                         <?php if ($auditPage > 1): ?>
-                            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['audit_page' => $auditPage > 2 ? $auditPage - 1 : null])) ?>">Previous</a>
+                            <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc($link(['audit_page' => $auditPage > 2 ? $auditPage - 1 : null])) ?>">Previous</a>
                         <?php endif; ?>
                         <?php if ($auditPage < $auditPages): ?>
-                            <a class="font-semibold text-brand hover:underline" href="<?= esc($link(['audit_page' => $auditPage + 1])) ?>">Next</a>
+                            <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc($link(['audit_page' => $auditPage + 1])) ?>">Next</a>
                         <?php endif; ?>
                     </span>
                 </nav>

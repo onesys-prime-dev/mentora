@@ -7,13 +7,13 @@
 $isPublished = $module['status'] === 'published';
 ?>
 
-<div class="flex items-center gap-2">
+<div class="flex flex-wrap items-center gap-2">
 
     <button
         type="button"
         title="<?= $isPublished ? 'Unpublish module' : 'Publish module' ?>"
         aria-label="<?= $isPublished ? 'Unpublish module' : 'Publish module' ?>"
-        class="flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold transition <?= $isPublished ? 'text-[#767676] hover:bg-gray-100' : 'text-brand hover:bg-brand/5' ?>"
+        class="flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold transition pointer-coarse:min-h-11 <?= $isPublished ? 'text-[#646464] hover:bg-gray-100' : 'text-brand hover:bg-brand/5' ?>"
         data-module-publish-toggle
         data-module-id="<?= esc($module['id']) ?>"
         data-status="<?= esc($module['status']) ?>">
@@ -36,7 +36,7 @@ $isPublished = $module['status'] === 'published';
         type="button"
         title="Edit module"
         aria-label="Edit module"
-        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
+        class="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
         data-edit-module
         data-module-id="<?= esc($module['id']) ?>"
         data-module-title="<?= esc($module['title']) ?>"
@@ -52,7 +52,7 @@ $isPublished = $module['status'] === 'published';
         type="button"
         title="Dependencies"
         aria-label="Dependencies"
-        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
+        class="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
         data-module-dependencies
         data-module-id="<?= esc($module['id']) ?>"
         data-module-title="<?= esc($module['title']) ?>">
@@ -65,7 +65,7 @@ $isPublished = $module['status'] === 'published';
         type="button"
         title="Delete module"
         aria-label="Delete module"
-        class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"
+        class="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"
         data-delete-module
         data-module-id="<?= esc($module['id']) ?>">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

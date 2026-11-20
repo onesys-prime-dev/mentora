@@ -124,6 +124,14 @@ final class DeanSignoffPageTest extends RouteTestCase
         $this->assertStringContainsString('First (2026-2027)', $body);
     }
 
+    public function testTheReauthDialogAfterTheHeaderKeepsTheDefaultLayout(): void
+    {
+        // The header's Apps tiles pass variant=menu; that must not leak into the dialogs rendered after it.
+        $body = $this->page();
+
+        $this->assertMatchesRegularExpression('/id="reauth-dialog"(?![^>]*data-dialog-variant)[^>]*>/', $body);
+    }
+
     public function testABlockedSectionLinksToItsGradesAndToTheOpenRequests(): void
     {
         $body = $this->page();

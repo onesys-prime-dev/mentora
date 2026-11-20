@@ -12,7 +12,19 @@
 */
 ?>
 
-<ol class="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm" aria-label="<?= esc($ariaLabel ?? 'Steps') ?>" data-stepper <?= $attrs ?? '' ?>>
+<?php
+$stepCount = count($steps);
+$currentLabel = (string) ($steps[$current - 1] ?? '');
+?>
+
+<div class="flex flex-col gap-2 sm:hidden" data-stepper-summary>
+    <p class="text-sm font-semibold text-brand">Step <?= (int) $current ?> of <?= $stepCount ?><span class="font-normal text-[#646464]"> · <?= esc($currentLabel) ?></span></p>
+    <div class="h-1 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="<?= esc($ariaLabel ?? 'Steps') ?> progress" aria-valuemin="1" aria-valuemax="<?= $stepCount ?>" aria-valuenow="<?= (int) $current ?>">
+        <div class="h-full rounded-full bg-brand" style="width: <?= $stepCount > 0 ? round(100 * $current / $stepCount, 1) : 0 ?>%"></div>
+    </div>
+</div>
+
+<ol class="max-sm:sr-only flex flex-wrap items-center gap-x-3 gap-y-2 text-sm" aria-label="<?= esc($ariaLabel ?? 'Steps') ?>" data-stepper <?= $attrs ?? '' ?>>
     <?php foreach ($steps as $index => $label): ?>
         <?php
         $number = $index + 1;

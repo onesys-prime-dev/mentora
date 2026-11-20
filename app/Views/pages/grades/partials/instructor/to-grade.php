@@ -32,7 +32,7 @@ $filtered = $filters['qsection'] !== null || $filters['type'] !== null || $filte
                         <span class="text-xs text-[#646464]"><?= esc($row['detail']) ?><?php if ($row['late'] > 0): ?> · <span class="font-semibold text-[#946200]"><?= (int) $row['late'] ?> late</span><?php endif; ?></span>
                     </div>
                     <a href="<?= esc($row['href']) ?>"
-                       class="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2"
+                       class="inline-flex min-h-9 pointer-coarse:min-h-11 shrink-0 items-center justify-center rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2"
                        data-grade-link>Grade →<span class="sr-only"> <?= esc($row['label']) ?></span></a>
                 </li>
             <?php endforeach; ?>

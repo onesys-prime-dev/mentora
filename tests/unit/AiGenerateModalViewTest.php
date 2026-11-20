@@ -95,7 +95,7 @@ final class AiGenerateModalViewTest extends CIUnitTestCase
     public function testTheModalOffersEveryTypeTheBuilderHasWithTheSameNames(): void
     {
         $html = $this->render(null);
-        $palette = (string) file_get_contents(APPPATH . 'Views/pages/courses/features/assessments/partials/quiz-builder-palette.php');
+        $palette = (string) file_get_contents(APPPATH . 'Views/pages/courses/features/assessments/quiz-builder.php');
 
         preg_match_all("/'type' => '([^']+)'/", $palette, $types);
         preg_match_all("/'description' => '([^']+)'/", $palette, $descriptions);

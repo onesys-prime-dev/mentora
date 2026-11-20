@@ -16,6 +16,10 @@ import { bindFeedbackComposer } from "../feedback/feedback.js";
 
 import { bindQuestionScoring } from "./question-scoring.js";
 
+import { bindSidePanels } from "../../../../../shared/side-panel.js";
+
+import { bindSplitDivider } from "../../../../../shared/split-divider.js";
+
 let state = {
     offeringId: null,
     assessmentId: null,
@@ -36,6 +40,11 @@ export function initializeGradeWork(offeringId, assessmentId, refresh, loadStude
     bindAttemptTabs();
     bindRegrade();
 
+    // Each student is a fresh render of the page: the students panel, the divider and the score bar start over.
+    bindSidePanels();
+    bindSplitDivider();
+    syncScoreBar();
+
     bindFeedbackComposer(offeringId, () => {
         const studentId = selectedStudentId();
         return studentId ? loadStudent(studentId, currentAttemptId()) : null;
@@ -52,6 +61,39 @@ export function initializeGradeWork(offeringId, assessmentId, refresh, loadStude
     }
 
 }
+
+/*
+|--------------------------------------------------------------------------
+| Score bar: below md the grading panel is a sticky bar whose controls open
+| upward (shared/action-bar.js); from md up they are a plain, open block.
+|--------------------------------------------------------------------------
+*/
+
+const phone = globalThis.matchMedia?.("(width < 48rem)");
+
+function syncScoreBar() {
+
+    const bar =
+        document.querySelector("[data-expandable-grade-work-actions-panel][data-action-bar]");
+
+    const details =
+        bar?.querySelector("[data-action-bar-panel]");
+
+    if (!details) {
+        return;
+    }
+
+    if (!phone?.matches) {
+        bar.removeAttribute("data-open");
+        bar.querySelector("[data-action-bar-toggle]")?.setAttribute("aria-expanded", "false");
+    }
+
+    // Collapsed on a phone, Tab skips the controls; from md up they are always reachable.
+    details.inert = Boolean(phone?.matches) && !bar.hasAttribute("data-open");
+
+}
+
+phone?.addEventListener("change", syncScoreBar);
 
 function hasAnyExistingScore() {
 

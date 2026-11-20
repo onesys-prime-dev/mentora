@@ -31,6 +31,7 @@ import { bindBreadcrumbEvents } from "./breadcrumb.js";
 import { bindLearningNavigation } from "./navigation.js";
 
 import { bindModal } from "./modals/index.js";
+import { createDialog } from "../../../../shared/dialog.js";
 import { bindModuleModals } from "./modals/modules.js";
 import { bindLearningUnitModals } from "./modals/learning-units.js";
 import { bindLearningItemCreateModal } from "./modals/learning-items.js";
@@ -131,12 +132,12 @@ function bindModuleBindings(moduleId, refresh, backToList) {
         });
 
     bindLearningUnitEvents();
-    initializeLearningUnitSorting();
+    initializeLearningUnitSorting(refresh);
     bindLearningUnitActionMenus();
 
     bindLearningItemEvents(refresh);
     bindLearningItemEditorEvents(refresh);
-    initializeLearningItemSorting();
+    initializeLearningItemSorting(refresh);
     bindLearningItemActionMenus();
 
     bindLearningNavigation(refresh);
@@ -183,10 +184,9 @@ function bindModuleBindings(moduleId, refresh, backToList) {
         refresh,
     });
 
-    const learningItemCreateModal = bindModal({
-        modal: "#learning-item-create-modal",
-        closeButtons: "[data-close-learning-item-modal]",
-    });
+    // A components/dialog (full-screen form below sm); createDialog gives the same open/close as bindModal.
+    const learningItemCreateElement = document.querySelector("#learning-item-create-modal");
+    const learningItemCreateModal = learningItemCreateElement ? createDialog(learningItemCreateElement) : null;
 
     bindLearningItemCreateModal({
         create: learningItemCreateModal,

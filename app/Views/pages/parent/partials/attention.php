@@ -12,7 +12,7 @@ $tones = [
 ];
 ?>
 
-<section class="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="parent-attention" data-parent-attention>
+<section class="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6" aria-labelledby="parent-attention" data-parent-attention>
     <h2 id="parent-attention" class="text-sm font-bold text-brand">Needs attention</h2>
 
     <?php if ($items === []): ?>

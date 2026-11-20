@@ -63,7 +63,7 @@ $barColor = static fn (string $tone) => match ($tone) {
 
 <?php else: ?>
 
-    <div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
+    <div class="flex flex-col gap-6 p-4 pb-6 max-lg:@xs:p-6 max-lg:@xs:pb-8 lg:p-6 lg:pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
         <div class="flex justify-between items-center">
 

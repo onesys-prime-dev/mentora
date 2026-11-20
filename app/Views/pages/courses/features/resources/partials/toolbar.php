@@ -12,12 +12,13 @@
             placeholder="Search..."
             value="<?= esc($filters['search'] ?? '') ?>"
             autocomplete="off"
-            class="w-full text-sm outline-none placeholder:text-[#767676]">
+            aria-label="Search resources"
+            class="w-full text-base sm:text-sm pointer-coarse:min-h-11 outline-none placeholder:text-[#767676]">
     </label>
 
     <div class="flex flex-wrap items-center gap-2">
 
-        <select data-resources-sort class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-[#1A1C1E] outline-none">
+        <select data-resources-sort aria-label="Sort resources" class="rounded-xl border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] outline-none">
             <option value="name" <?= ($filters['sort'] ?? 'name') === 'name' ? 'selected' : '' ?>>Name (A–Z)</option>
             <option value="name_desc" <?= ($filters['sort'] ?? '') === 'name_desc' ? 'selected' : '' ?>>Name (Z–A)</option>
             <option value="newest" <?= ($filters['sort'] ?? '') === 'newest' ? 'selected' : '' ?>>Newest first</option>
@@ -26,7 +27,7 @@
 
         <?php if ($showFileControls): ?>
 
-            <select data-resources-type class="rounded-xl border border-gray-300 px-3 py-2 text-sm text-[#1A1C1E] outline-none">
+            <select data-resources-type aria-label="File type" class="rounded-xl border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] outline-none">
                 <option value="" <?= ($filters['type'] ?? '') === '' ? 'selected' : '' ?>>All types</option>
                 <option value="pdf" <?= ($filters['type'] ?? '') === 'pdf' ? 'selected' : '' ?>>PDF</option>
                 <option value="word" <?= ($filters['type'] ?? '') === 'word' ? 'selected' : '' ?>>Word</option>
@@ -42,13 +43,13 @@
                 <button
                     type="button"
                     data-view="list"
-                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'list' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
+                    class="rounded-lg px-3 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold transition <?= $view === 'list' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
                     List
                 </button>
                 <button
                     type="button"
                     data-view="grid"
-                    class="rounded-lg px-3 py-1.5 text-sm font-semibold transition <?= $view === 'grid' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
+                    class="rounded-lg px-3 py-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold transition <?= $view === 'grid' ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-50' ?>">
                     Grid
                 </button>
             </div>

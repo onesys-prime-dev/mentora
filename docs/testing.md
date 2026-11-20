@@ -125,6 +125,42 @@ To add a test: take a case from `docs/test-cases/`, name the test with its ID, s
 in through the form with a demo account, and set the case's Playwright field to the
 file.
 
+#### The responsive sweep
+
+`tests/e2e/responsive.spec.js` opens every screen in its `SCREENS` table at several window sizes
+(`tests/e2e/support/responsive.js`) and checks four things at each: no sideways page scroll (content inside a
+`[data-scroll-x]` scroller is allowed to be wider), controls of at least 44×44 that fit the window (phone and
+tablet sizes, with touch emulated), no serious or critical axe findings (WCAG 2.2 A and AA), and a full-page
+screenshot against its baseline. A new screen is one more `SCREENS` entry.
+
+```bash
+npx playwright install chromium webkit                                  # once
+npx playwright test responsive.spec.js --project=chromium              # smoke: 375, 834 and 1366 px, light
+RESPONSIVE_FULL=1 npx playwright test responsive.spec.js --project=chromium   # the whole matrix, light and dark, 200% zoom
+npx playwright test --project=webkit                                    # Safari's engine, the 375 px phone only
+```
+
+`npm run e2e` runs the sweep too (smoke sizes, both projects), so it needs WebKit installed.
+
+**Screenshot baselines** live in `tests/e2e/__screenshots__/` and are compared on Linux only (fonts render
+differently on Windows and macOS, so there the screenshots are skipped and every other check still runs). The
+config sets `updateSnapshots: "none"`: a missing or changed baseline fails the run instead of being written. To
+make or update them: push the branch, run **Actions → Responsive → Run workflow** on it with
+`update_snapshots` ticked (or `gh workflow run responsive.yml --ref <branch> -f update_snapshots=true`),
+download the `responsive-baselines` artifact, unzip it into `tests/e2e/__screenshots__`, look through the
+images, and commit them. The same workflow runs the whole matrix every night at 02:00 Manila time.
+
+**The first baselines.** GitHub only offers Run workflow for a workflow file that is already on the default
+branch, and the CI e2e job fails until baselines exist, so the branch that brings the sweep cannot make its own
+baselines. Bootstrap it in this order:
+
+1. Land `.github/workflows/responsive.yml` alone on `main` in a tiny separate PR (it only runs on demand and at
+   night, so it changes nothing else).
+2. `gh workflow run responsive.yml --ref feat/responsive-1-foundation -f update_snapshots=true`
+3. When it finishes, download the `responsive-baselines` artifact (`gh run download <run id> -n
+   responsive-baselines -D tests/e2e/__screenshots__`), look through the images, and commit them to the branch.
+4. Merge the branch once CI is green.
+
 ## Writing a test
 
 - Put it in `tests/unit/` (no database), `tests/database/` (service and model
@@ -187,7 +223,9 @@ back up your `.env`, copy `ci-full.env` over it, run `vendor/bin/phpunit
 
 The **End-to-end (Playwright)** job runs the browser tests above: it builds the
 frontend, starts a MySQL 8.4 container, and runs `npm run e2e` (most of its time is
-building and installing Chromium). It is part of **CI passed**.
+building and installing Chromium and WebKit). It is part of **CI passed**, and it fails until the
+responsive sweep's screenshot baselines are committed (see "The responsive sweep" above). The nightly
+**Responsive** workflow (`.github/workflows/responsive.yml`) runs the sweep's whole matrix.
 
 ## Coverage plan
 

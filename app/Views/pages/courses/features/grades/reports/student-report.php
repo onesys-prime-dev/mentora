@@ -15,6 +15,7 @@ $offering = $report['offering'];
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Grade report: <?= esc($student['student_name']) ?></title>
     <?= view('pages/courses/features/grades/reports/_style', [], ['saveData' => false]) ?>
 </head>
@@ -56,6 +57,7 @@ $offering = $report['offering'];
 <?php endif; ?>
 
 <h2>How the grade is made up</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Category</th><th class="num">Weight</th><?php if ($showItems): ?><th class="num">Points</th><?php endif; ?><th class="num">Percentage</th></tr></thead>
     <tbody>
@@ -71,9 +73,11 @@ $offering = $report['offering'];
         <?php endforeach; ?>
     </tbody>
 </table>
+</div>
 
 <?php if ($showItems): ?>
 <h2>Scores</h2>
+<div data-scroll-x style="overflow-x:auto">
 <table>
     <thead><tr><th>Item</th><th>Category</th><th class="num">Score</th></tr></thead>
     <tbody>
@@ -90,6 +94,7 @@ $offering = $report['offering'];
         <?php endforeach; ?>
     </tbody>
 </table>
+</div>
 <?php endif; ?>
 
 </body>

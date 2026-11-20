@@ -12,6 +12,9 @@ const events = [
 ];
 
 const mount = async (role, abilities) => {
+    // The page compares the clicked day with the real clock, so pin the clock to the fixture's day.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-10T09:00:00"));
     document.body.innerHTML = `
         <div id="calendar-app"
              data-today="2026-11-10"
@@ -42,6 +45,7 @@ const mount = async (role, abilities) => {
 };
 
 afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     document.body.innerHTML = "";
 });

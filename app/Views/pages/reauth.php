@@ -33,8 +33,8 @@
                 autocomplete="current-password"
                 required
                 autofocus
-                class="rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand/55">
-            <button type="submit" class="rounded bg-brand px-4 py-2 font-semibold text-white hover:bg-brand-dark">Confirm</button>
+                class="rounded border border-gray-300 px-3 py-2 pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/55">
+            <button type="submit" class="rounded bg-brand px-4 py-2 pointer-coarse:min-h-11 font-semibold text-white hover:bg-brand-dark">Confirm</button>
         </form>
     </div>
 
@@ -62,7 +62,7 @@
                 'attrs'    => 'autocomplete="current-password" autofocus',
             ], ['saveData' => false]) ?>
             <div>
-                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Confirm</button>
+                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Confirm</button>
             </div>
         </form>
 

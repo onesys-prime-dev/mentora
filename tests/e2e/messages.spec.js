@@ -52,8 +52,11 @@ async function openInstructorTab(page) {
     await page.goto("/parent/dashboard");
     await page.getByRole("link", { name: "Introduction to Computing" }).first().click();
     await expect(page).toHaveURL(/\/parent\/children\/\d+\/courses\/\d+\//);
-    await page.getByRole("tab", { name: "From the instructor", exact: true }).click();
-    await expect(page.locator("[data-parent-instructor-feed]")).toBeVisible();
+    // The tabs' script loads after the page does, and a click before it is lost: click again until the feed opens.
+    await expect(async () => {
+        await page.getByRole("tab", { name: "From the instructor", exact: true }).click();
+        await expect(page.locator("[data-parent-instructor-feed]")).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
 }
 
 test("TC-MSG-01 A student sees the pinned course chat, posts in it, and the instructor sees the post", async ({ browser }) => {

@@ -40,7 +40,7 @@ $arrow = 'h-6 w-6 text-gray-500 transition duration-200 ease-out group-hover:tex
             <button
                 type="button"
                 data-assessments-filter-set="draft"
-                class="text-sm font-semibold text-brand transition hover:underline">
+                class="shrink-0 text-sm font-semibold text-brand transition hover:underline pointer-coarse:min-h-11">
                 View all
             </button>
         <?php endif; ?>

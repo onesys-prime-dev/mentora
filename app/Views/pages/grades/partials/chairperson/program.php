@@ -70,8 +70,8 @@ $canEdit = $canManage && ! $dean;
 // Nudge and Edit as chairperson have nothing to do in a finalized section.
 $selectedFinalized = $selected !== null && $selected['state'] === 'finalized';
 
-$secondary = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
-$primary   = 'inline-flex min-h-9 items-center justify-center gap-2 rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
+$secondary = 'inline-flex min-h-9 pointer-coarse:min-h-11 items-center justify-center gap-2 rounded-full border border-brand bg-white px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55';
+$primary   = 'inline-flex min-h-9 pointer-coarse:min-h-11 items-center justify-center gap-2 rounded-full bg-brand px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
 
 // A section without a grading scheme: no grid (fetching it would create one), the way to the course instead.
 $noScheme = static fn (string $href): string => '<div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-gray-200 px-8 py-14 text-center" data-no-scheme>'
@@ -125,7 +125,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
 
         <?php // A link that turns the filter on or off; the box and the hidden word say which it is. ?>
         <a href="<?= esc($link(array_merge($keep, ['nf' => $state['nf'] ? null : 1]))) ?>"
-           class="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-lg border bg-white px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 sm:self-auto <?= $state['nf'] ? 'border-brand text-brand-dark' : 'border-gray-300 text-[#1A1C1E] hover:border-brand/50' ?>"
+           class="inline-flex min-h-10 pointer-coarse:min-h-11 shrink-0 items-center gap-2 self-start rounded-lg border bg-white px-3 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 sm:self-auto <?= $state['nf'] ? 'border-brand text-brand-dark' : 'border-gray-300 text-[#1A1C1E] hover:border-brand/50' ?>"
            data-not-finalized>
             <span class="flex h-4 w-4 items-center justify-center rounded border <?= $state['nf'] ? 'border-brand bg-brand' : 'border-gray-400 bg-white' ?>" aria-hidden="true">
                 <?php if ($state['nf']): ?><?= icon('check', 'h-3 w-3 text-white') ?><?php endif; ?>
@@ -165,9 +165,10 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
 
         <h2 id="grades-program-sections" class="sr-only">Sections</h2>
 
-        <?php // Positioned, so the card also clips what is absolutely placed inside it (a header's sr-only words): the
-              // page itself never scrolls sideways on a phone. ?>
-        <div class="relative overflow-x-auto rounded-2xl border border-[#E3E6EE]">
+        <?php // The shared pinned scroller (shared/scroll-x.js), the Section column pinned. Positioned, so the card also
+              // clips what is absolutely placed inside it (a header's sr-only words): the page itself never scrolls
+              // sideways on a phone. ?>
+        <div class="relative rounded-2xl border border-[#E3E6EE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/55" tabindex="0" role="region" aria-label="<?= $dean ? "The college's sections" : "The program's sections" ?>" data-scroll-x data-sticky-first>
             <table class="w-full <?= $dean ? 'min-w-[52rem]' : 'min-w-[46rem]' ?> text-left text-sm" data-program-table>
                 <caption class="sr-only"><?= $dean ? "The college's sections this term." : "The program's sections this term." ?><?= $canOpen ? ' Pick a section to open its gradebook below.' : '' ?></caption>
                 <thead class="bg-[#F6F7FA] text-xs font-semibold uppercase tracking-wide text-[#646464]">
@@ -215,7 +216,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
                                    data-term-end="<?= esc((string) $termEnd, 'attr') ?>"
                                    <?= $on ? 'aria-current="true"' : '' ?>>
                                     <span class="font-bold <?= $on ? 'text-brand' : 'text-[#1A1C1E] group-hover:text-brand' ?>"><?= esc($label($row)) ?></span>
-                                    <span class="max-w-[13rem] truncate text-xs text-[#646464]" title="<?= esc($row['course_title'], 'attr') ?>"><?= esc($row['course_title']) ?></span>
+                                    <span class="min-w-0 max-w-[13rem] truncate text-xs text-[#646464] max-sm:max-w-[8rem]" title="<?= esc($row['course_title'], 'attr') ?>"><?= esc($row['course_title']) ?></span>
                                 </a>
                             </th>
                             <td class="px-4 py-3 align-top text-[#3D3D3D] <?= $bg ?>" data-cell="instructor"><?php if ($names === []): ?><span class="text-[#9AA0AC]" aria-hidden="true">—</span><span class="sr-only">No instructor</span><?php else: ?><?= esc(implode(', ', $names)) ?><?php endif; ?></td>
@@ -225,7 +226,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
                             <td class="px-4 py-3 align-top <?= $bg ?>" data-cell="status">
                                 <span class="inline-flex items-center gap-2 whitespace-nowrap font-semibold <?= $view['class'] ?>"><span class="h-2.5 w-2.5 shrink-0 rounded-full <?= $view['dot'] ?>" aria-hidden="true"></span><?= esc($view['word']) ?></span>
                                 <?php if ($row['state'] === 'blocked'): ?>
-                                    <span class="mt-0.5 block max-w-[14rem] text-xs text-[#646464]"><?= esc($row['note']) ?></span>
+                                    <span class="mt-0.5 block min-w-0 max-w-[14rem] break-words text-xs text-[#646464]"><?= esc($row['note']) ?></span>
                                 <?php endif; ?>
                             </td>
                             <?php if ($dean): ?>
@@ -237,7 +238,7 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
             </table>
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" data-program-tools-home>
 
             <div class="min-w-0 flex-1">
                 <?php $pages = max(1, (int) ceil($program['total'] / \App\Services\Grades\ChairpersonProgramOverview::PER_PAGE)); ?>
@@ -254,7 +255,8 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
                 <?php endif; ?>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
+            <?php // Below lg the page script (program.js) moves these into the section's action bar, and back from lg. ?>
+            <div class="flex flex-wrap items-center gap-2" data-program-tools>
                 <?php if ($canNudge): ?>
                     <?php // Opens the nudge for the section below, filled from the action bar's data. Hidden for a
                           // finalized section (nothing to nudge about); the page script hides and shows it per row. ?>
@@ -285,7 +287,8 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
 
     <section class="flex flex-col gap-4" aria-label="<?= esc('Gradebook of ' . $label($selected), 'attr') ?>" data-program-panel>
 
-        <div class="flex flex-col gap-3 rounded-2xl border border-[#E3E6EE] px-4 py-3 md:flex-row md:items-center md:justify-between" data-program-actions data-section-id="<?= $id ?>"
+        <?php // Below lg also an expandable action bar (shared/action-bar.js): More opens Nudge and Download under it. ?>
+        <div class="flex flex-col gap-3 rounded-2xl border border-[#E3E6EE] px-4 py-3 max-lg:flex-wrap md:flex-row md:items-center md:justify-between" data-program-actions data-action-bar data-section-id="<?= $id ?>"
              data-label="<?= esc($label($selected), 'attr') ?>"
              data-state="<?= esc($selected['state'], 'attr') ?>"
              data-instructors="<?= esc((string) json_encode($selected['recipients'], JSON_UNESCAPED_UNICODE), 'attr') ?>"
@@ -310,7 +313,17 @@ $stripPart = static function (string $text, ?string $href, string $key, ?string 
                 <?php if ($canOpen): ?>
                     <a href="<?= esc($inCourse) ?>" class="<?= $secondary ?>" data-open-in-course>Open in course →</a>
                 <?php endif; ?>
+                <?php if ($rows !== []): ?>
+                    <button type="button" class="<?= $secondary ?> lg:hidden" data-action-bar-toggle aria-controls="program-tools-panel" aria-expanded="false">More</button>
+                <?php endif; ?>
             </div>
+
+            <?php if ($rows !== []): ?>
+                <?php // A line of its own; the negative margin takes back the bar's gap while it is closed. ?>
+                <div id="program-tools-panel" class="basis-full max-lg:-mt-3 lg:hidden" data-action-bar-panel>
+                    <div><div class="pt-3" data-program-tools-slot></div></div>
+                </div>
+            <?php endif; ?>
 
         </div>
 

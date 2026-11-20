@@ -14,6 +14,8 @@ const key = (name) => document.dispatchEvent(new KeyboardEvent("keydown", { key:
 
 afterEach(() => {
     document.body.innerHTML = "";
+    vi.doUnmock("../../../resources/js/shared/clamp-panel.js");
+    vi.unstubAllGlobals();
 });
 
 describe("app menu", () => {
@@ -80,7 +82,7 @@ describe("app menu", () => {
 describe("profile menu", () => {
     beforeEach(async () => {
         document.body.innerHTML = `
-            <button id="profile-menu-button" aria-expanded="false">Me</button>
+            <button id="profile-menu-button" data-profile-menu-trigger aria-expanded="false">Me</button>
             <svg id="profile-menu-arrow"></svg>
             <div id="profile-menu-panel" class="hidden"><a id="inside" href="#">Settings</a></div>
             <div id="elsewhere">page</div>`;
@@ -118,6 +120,98 @@ describe("profile menu", () => {
         document.getElementById("inside").click();
 
         expect(panel().classList.contains("hidden")).toBe(false);
+    });
+});
+
+describe("profile menu with the phone ⋯ trigger", () => {
+    beforeEach(async () => {
+        document.body.innerHTML = `
+            <button id="profile-menu-button" data-profile-menu-trigger aria-expanded="false">Me</button>
+            <svg id="profile-menu-arrow"></svg>
+            <button id="more" data-profile-menu-trigger aria-expanded="false">More</button>
+            <div id="profile-menu-panel" class="hidden"><a id="inside" href="#">Settings</a></div>
+            <div id="elsewhere">page</div>`;
+
+        await load("profile-menu");
+    });
+
+    const button = () => document.getElementById("profile-menu-button");
+    const more = () => document.getElementById("more");
+    const panel = () => document.getElementById("profile-menu-panel");
+
+    it("the ⋯ trigger opens the account panel and sets its own aria-expanded", () => {
+        more().click();
+
+        expect(panel().classList.contains("hidden")).toBe(false);
+        expect(more().getAttribute("aria-expanded")).toBe("true");
+        expect(button().getAttribute("aria-expanded")).toBe("false");
+
+        more().click();
+
+        expect(panel().classList.contains("hidden")).toBe(true);
+        expect(more().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("outside click ignores clicks on either trigger", () => {
+        more().click();
+        button().click();
+
+        // The avatar button toggles the shared panel shut; it is not treated as an outside click first.
+        expect(panel().classList.contains("hidden")).toBe(true);
+        expect(more().getAttribute("aria-expanded")).toBe("false");
+
+        button().click();
+        expect(panel().classList.contains("hidden")).toBe(false);
+        expect(button().getAttribute("aria-expanded")).toBe("true");
+
+        document.getElementById("elsewhere").click();
+        expect(panel().classList.contains("hidden")).toBe(true);
+        expect(button().getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("Escape returns focus to the trigger that opened it", () => {
+        more().click();
+        key("Escape");
+
+        expect(panel().classList.contains("hidden")).toBe(true);
+        expect(document.activeElement).toBe(more());
+
+        button().click();
+        key("Escape");
+
+        expect(document.activeElement).toBe(button());
+    });
+});
+
+describe("header panels", () => {
+    it("opening a header panel clamps it to the viewport", async () => {
+        const clampToViewport = vi.fn();
+        vi.doMock("../../../resources/js/shared/clamp-panel.js", () => ({ clampToViewport }));
+
+        document.body.innerHTML = `
+            <button id="notifications-button" aria-expanded="false">Bell</button>
+            <div id="notifications-panel" class="hidden" data-feed-url="/notifications/feed">
+                <div data-notifications-scroll><ul data-notifications-list></ul></div>
+                <p data-notifications-empty></p><p data-notifications-error></p>
+            </div>
+            <button id="app-menu-button" aria-expanded="false">Apps</button>
+            <div id="app-menu-panel" class="hidden"></div>
+            <button id="profile-menu-button" data-profile-menu-trigger aria-expanded="false">Me</button>
+            <svg id="profile-menu-arrow"></svg>
+            <div id="profile-menu-panel" class="hidden"></div>`;
+
+        vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+
+        await load("notifications-menu");
+        await import("../../../resources/js/shared/app-menu.js");
+        await import("../../../resources/js/shared/profile-menu.js");
+
+        for (const id of ["notifications", "app-menu", "profile-menu"]) {
+            clampToViewport.mockClear();
+            document.getElementById(`${id}-button`).click();
+
+            expect(clampToViewport).toHaveBeenCalledWith(document.getElementById(`${id}-panel`));
+        }
     });
 });
 

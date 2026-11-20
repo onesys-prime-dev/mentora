@@ -13,7 +13,7 @@ if (count($children) > 1) {
     $actions .= view('pages/parent/partials/child-switcher', ['children' => $children, 'selected' => (int) $child['id']], ['saveData' => false]);
 }
 
-$actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] . '/calendar')) . '" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View calendar</a>';
+$actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] . '/calendar')) . '" class="inline-flex items-center justify-center rounded-full border border-brand bg-white px-5 py-2 text-sm pointer-coarse:min-h-11 font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View calendar</a>';
 ?>
 
 <?= $this->extend('layouts/app') ?>
@@ -29,8 +29,17 @@ $actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] .
         'actions'     => $actions,
     ], ['saveData' => false]) ?>
 
-    <?= view('pages/parent/partials/attention', ['items' => $dashboard['attention']], ['saveData' => false]) ?>
+    <?= view('components/phone-tabs', ['label' => 'Dashboard sections', 'tabs' => [
+        ['key' => 'attention', 'label' => 'Attention', 'dot' => $dashboard['attention'] !== []],
+        ['key' => 'courses', 'label' => 'Courses', 'dot' => false],
+        ['key' => 'deadlines', 'label' => 'Deadlines', 'dot' => false],
+    ]], ['saveData' => false]) ?>
 
+    <div data-phone-panel="attention" data-phone-active>
+        <?= view('pages/parent/partials/attention', ['items' => $dashboard['attention']], ['saveData' => false]) ?>
+    </div>
+
+    <div class="flex flex-col gap-6" data-phone-panel="courses">
     <section class="flex flex-col gap-3" aria-labelledby="parent-courses">
         <h2 id="parent-courses" class="text-sm font-bold text-brand">Courses this term</h2>
 
@@ -41,19 +50,22 @@ $actions .= '<a href="' . esc(site_url('parent/children/' . (int) $child['id'] .
                 'text'  => 'Courses appear here once your child is enrolled.',
             ], ['saveData' => false]) ?>
         <?php else: ?>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div class="@container w-full min-w-0"><div class="grid grid-cols-1 gap-4 @md:grid-cols-2">
                 <?php foreach ($dashboard['courses'] as $course): ?>
                     <?= view('pages/parent/partials/course-card', ['course' => $course, 'past' => false, 'childId' => (int) $child['id']], ['saveData' => false]) ?>
                 <?php endforeach; ?>
-            </div>
+            </div></div>
         <?php endif; ?>
     </section>
-
-    <?= view('pages/parent/partials/deadlines', ['deadlines' => $dashboard['deadlines']], ['saveData' => false]) ?>
 
     <?php if ($dashboard['past'] !== []): ?>
         <?= view('pages/parent/partials/past-terms', ['past' => $dashboard['past'], 'childId' => (int) $child['id']], ['saveData' => false]) ?>
     <?php endif; ?>
+    </div>
+
+    <div data-phone-panel="deadlines">
+        <?= view('pages/parent/partials/deadlines', ['deadlines' => $dashboard['deadlines']], ['saveData' => false]) ?>
+    </div>
 
 </div>
 

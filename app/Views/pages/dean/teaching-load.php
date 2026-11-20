@@ -42,7 +42,7 @@ foreach ($instructors as $i) {
     $rows[] = [
         'id'    => (int) $i['id'],
         'cells' => [
-            'name'       => ['html' => '<a class="font-semibold text-brand hover:underline" href="' . esc($base . '/' . (int) $i['id'] . (($q = http_build_query(array_filter(['term' => $term, 'department' => null]))) === '' ? '' : '?' . $q)) . '">' . esc($i['name']) . '</a>'
+            'name'       => ['html' => '<a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc($base . '/' . (int) $i['id'] . (($q = http_build_query(array_filter(['term' => $term, 'department' => null]))) === '' ? '' : '?' . $q)) . '">' . esc($i['name']) . '</a>'
                 . ($i['high_load'] ? '<span class="mt-1 block">' . view('components/status-badge', ['label' => 'High load', 'tone' => 'warning', 'icon' => 'attention'], ['saveData' => false]) . '</span>' : '')],
             'sections'   => (string) $i['sections'],
             'students'   => number_format((int) $i['students']),
@@ -80,7 +80,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
         'title'       => 'Teaching load',
         'icon'        => 'modules',
         'description' => 'What each instructor in your college teaches in a term. You can look, not change. A high load is ' . $highLoadUnits . ' units or more; your institution sets that number.',
-        'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
+        'actions'     => $loadError ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/teaching-load') . '?' . http_build_query($filters->toQuery(['term' => $term])), 'attr') . '" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [
@@ -101,7 +101,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the teaching load</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 inline-flex items-center pointer-coarse:min-h-11">Try again</a>
         </div>
 
     <?php else: ?>

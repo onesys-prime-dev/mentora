@@ -9,8 +9,8 @@
  */
 use App\Services\Users\UserFilters;
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$cancel  = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$cancel  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $institutionOptions = ['' => 'Choose an institution'];
 
@@ -53,7 +53,7 @@ foreach ($newRoles as $role) {
         <?= view('components/form-field', ['name' => 'institution_id', 'label' => 'Institution', 'type' => 'select', 'options' => $institutionOptions, 'value' => (string) $newValues['institution_id'], 'required' => true], ['saveData' => false]) ?>
         <?= view('components/form-field', ['name' => 'role', 'label' => 'Role', 'type' => 'select', 'options' => $roleOptions, 'value' => (string) $newValues['role'], 'required' => true, 'help' => 'A student takes one of the plan\'s seats.'], ['saveData' => false]) ?>
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <?= view('components/form-field', ['name' => 'first_name', 'label' => 'First name', 'value' => (string) $newValues['first_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
             <?= view('components/form-field', ['name' => 'last_name', 'label' => 'Last name', 'value' => (string) $newValues['last_name'], 'maxlength' => 100, 'required' => true], ['saveData' => false]) ?>
         </div>

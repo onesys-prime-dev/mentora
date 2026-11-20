@@ -113,7 +113,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
                 <?php // The picker reads "Change term"; the term shown is marked in the list. ?>
                 <label class="sr-only" for="grades-term">Change term</label>
-                <select id="grades-term" data-select-link data-term-select class="<?= $select ?> sm:w-56">
+                <select id="grades-term" data-select-link data-term-select class="<?= $select ?> w-full pointer-coarse:min-h-11 max-sm:text-base sm:w-56">
                     <option value="" selected disabled hidden>Change term</option>
                     <?php foreach ($terms as $term): ?>
                         <option value="<?= esc($base . '?term=' . $term['id']) ?>"><?= esc($term['name'] . ' (' . $term['academic_year'] . ')' . ($term['id'] === $termId ? ' · shown' : '')) ?></option>
@@ -134,6 +134,9 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
     <?php elseif ($area === 'chairperson' || $area === 'dean'): ?>
 
         <?php
+        // Finger-sized on touch, 16px on a phone (no zoom on focus), as on the instructor's page.
+        $select .= ' pointer-coarse:min-h-11 max-sm:text-base';
+
         // The dean's one view carries the program picked where the chairperson's links carry a tab.
         $isDean   = $area === 'dean';
         $programId ??= null;
@@ -180,7 +183,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                     <?php foreach ($chairTabs as $key): ?>
                         <?php $on = $tab === $key; ?>
                         <a href="<?= esc($chairLink(['tab' => $key])) ?>"
-                           class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
+                           class="inline-flex items-center rounded-full px-4 py-1.5 text-sm font-semibold pointer-coarse:min-h-11 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
                            data-grades-tab="<?= esc($key) ?>"
                            <?= $on ? 'aria-current="page"' : '' ?>><?= esc($tabLabels[$key]) ?></a>
                     <?php endforeach; ?>
@@ -216,7 +219,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                     <?php // Back to the analytics page of the same term. The Program tab exists only with program.monitor and the
                           // dean's page only with college.monitor, the permissions of the pages this goes to. ?>
                     <a href="<?= esc(site_url($isDean ? 'dean/monitor-college' : 'chairperson/monitor-program') . ($termId === null ? '' : '?term=' . (int) $termId)) ?>"
-                       class="inline-flex min-h-10 items-center justify-center rounded-lg px-2 text-sm font-semibold text-brand transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55" data-view-analytics>View analytics →</a>
+                       class="inline-flex min-h-10 pointer-coarse:min-h-11 items-center justify-center rounded-lg px-2 text-sm font-semibold text-brand transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55" data-view-analytics>View analytics →</a>
                 <?php endif; ?>
 
                 <?php if ($searching): ?>
@@ -232,7 +235,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                         <span class="relative flex min-w-0 flex-1">
                             <?= icon('search', 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400') ?>
                             <input id="program-q" type="search" name="q" data-auto-search value="<?= esc($state['q']) ?>" maxlength="100" placeholder="Search sections"
-                                   class="min-h-10 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 sm:w-56">
+                                   class="min-h-10 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm pointer-coarse:min-h-11 max-sm:text-base focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 sm:w-56">
                         </span>
                     </form>
                 <?php endif; ?>
@@ -248,7 +251,7 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
                 <?php foreach ($subLabels[$tab] as $key => $label): ?>
                     <?php $on = $sub === $key; ?>
                     <a href="<?= esc($chairLink(['tab' => $tab, 'sub' => $key === $firstSub ? null : $key, 'section' => $tab === 'mine' && $key === 'gradebook' ? ($selected['offering_id'] ?? null) : null])) ?>"
-                       class="inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 py-1 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'border-brand bg-white text-brand-dark ring-1 ring-brand' : 'border-[#E3E6EE] bg-white text-[#646464] hover:border-brand/40 hover:text-brand-dark' ?>"
+                       class="inline-flex min-h-9 pointer-coarse:min-h-11 items-center gap-1.5 rounded-full border px-3.5 py-1 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'border-brand bg-white text-brand-dark ring-1 ring-brand' : 'border-[#E3E6EE] bg-white text-[#646464] hover:border-brand/40 hover:text-brand-dark' ?>"
                        data-grades-sub="<?= esc($key) ?>"
                        <?= $on ? 'aria-current="page"' : '' ?>><span data-department-label><?= esc($label) ?></span><?php if (isset($counts[$key])): ?><span class="rounded-full px-2 py-0.5 text-xs font-bold <?= $on ? 'bg-brand-tint text-brand-dark' : 'bg-[#F1F3F7] text-[#646464]' ?>" data-department-count="<?= esc($key) ?>"><?= (int) $counts[$key] ?></span><?php endif; ?></a>
                 <?php endforeach; ?>
@@ -296,13 +299,16 @@ $tabs = ['gradebook' => 'Gradebook', 'to-grade' => 'To grade', 'at-risk' => 'At 
 
     <?php else: ?>
 
+        <?php // The instructor's controls: finger-sized on touch, 16px selects on a phone (no zoom on focus). ?>
+        <?php $select .= ' pointer-coarse:min-h-11 max-sm:text-base'; ?>
+
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 lg:flex-row lg:items-center lg:justify-between">
 
             <nav aria-label="Grades" class="flex flex-wrap items-center gap-2" data-grades-tabs>
                 <?php foreach ($tabs as $key => $label): ?>
                     <?php $on = $tab === $key; ?>
                     <a href="<?= esc($link(['tab' => $key === 'gradebook' ? null : $key, 'section' => $key === 'gradebook' ? ($selected['offering_id'] ?? null) : null])) ?>"
-                       class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
+                       class="inline-flex items-center gap-1 rounded-full px-4 py-1.5 text-sm font-semibold pointer-coarse:min-h-11 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $on ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
                        data-grades-tab="<?= esc($key) ?>"
                        <?= $on ? 'aria-current="page"' : '' ?>><?= esc($label) ?><?php if (isset($counts[$key])): ?> <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-bold <?= $on ? 'bg-white/25 text-white' : 'bg-brand-tint text-brand-dark' ?>" data-tab-count="<?= esc($key) ?>"><?= (int) $counts[$key] ?></span><?php endif; ?></a>
                 <?php endforeach; ?>

@@ -28,11 +28,11 @@ $attachments = array_map(
     data-discussion-attachments="<?= esc(json_encode($attachments), 'attr') ?>">
 
     <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
+        <div class="flex min-w-0 items-center gap-3">
             <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10">
                 <?= icon('discussion', 'h-5 w-5 text-brand') ?>
             </div>
-            <div class="flex flex-col">
+            <div class="flex min-w-0 flex-col">
                 <span class="text-sm font-semibold text-[#1A1C1E]">Class discussion</span>
                 <span class="text-xs text-[#767676]">
                     Students complete this item by posting a reply.
@@ -46,7 +46,7 @@ $attachments = array_map(
                 href="#"
                 data-discussion-thread-link
                 data-thread-id="<?= (int) $thread['id'] ?>"
-                class="text-sm font-semibold text-brand hover:underline">
+                class="inline-flex items-center text-sm font-semibold text-brand hover:underline pointer-coarse:min-h-11">
                 Open in Discussions tab
             </a>
         <?php endif; ?>

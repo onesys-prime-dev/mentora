@@ -1,41 +1,35 @@
 <?php
 
-$elements = [
-    [
-        'type' => 'Multiple Choice',
-        'label' => 'Multiple Choice',
-        'description' => 'Students pick one correct answer.',
-        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-    ],
-    [
-        'type' => 'Short Answer',
-        'label' => 'Short Answer',
-        'description' => 'Students type a brief response.',
-        'icon' => 'M4 6h16M4 12h10',
-    ],
-    [
-        'type' => 'Essay',
-        'label' => 'Essay',
-        'description' => 'Students write a longer response.',
-        'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h10',
-    ],
-    [
-        'type' => 'File Upload',
-        'label' => 'File Upload',
-        'description' => 'Students upload a file as their answer.',
-        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-    ],
-];
+/*
+| The question types ($elements, from quiz-builder.php): the pane beside the questions from lg up, a side panel
+| below lg (opened from the top bar at md–lg). A click adds the type at the end, a drag drops it where it lands.
+*/
 ?>
 
-<div
+<aside
     id="quiz-builder-palette"
-    class="sticky top-24 flex w-[290px] shrink-0 flex-col gap-3 self-start"
-    data-builder-palette>
+    aria-label="Question types"
+    data-side-panel
+    data-builder-palette
+    class="flex flex-col gap-3 max-lg:p-5 max-lg:pb-safe-4 lg:sticky lg:top-24 lg:w-[290px] lg:shrink-0 lg:self-start">
 
-    <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">
-        Add a Question
-    </span>
+    <div class="flex items-center justify-between gap-2">
+
+        <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">
+            Add a Question
+        </span>
+
+        <button
+            type="button"
+            data-side-panel-close
+            aria-label="Close question types"
+            class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:p-3 lg:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+    </div>
 
     <div class="flex flex-col gap-2">
 
@@ -74,13 +68,13 @@ $elements = [
 
     </div>
 
-    <span class="text-xs text-[#767676]">
+    <span class="text-xs text-[#646464]">
         Drag a question type onto the canvas, or click it to add it to the end.
     </span>
 
     <div class="h-px bg-gray-200"></div>
 
-    <span class="text-xs font-bold uppercase tracking-wide text-[#767676]">
+    <span class="text-xs font-bold uppercase tracking-wide text-[#646464]">
         Build Faster
     </span>
 
@@ -116,4 +110,4 @@ $elements = [
 
     </div>
 
-</div>
+</aside>

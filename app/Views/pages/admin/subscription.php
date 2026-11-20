@@ -11,7 +11,7 @@
  * @var string                     $subDefaultCurrency
  */
 $th    = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
-$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$btn   = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $money = static fn (?string $amount, string $currency): string => $amount === null ? '—' : esc($currency) . ' ' . number_format((float) $amount, 2);
 
@@ -66,7 +66,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
     <div class="mt-6 rounded-2xl border border-[#946200]/30 bg-[#FFF1D6] p-6" data-onboarding-pending>
         <h2 class="text-lg font-semibold text-amber-900">Onboarding is not finished</h2>
         <p class="mt-1 text-sm text-amber-900">A new institution gets its first subscription as part of onboarding, together with its first administrator.</p>
-        <a class="mt-3 inline-block rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
+        <a class="mt-3 inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/onboarding') ?>">Continue onboarding</a>
     </div>
 
 <?php elseif ($subscription === null): ?>
@@ -75,11 +75,11 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
         <h2 class="text-lg font-semibold text-brand">Start a subscription</h2>
         <p class="mt-1 text-sm text-[#646464]">This institution has no subscription yet. Pick its plan and the period it has paid for.</p>
 
-        <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription') ?>" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => null, 'tfValues' => []]) ?>
-            <div class="sm:col-span-2">
-                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Start subscription</button>
+            <div class="md:col-span-2">
+                <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Start subscription</button>
             </div>
         </form>
     </div>
@@ -102,7 +102,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
         <h2 class="text-lg font-semibold text-brand">Usage</h2>
         <p class="mt-1 text-sm text-[#646464]">How much of the plan's limits this institution has used. From 90% it is a warning; when a limit is used up, anything that would add to it is refused. Nothing is ever removed.</p>
 
-        <dl class="mt-4 grid gap-4 sm:grid-cols-3">
+        <dl class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
             <?php foreach ([
                 ['Student seats', $subUsage['seats'], number_format($subUsage['seats']['used']), $subUsage['seats']['limit'] === null ? null : number_format($subUsage['seats']['limit'])],
                 ['Storage', $subUsage['storage'], number_format($subUsage['storage']['used_mb']) . ' MB', $subUsage['storage']['limit_mb'] === null ? null : number_format($subUsage['storage']['limit_mb']) . ' MB'],
@@ -129,23 +129,24 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
         <h2 class="text-lg font-semibold text-brand">Record a renewal</h2>
         <p class="mt-1 text-sm text-[#646464]">A renewal adds a new term and moves the end date to the end of it. It must end after <?= esc($subscription['end_date']) ?>.</p>
 
-        <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renew') ?>" class="mt-4 grid gap-3 sm:grid-cols-2">
+        <form method="post" action="<?= site_url('admin/institutions/' . $subInstitution['id'] . '/subscription/renew') ?>" class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('pages/admin/partials/term-fields', ['tfCurrency' => $subDefaultCurrency, 'tfPlans' => $subPlans, 'tfPlan' => (int) $subscription['plan_id'], 'tfValues' => []]) ?>
-            <div class="sm:col-span-2">
-                <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Record renewal</button>
+            <div class="md:col-span-2">
+                <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Record renewal</button>
             </div>
         </form>
     </div>
 
+    <div data-section="history">
     <h2 class="mt-8 text-lg font-semibold text-brand">History</h2>
     <p class="mt-1 text-sm text-[#646464]">Every term, newest first. Records are never changed or removed; a mistake is put right with a correction.</p>
 
-    <div class="mt-2 overflow-x-auto rounded-lg bg-white shadow">
+    <div class="mt-2 rounded-lg bg-white shadow" data-scroll-x data-sticky-first tabindex="0" role="region" aria-label="Subscription history">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="<?= $th ?>">Recorded</th>
+                    <th class="<?= $th ?> sticky left-0 z-[1] bg-gray-50">Recorded</th>
                     <th class="<?= $th ?>">Type</th>
                     <th class="<?= $th ?>">Plan</th>
                     <th class="<?= $th ?>">Period</th>
@@ -158,7 +159,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
             <tbody class="divide-y divide-gray-100">
                 <?php foreach ($subHistory as $row): ?>
                     <tr>
-                        <td class="whitespace-nowrap px-3 py-2 text-[#646464]"><?= esc(substr((string) $row['recorded_at'], 0, 16)) ?></td>
+                        <td class="sticky left-0 z-[1] whitespace-nowrap bg-white px-3 py-2 text-[#646464]"><?= esc(substr((string) $row['recorded_at'], 0, 16)) ?></td>
                         <td class="px-3 py-2">
                             <?= esc($kindLabels[$row['kind']] ?? $row['kind']) ?>
                             <?php if ($row['corrects_renewal_id'] !== null): ?><span class="block text-xs text-[#646464]">of record #<?= esc((string) $row['corrects_renewal_id']) ?></span><?php endif; ?>
@@ -189,6 +190,7 @@ $kindLabels = ['start' => 'Started', 'renewal' => 'Renewal', 'correction' => 'Co
             </tbody>
         </table>
     </div>
+</div>
 
 <?php endif; ?>
 

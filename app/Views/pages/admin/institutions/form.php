@@ -10,8 +10,8 @@
 $isEdit = $institution !== null;
 $action = $isEdit ? site_url('admin/institutions/' . $institution['id']) : site_url('admin/institutions');
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$cancel  = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$cancel  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 ?>
 
 <?= $this->extend('layouts/admin') ?>
@@ -40,7 +40,7 @@ $cancel  = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-
         <?php if ($isEdit): ?>
             <div class="flex flex-col gap-1">
                 <label class="text-xs font-medium text-[#646464]" for="institution-code">Code</label>
-                <input id="institution-code" type="text" value="<?= esc((string) $formValues['code']) ?>" disabled aria-describedby="institution-code-help" class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm text-[#646464]">
+                <input id="institution-code" type="text" value="<?= esc((string) $formValues['code']) ?>" disabled aria-describedby="institution-code-help" class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-base sm:text-sm pointer-coarse:min-h-11 text-[#646464]">
                 <p id="institution-code-help" class="text-xs text-[#646464]">The code identifies this institution everywhere and cannot be changed.</p>
             </div>
         <?php else: ?>

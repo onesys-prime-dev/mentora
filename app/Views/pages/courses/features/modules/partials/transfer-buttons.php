@@ -28,7 +28,7 @@ $entries = ['copy' => 'Copy to…', 'move' => 'Move to…'];
             type="button"
             title="<?= esc($label) ?>"
             aria-label="<?= esc($label) ?>"
-            class="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
+            class="flex h-10 w-10 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-brand"
             data-transfer
             data-transfer-action="<?= $action ?>"
             data-transfer-kind="<?= esc($kind) ?>"
@@ -41,7 +41,7 @@ $entries = ['copy' => 'Copy to…', 'move' => 'Move to…'];
 
         <button
             type="button"
-            class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
+            class="flex w-full items-center gap-3 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-sm text-gray-700 transition hover:bg-gray-50 hover:text-brand cursor-pointer"
             data-transfer
             data-transfer-action="<?= $action ?>"
             data-transfer-kind="<?= esc($kind) ?>"

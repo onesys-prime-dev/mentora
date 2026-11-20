@@ -91,7 +91,8 @@ final class GradesBadgeTileTest extends RouteTestCase
     {
         $out = [];
 
-        foreach ($x->query($scope . "//*[@data-app-badge]") as $node) {
+        // The phone block in the account panel repeats the Apps menu tiles; it is not a separate place.
+        foreach ($x->query($scope . "//*[@data-app-badge][not(ancestor::*[@data-profile-phone-block])]") as $node) {
             $out[] = ['text' => trim($node->textContent), 'label' => $node->getAttribute('aria-label')];
         }
 

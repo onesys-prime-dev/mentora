@@ -39,9 +39,9 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
         <div class="flex flex-wrap items-center justify-between gap-3">
 
-            <div class="flex items-center gap-4">
-                <?= icon('clock', 'h-6 w-6') ?>
-                <div class="flex flex-col">
+            <div class="flex min-w-0 items-center gap-4">
+                <?= icon('clock', 'h-6 w-6 shrink-0') ?>
+                <div class="flex min-w-0 flex-col">
                     <span class="text-2xl font-bold text-brand">
                         My Schedule
                     </span>
@@ -71,14 +71,14 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
                         default       => "You aren't enrolled in any courses yet",
                     } ?>
                 </span>
-                <span class="text-xs text-[#878787]">Your weekly timetable will show up here once that changes.</span>
+                <span class="text-xs text-[#646464]">Your weekly timetable will show up here once that changes.</span>
             </div>
 
         <?php elseif (! $hasAnyClasses): ?>
 
             <div class="flex flex-col items-center justify-center gap-1 py-16 text-center">
                 <span class="text-sm font-bold text-[#646464]">No meeting times set yet</span>
-                <span class="text-xs text-[#878787]">
+                <span class="text-xs text-[#646464]">
                     <?= $role !== 'student'
                         ? "Your sections don't have a schedule set. Add one from the course's overview."
                         : "Your courses don't have a schedule set yet." ?>
@@ -87,17 +87,22 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
 
         <?php else: ?>
 
-            <div class="flex flex-col overflow-auto lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <?php // A grid table (scroll-x.js): the hour rail is pinned and the day row sticks; below lg the box has its own
+                  // height so the day row sticks there too. A phone opens on today's column (data-scroll-current). ?>
+            <div
+                class="flex flex-col overflow-auto max-lg:max-h-[75dvh] lg:min-h-0 lg:flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                tabindex="0" role="region" aria-label="Weekly schedule"
+                data-scroll-x data-sticky-first data-scroll-current>
 
                 <div class="flex min-w-180 flex-1 flex-col">
 
                     <!-- Day header row -->
                     <div class="sticky top-0 z-10 grid bg-white" style="grid-template-columns: <?= esc($gridTemplateColumns) ?>;">
 
-                        <div></div>
+                        <div class="sticky left-0 z-1 bg-white" data-sticky-col></div>
 
                         <?php foreach ($days as $day): ?>
-                            <div class="flex flex-col items-center gap-1 border-b border-[#A9A9A9]/30 pb-2.5 <?= $day === $today ? 'text-brand' : 'text-[#5B6577]' ?>">
+                            <div <?= $day === $today ? 'aria-current="date" ' : '' ?>class="flex flex-col items-center gap-1 border-b border-[#A9A9A9]/30 pb-2.5 <?= $day === $today ? 'text-brand' : 'text-[#5B6577]' ?>">
                                 <span class="text-[11px] font-semibold uppercase tracking-wider"><?= esc(substr($dayLabels[$day], 0, 3)) ?></span>
                                 <span class="flex h-8 w-8 items-center justify-center rounded-full text-base font-semibold <?= $day === $today ? 'bg-brand font-bold text-white' : 'text-[#1B2433]' ?>">
                                     <?= (int) $weekDates[$day] ?>
@@ -112,10 +117,12 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
                         class="relative grid flex-1 pt-2"
                         style="grid-template-columns: <?= esc($gridTemplateColumns) ?>; grid-template-rows: repeat(<?= (int) $totalRows ?>, minmax(1.75rem, 1fr));">
 
-                        <!-- Hour labels, left rail -->
+                        <!-- Hour labels, left rail: pinned over an opaque rail so the classes scroll under it -->
+                        <div class="sticky left-0 z-2 bg-white" data-sticky-col style="grid-column: 1; grid-row: 1 / span <?= (int) $totalRows ?>;"></div>
+
                         <?php foreach ($grid['hour_marks'] as $mark): ?>
                             <div
-                                class="relative -top-2 pr-2 text-right text-[11px] text-[#A9A9A9]"
+                                class="sticky left-0 z-3 -translate-y-2 pr-2 text-right text-[11px] text-[#767676]"
                                 style="grid-column: 1; grid-row: <?= (int) $mark['row'] ?>;">
                                 <?= esc($mark['label']) ?>
                             </div>
@@ -183,7 +190,7 @@ $gridTemplateColumns = '80px repeat(7, minmax(0, 1fr))';
             </div>
 
             <!-- Legend -->
-            <div class="-mt-3 flex items-center gap-3 text-[11px] text-[#878787]">
+            <div class="-mt-3 flex items-center gap-3 text-[11px] text-[#646464]">
                 <span class="flex items-center gap-1.5">
                     <span class="h-3 w-3 rounded <?= $modeTone('On-site') ?>"></span>
                     On-site

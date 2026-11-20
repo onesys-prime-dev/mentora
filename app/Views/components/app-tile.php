@@ -47,7 +47,7 @@ $hover = $isLive && !$active
 ?>
 
 <<?= $tag ?>
-    class="flex flex-col items-center gap-2 <?= $isLive ? 'group' : 'cursor-default' ?>"
+    class="flex flex-col items-center gap-2 <?= $isLive ? 'group transition pointer-coarse:active:scale-95 pointer-coarse:min-h-11 pointer-coarse:min-w-11' : 'cursor-default' ?>"
     <?php if ($isLive): ?>
         href="<?= esc($app['url'], 'attr') ?>"
         <?= $active ? 'aria-current="page"' : '' ?>
@@ -74,7 +74,7 @@ $hover = $isLive && !$active
         <?php endif; ?>
     </span>
 
-    <span class="text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-brand' : 'text-gray-700' ?>">
+    <span class="line-clamp-2 text-[11px] leading-tight text-center <?= $active ? 'font-semibold text-brand' : 'text-gray-700' ?>">
         <?= esc($app['label']) ?>
     </span>
 

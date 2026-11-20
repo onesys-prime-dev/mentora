@@ -11,7 +11,8 @@
  * @var bool                       $parentCanEdit
  */
 $base    = 'institution/people/parents';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$link    = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$warn    = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
 $filtered = $parentFilters['q'] !== '';
 $query    = array_filter(['q' => $parentFilters['q']], static fn ($v): bool => $v !== '');
 $url      = static fn (string $path): string => esc(site_url($base . $path));
@@ -19,17 +20,20 @@ $url      = static fn (string $path): string => esc(site_url($base . $path));
 $rows = [];
 
 foreach ($parentRows as $p) {
-    $chips = '';
+    $chips  = '';
+    $unlink = '';
 
     foreach ($p['students'] as $s) {
         $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1 text-xs" data-linked-student="' . esc((string) $s['link_id']) . '">' . esc($s['name']);
 
         if ($parentCanEdit) {
-            $chips .= ' <button type="button" class="rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
-                . ' aria-label="Unlink ' . esc($s['name']) . ' from ' . esc($p['name']) . '"'
-                . ' data-dialog-open="parent-confirm" data-dialog-title="Unlink ' . esc($s['name']) . '?"'
+            $attrs = ' data-dialog-open="parent-confirm" data-dialog-title="Unlink ' . esc($s['name']) . '?"'
                 . ' data-dialog-text="' . esc($p['name']) . ' will no longer be linked to this student. Nothing else about either of them changes."'
-                . ' data-dialog-label="Unlink" data-dialog-action="' . $url('/links/' . $s['link_id'] . '/remove') . '">Unlink</button>';
+                . ' data-dialog-label="Unlink" data-dialog-action="' . $url('/links/' . $s['link_id'] . '/remove') . '"';
+            $chips .= ' <button type="button" class="inline-flex items-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
+                . ' aria-label="Unlink ' . esc($s['name']) . ' from ' . esc($p['name']) . '"' . $attrs . '>Unlink</button>';
+            // A phone moves the students into the row's read-only sheet, so each unlink has a live copy among the row's actions.
+            $unlink .= '<button type="button" class="' . $warn . ' md:hidden" aria-label="Unlink ' . esc($s['name']) . ' from ' . esc($p['name']) . '"' . $attrs . '>Unlink ' . esc($s['name']) . '</button>';
         }
 
         $chips .= '</span> ';
@@ -48,7 +52,7 @@ foreach ($parentRows as $p) {
             'status'   => ['html' => view('components/status-badge', ['label' => $p['active'] ? 'Active' : 'Deactivated', 'tone' => $p['active'] ? 'success' : 'neutral'], ['saveData' => false])],
         ],
         'actions' => $parentCanEdit
-            ? '<button type="button" class="' . $link . '" data-dialog-open="parent-link" data-dialog-title="Link students to ' . esc($p['name']) . '" data-dialog-label="Link students" data-dialog-action="' . $url('/' . $p['id'] . '/students') . '">Link students</button>'
+            ? '<button type="button" class="' . $link . '" data-dialog-open="parent-link" data-dialog-title="Link students to ' . esc($p['name']) . '" data-dialog-label="Link students" data-dialog-action="' . $url('/' . $p['id'] . '/students') . '">Link students</button>' . $unlink
             : '',
     ];
 }
@@ -104,9 +108,9 @@ foreach ($parentRows as $p) {
     <?= view('components/data-table', [
         'caption'    => 'Parents',
         'columns'    => [
-            ['key' => 'name', 'label' => 'Parent'],
+            ['key' => 'name', 'label' => 'Parent', 'role' => 'primary'],
             ['key' => 'students', 'label' => 'Linked students'],
-            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'status', 'label' => 'Status', 'role' => 'status'],
         ],
         'rows'       => $rows,
         'emptyIcon'  => 'user',
@@ -123,15 +127,15 @@ foreach ($parentRows as $p) {
 <?php if ($parentCanEdit): ?>
     <?php
     $buttons = '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Link students</button></div>';
+        . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Link students</button></div>';
 
     $form = '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . view('components/form-field', ['name' => 'students', 'label' => 'Student numbers or email addresses', 'type' => 'textarea', 'required' => true, 'help' => 'One per line, or separated by commas. They must be students of your institution.'], ['saveData' => false])
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons . '</form>';
     ?>
 
-    <?= view('components/dialog', ['id' => 'parent-link', 'title' => 'Link students', 'body' => $form], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'parent-link', 'title' => 'Link students', 'variant' => 'default', 'body' => $form], ['saveData' => false]) ?>
 
     <?= view('components/confirm', [
         'id'           => 'parent-confirm',

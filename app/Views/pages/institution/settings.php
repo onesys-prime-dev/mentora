@@ -13,10 +13,10 @@
  */
 $d       = $settingsData;
 $base    = 'institution/settings';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$input   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:bg-gray-50 disabled:text-gray-500';
-$danger  = 'rounded text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$input   = 'w-full pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm text-[#1A1C1E] focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:bg-gray-50 disabled:text-gray-500';
+$danger  = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
 $disabled = $settingsCanEdit ? '' : 'disabled';
 
 // The layout pieces every tab shares.
@@ -177,12 +177,12 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     <p class="text-sm text-[#3D3D3D]">Lets linked parents see their child's courses and grades, read-only. Switching it off hides it from every parent at once; nothing is deleted.</p>
 
                     <div class="flex flex-wrap gap-4">
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                            <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? 'checked' : '' ?> <?= $disabled ?>>
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input type="radio" name="enabled" value="1" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? 'checked' : '' ?> <?= $disabled ?>>
                             On
                         </label>
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                            <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? '' : 'checked' ?> <?= $disabled ?>>
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input type="radio" name="enabled" value="0" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $pp['own'] ? '' : 'checked' ?> <?= $disabled ?>>
                             Off
                         </label>
                     </div>
@@ -216,12 +216,12 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     <p class="text-sm text-[#3D3D3D]">Lets students who share a course start a message with each other. Switching it off stops new conversations between students; the ones that exist stay readable but nobody can add to them. Messages between students and their instructors are not affected.</p>
 
                     <div class="flex flex-wrap gap-4">
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                            <input type="radio" name="enabled" value="1" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? 'checked' : '' ?> <?= $disabled ?>>
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input type="radio" name="enabled" value="1" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? 'checked' : '' ?> <?= $disabled ?>>
                             On
                         </label>
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                            <input type="radio" name="enabled" value="0" class="h-4 w-4 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? '' : 'checked' ?> <?= $disabled ?>>
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input type="radio" name="enabled" value="0" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? '' : 'checked' ?> <?= $disabled ?>>
                             Off
                         </label>
                     </div>
@@ -231,7 +231,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     <section class="<?= $section ?>" data-chat-controls data-api="<?= esc(site_url('messages/api'), 'attr') ?>">
                         <h2 class="<?= $heading ?> w-full">Chat controls</h2>
                         <p class="text-sm text-[#3D3D3D]">Choose a course chat or staff group, then switch Reactions, Replies, Forwarding, Bump, Delete for everyone and (for course chats) the lock on or off. Press Save to apply your changes; members' menus follow at once. Delete for me is always available.</p>
-                        <select data-role="controls-picker" hidden aria-label="Chat" class="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"></select>
+                        <select data-role="controls-picker" hidden aria-label="Chat" class="w-full pointer-coarse:min-h-11 rounded-lg border border-gray-300 px-2 py-1.5 text-base sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"></select>
                         <p data-role="controls-empty" class="text-sm text-[#646464]">There are no course chats or staff groups yet.</p>
                         <div data-role="controls-list" class="flex flex-col"></div>
                         <p data-role="controls-note" role="status" class="text-xs text-[#C33939]"></p>
@@ -301,8 +301,8 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,16rem),1fr))] gap-x-8 gap-y-2">
                     <?php foreach ($roleNames as $role => $name): ?>
                         <?php $byPlatform = in_array($role, (array) $s['platform']['twoFactorRoles'], true); ?>
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E]">
-                            <input type="checkbox" name="twoFactorRoles[]" value="<?= esc($role) ?>" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"
+                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+                            <input type="checkbox" name="twoFactorRoles[]" value="<?= esc($role) ?>" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300 text-brand focus:ring-brand/40"
                                    <?= $byPlatform || in_array($role, $s['ownRoles'], true) ? 'checked' : '' ?> <?= $byPlatform || ! $settingsCanEdit ? 'disabled' : '' ?>>
                             <?= esc($name) ?><?= $byPlatform ? ' <span class="text-xs text-[#646464]">(required by the platform)</span>' : '' ?>
                         </label>
@@ -446,7 +446,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     <div class="flex flex-col gap-1" data-field="logo">
                         <label class="text-xs font-medium text-gray-600" for="logo-file">Choose an image</label>
                         <input id="logo-file" name="logo" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="logo-help logo-error" <?= $disabled ?>
-                               class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-tint file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-brand">
+                               class="block w-full pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:file:py-3 file:mr-3 file:rounded-full file:border-0 file:bg-brand-tint file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-brand">
                         <p id="logo-help" class="text-xs text-[#646464]">PNG, JPEG or WebP, up to 1 MB and 2000 pixels a side. It counts towards your storage.</p>
                         <p id="logo-error" class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
                     </div>
@@ -468,7 +468,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                             <label class="text-xs font-medium text-gray-600" for="brand-<?= esc($role) ?>"><?= esc($label) ?></label>
                             <div class="flex items-center gap-3">
                                 <input type="color" value="<?= esc(strtolower((string) $d[$role])) ?>" data-brand-swatch="<?= esc($role) ?>" aria-label="<?= esc($label) ?> picker"
-                                       class="h-10 w-12 shrink-0 cursor-pointer rounded border border-gray-300 bg-white p-1" <?= $disabled ?>>
+                                       class="h-10 w-12 pointer-coarse:h-11 pointer-coarse:w-12 shrink-0 cursor-pointer rounded border border-gray-300 bg-white p-1" <?= $disabled ?>>
                                 <input id="brand-<?= esc($role) ?>" name="<?= esc($role) ?>" type="text" value="<?= esc((string) $d[$role]) ?>" maxlength="7" autocomplete="off" spellcheck="false"
                                        data-brand-input="<?= esc($role) ?>" data-default="<?= esc($settingsDefaults[$role]) ?>" aria-describedby="brand-<?= esc($role) ?>-note brand-<?= esc($role) ?>-error"
                                        class="<?= $input ?> max-w-[10rem] font-mono" <?= $disabled ?>>
@@ -483,7 +483,7 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
                     <?php if ($settingsCanEdit): ?>
                         <div class="flex flex-wrap items-center justify-between gap-3">
-                            <button type="button" class="rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-brand-default>Use the Mentora colours</button>
+                            <button type="button" class="inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-brand-default>Use the Mentora colours</button>
                             <button type="submit" class="<?= $primary ?>">Save colours</button>
                         </div>
                     <?php endif; ?>
@@ -510,8 +510,8 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <button type="button" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Primary button</button>
-                        <button type="button" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint">Secondary</button>
+                        <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Primary button</button>
+                        <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint">Secondary</button>
                         <a href="#preview-heading" class="text-sm font-semibold text-brand underline">A link</a>
                     </div>
 

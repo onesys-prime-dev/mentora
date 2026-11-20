@@ -7,7 +7,7 @@
  */
 $instructor = ($role ?? '') === 'instructor';
 ?>
-<div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true" data-server-skeleton-shape>
+<div class="flex animate-pulse flex-col gap-10 p-5 sm:p-8 lg:p-10" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="flex items-center gap-4">
         <div class="h-6 w-6 rounded bg-gray-200"></div>

@@ -54,7 +54,8 @@ if (! function_exists('renderInlineEditor')) {
 
         <select
             data-style-select
-            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-brand">
+            aria-label="Text style"
+            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-base font-medium sm:text-sm pointer-coarse:min-h-11 text-gray-700 outline-none transition focus:border-brand">
 
             <option value="p">
                 Normal Text
@@ -77,7 +78,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="bold"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Bold"
+            title="Bold"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -99,7 +102,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="italic"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Italic"
+            title="Italic"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -122,7 +127,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="underline"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Underline"
+            title="Underline"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -152,7 +159,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="justifyLeft"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align left"
+            title="Align left"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -172,7 +181,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="justifyCenter"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align center"
+            title="Align center"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -192,7 +203,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="justifyRight"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align right"
+            title="Align right"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -212,7 +225,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="justifyFull"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Justify"
+            title="Justify"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -234,7 +249,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="insertUnorderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Bulleted list"
+            title="Bulleted list"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -257,7 +274,9 @@ if (! function_exists('renderInlineEditor')) {
         <button
             type="button"
             data-action="insertOrderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Numbered list"
+            title="Numbered list"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -284,7 +303,9 @@ if (! function_exists('renderInlineEditor')) {
             <button
                 type="button"
                 data-editor-undo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+                aria-label="Undo"
+                title="Undo"
+                class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"
@@ -307,7 +328,9 @@ if (! function_exists('renderInlineEditor')) {
             <button
                 type="button"
                 data-editor-redo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+                aria-label="Redo"
+                title="Redo"
+                class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"
@@ -334,7 +357,7 @@ if (! function_exists('renderInlineEditor')) {
     <div
         id="reading-editor"
         data-reading='<?= esc(json_encode($content), "attr") ?>'
-        class="mx-auto bg-white px-10 py-10 cursor-text">
+        class="mx-auto bg-white px-5 py-6 sm:px-10 sm:py-10 cursor-text">
     </div>
 
 </div>

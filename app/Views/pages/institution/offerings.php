@@ -15,9 +15,9 @@
  * @var bool                       $offeringCanEdit
  */
 $base    = 'institution/offerings';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
-$warn    = 'text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'inline-flex items-center justify-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$warn    = 'inline-flex items-center justify-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
 
 $filtered = $offeringFilters['q'] !== '' || $offeringFilters['term'] > 0 || $offeringFilters['program'] > 0 || $offeringFilters['instructor'] !== '' || $offeringFilters['status'] !== '';
 
@@ -45,6 +45,7 @@ foreach ($offeringRows as $o) {
     $open = $o['status'] === 'active';
 
     $chips = '';
+    $removes = '';
 
     foreach ($o['instructors'] as $i) {
         $chips .= '<span class="inline-flex items-center gap-2 rounded-full bg-brand-tint px-3 py-1 text-xs" data-instructor="' . esc((string) $i['assignment_id']) . '">' . esc($i['name']);
@@ -52,7 +53,13 @@ foreach ($offeringRows as $o) {
         if (isset($offeringSisInstructors[(int) $i['assignment_id']])) {
             $chips .= ' <span class="inline-flex items-center gap-1 text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here.">' . icon('lock', 'h-3 w-3') . 'From the SIS</span>';
         } elseif ($offeringCanEdit && $open) {
-            $chips .= ' <button type="button" class="rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
+            // A phone row's sheet shows the instructors as a read-only copy, so the same action is also a row action there.
+            $removes .= ' <button type="button" class="' . $warn . ' md:hidden" data-remove-instructor'
+                . ' data-dialog-open="offering-confirm"'
+                . ' data-dialog-title="Remove ' . esc($i['name']) . '?"'
+                . ' data-dialog-text="They stop teaching ' . esc($o['course_code'] . ' ' . $o['section_code']) . '. The work and grades they did stay, and so does the record of it."'
+                . ' data-dialog-label="Remove" data-dialog-action="' . esc(site_url($base . '/instructors/' . $i['assignment_id'] . '/remove')) . '">Remove ' . esc($i['name']) . '</button>';
+            $chips .= ' <button type="button" class="inline-flex items-center justify-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
                 . ' aria-label="Remove ' . esc($i['name']) . ' from ' . esc($o['course_code'] . ' ' . $o['section_code']) . '"'
                 . ' data-dialog-open="offering-confirm"'
                 . ' data-dialog-title="Remove ' . esc($i['name']) . '?"'
@@ -90,7 +97,8 @@ foreach ($offeringRows as $o) {
 
     // Everyone who can see the list can look at the course itself (read only), and at its class times.
     $actions = '<a class="' . $link . ' mr-3" href="' . esc(site_url('institution/courses/' . $o['id'] . '/' . url_title((string) $o['course_title'], '-', true) . '/overview')) . '" data-view-course>View course</a>'
-        . '<a class="' . $link . ' mr-3" href="' . esc(site_url($base . '/' . $o['id'] . '/schedule')) . '" aria-label="Class times of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '" data-class-times>Class times</a>' . $actions;
+        . '<a class="' . $link . ' mr-3" href="' . esc(site_url($base . '/' . $o['id'] . '/schedule')) . '" aria-label="Class times of ' . esc($o['course_code'] . ' ' . $o['section_code']) . '" data-class-times>Class times</a>'
+        . '<a class="' . $link . ' mr-3 md:hidden" href="' . esc(site_url('institution/enrolments/offering/' . $o['id'])) . '" data-roster>Roster</a>' . $actions . $removes;
 
     $meets = $offeringSchedules[(int) $o['id']] ?? null;
 
@@ -194,8 +202,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
         'columns'    => [
             ['key' => 'course', 'label' => 'Course', 'sortable' => true],
             ['key' => 'section', 'label' => 'Section', 'sortable' => true],
-            ['key' => 'term', 'label' => 'Term', 'sortable' => true],
-            ['key' => 'meets', 'label' => 'Meets'],
+            ['key' => 'term', 'label' => 'Term', 'sortable' => true, 'priority' => 2],
+            ['key' => 'meets', 'label' => 'Meets', 'priority' => 2],
             ['key' => 'instructors', 'label' => 'Instructors'],
             ['key' => 'capacity', 'label' => 'Enrolled / capacity', 'sortable' => true],
             ['key' => 'status', 'label' => 'Status', 'sortable' => true],
@@ -222,8 +230,8 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
     $field = static fn (array $f): string => view('components/form-field', $f, ['saveData' => false]);
 
     $buttons = static fn (string $label): string => '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($label) . '</button></div>';
+        . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($label) . '</button></div>';
 
     $form = static fn (string $inside, string $label): string => '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . $inside . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons($label) . '</form>';
@@ -264,7 +272,7 @@ $canAdd = $offeringCanEdit && $offeringOptions['courses'] !== [] && $offeringOpt
 
     <?= view('components/dialog', ['id' => 'offering-edit', 'title' => 'Edit offering', 'body' => $form($details(), 'Save')], ['saveData' => false]) ?>
 
-    <?= view('components/dialog', ['id' => 'offering-instructor', 'title' => 'Assign an instructor', 'body' => $form(
+    <?= view('components/dialog', ['id' => 'offering-instructor', 'title' => 'Assign an instructor', 'variant' => 'default', 'body' => $form(
         $field(['name' => 'user_id', 'label' => 'Instructor', 'type' => 'select', 'options' => $candidateSelect, 'required' => true, 'help' => 'People who hold the instructor role in your institution.']),
         'Assign',
     )], ['saveData' => false]) ?>

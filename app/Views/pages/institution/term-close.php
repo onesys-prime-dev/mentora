@@ -8,8 +8,8 @@
 $plan    = $closePlan;
 $term    = $plan['term'];
 $base    = 'institution/terms';
-$primary = 'rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A82E2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-[#C33939] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#A82E2E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $rows = [];
 

@@ -24,7 +24,7 @@ $replyCount = count($replies);
     data-thread-attachments="<?= esc(json_encode(array_map(static fn ($f) => ['file_id' => $f['id'], 'original_filename' => $f['original_filename']], $thread['attachments'])), 'attr') ?>">
 
     <!-- opening post -->
-    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-6 py-6 <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>" data-reactions>
+    <article class="group relative flex flex-col gap-4 rounded-2xl border bg-white px-4 py-5 sm:px-6 sm:py-6 <?= $thread['is_pinned'] ? 'border-brand/30' : 'border-gray-200' ?>" data-reactions>
 
         <?php
         $menuItems = [];
@@ -122,7 +122,7 @@ $replyCount = count($replies);
     </section>
 
     <!-- reply box / locked notice: both always rendered so lock toggles in place -->
-    <div class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-6 py-4 text-sm text-[#646464] <?= $thread['is_locked'] ? '' : 'hidden' ?>" data-locked-notice>
+    <div class="flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 sm:px-6 text-sm text-[#646464] <?= $thread['is_locked'] ? '' : 'hidden' ?>" data-locked-notice>
         <?= icon('lock', 'h-5 w-5') ?>
         This discussion is locked, so new replies are turned off.
     </div>
@@ -135,20 +135,20 @@ $replyCount = count($replies);
                     data-reply-input
                     aria-label="Write a reply"
                     placeholder="Write a reply"
-                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition placeholder:text-gray-500 focus:border-brand/60"></textarea>
+                    class="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-base sm:text-sm outline-none transition placeholder:text-gray-500 focus:border-brand/60"></textarea>
     
                 <div class="flex flex-wrap gap-2" data-reply-attachments></div>
     
                 <div class="flex items-center justify-between">
     
                     <div class="flex items-center">
-                        <button type="button" data-reply-attach title="Attach files" aria-label="Attach files" class="rounded-lg p-2 text-[#646464] transition hover:bg-gray-100">
+                        <button type="button" data-reply-attach title="Attach files" aria-label="Attach files" class="inline-flex items-center justify-center rounded-lg p-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-[#646464] transition hover:bg-gray-100">
                             <?= icon('link', 'h-5 w-5 text-current') ?>
                         </button>
                         <input type="file" data-reply-file-input class="hidden" multiple accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
                     </div>
     
-                    <button type="button" data-reply-send disabled class="rounded-full bg-brand px-6 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
+                    <button type="button" data-reply-send disabled class="rounded-full bg-brand px-6 py-2 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-50">
                         Reply
                     </button>
     

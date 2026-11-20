@@ -57,6 +57,9 @@ export function initializeTipTap() {
 
             attributes: {
 
+                // Tiptap gives the editable a textbox role, which needs a name.
+                "aria-label": "Reading content",
+
                 class:
                     "reading-content min-h-[300px] focus:outline-none",
 

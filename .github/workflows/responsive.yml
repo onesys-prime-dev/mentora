@@ -4,8 +4,9 @@ name: Responsive
 # window size, light and dark, 200% zoom, on Chromium and WebKit. Pull requests run only the smoke sizes
 # (the e2e job in ci.yml); this runs the rest every night once the schedule below is switched on.
 #
-# Run it by hand with "update_snapshots" ticked to make new screenshot baselines: they are uploaded as the
-# responsive-baselines artifact, to unzip into tests/e2e/__screenshots__, review and commit.
+# Screenshot comparison is off (tests/e2e/support/responsive.js snap): the baselines are about 650 MB, too big to
+# commit. Run it by hand with "update_snapshots" ticked to make them anyway: they are uploaded as the
+# responsive-baselines artifact, to download and review, not to commit.
 #
 # The nightly schedule is OFF until the responsive stack and its baselines are on main: a schedule always runs
 # the default branch, where the sweep would only fail. Uncomment it when they land.
@@ -93,6 +94,7 @@ jobs:
         env:
           RESPONSIVE_FULL: "1"
           UPDATE_FLAG: ${{ inputs.update_snapshots && '--update-snapshots=all' || '' }}
+          RESPONSIVE_SNAPSHOTS: ${{ inputs.update_snapshots && '1' || '' }}
         run: npx playwright test responsive.spec.js $UPDATE_FLAG
 
       # Even when some checks fail, so the baselines that were written can still be reviewed.

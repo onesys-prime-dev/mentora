@@ -8,13 +8,14 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
     class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
 
     <!-- Toolbar -->
-    <div class="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-gray-50 px-5 py-3">
+    <div class="flex flex-wrap items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-3 sm:px-5">
 
         <!-- Style -->
 
         <select
             data-style-select
-            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-700 outline-none transition focus:border-brand">
+            aria-label="Text style"
+            class="h-9 w-44 rounded-lg border border-gray-300 bg-white px-3 text-base font-medium text-gray-700 outline-none transition focus:border-brand sm:text-sm pointer-coarse:h-11">
 
             <option value="p">
                 Normal Text
@@ -37,7 +38,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="bold"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Bold"
+            title="Bold"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -59,7 +62,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="italic"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Italic"
+            title="Italic"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -82,7 +87,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="underline"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Underline"
+            title="Underline"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -112,7 +119,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="justifyLeft"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align left"
+            title="Align left"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -132,7 +141,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="justifyCenter"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align center"
+            title="Align center"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -152,7 +163,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="justifyRight"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Align right"
+            title="Align right"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -172,7 +185,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="justifyFull"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Justify"
+            title="Justify"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -194,7 +209,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="insertUnorderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Bulleted list"
+            title="Bulleted list"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -217,7 +234,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-action="insertOrderedList"
-            class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+            aria-label="Numbered list"
+            title="Numbered list"
+            class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5"
@@ -244,7 +263,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
             <button
                 type="button"
                 data-editor-undo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+                aria-label="Undo"
+                title="Undo"
+                class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"
@@ -267,7 +288,9 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
             <button
                 type="button"
                 data-editor-redo
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white">
+                aria-label="Redo"
+                title="Redo"
+                class="flex items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-brand hover:text-white pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
                 <svg xmlns="http://www.w3.org/2000/svg"
                     class="h-5 w-5"
@@ -294,16 +317,16 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
     <div
         id="instructions-editor"
         data-instructions='<?= esc(json_encode($content), "attr") ?>'
-        class="mx-auto bg-white px-10 py-10 cursor-text">
+        class="mx-auto bg-white px-5 py-6 cursor-text sm:px-10 sm:py-10">
     </div>
 
     <!-- Footer -->
-    <div class="flex items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-3">
+    <div class="flex flex-wrap items-center justify-end gap-3 border-t border-gray-200 bg-gray-50 px-5 py-3">
 
         <button
             type="button"
             data-cancel-instructions
-            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100">
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 pointer-coarse:min-h-11">
 
             Cancel
 
@@ -312,7 +335,7 @@ $content = $currentAssessment['instructions'] ?? ['version' => 1, 'blocks' => []
         <button
             type="button"
             data-save-instructions
-            class="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+            class="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">
 
             Save Changes
 

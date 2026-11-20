@@ -22,6 +22,7 @@
 */
 
 import { setGradesApiBase } from "../courses/features/grades/api.js";
+import { bindActionBars } from "../../shared/action-bar.js";
 import { createDialog } from "../../shared/dialog.js";
 import { flushPendingScores } from "../courses/features/grades/roster/roster.js";
 import { GRID_QUERY, areaOf, loadInto, sectionHref, showNoScheme } from "./section-switch.js";
@@ -61,8 +62,8 @@ function askToEdit(label, trigger)
                 <h2 id="edit-as-chair-dialog-title" class="text-lg font-bold text-brand">Edit as chairperson</h2>
                 <p class="text-sm text-[#3D3D3D]" data-dialog-text></p>
                 <div class="flex flex-wrap items-center justify-end gap-3">
-                    <button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>
-                    <button type="button" data-edit-continue class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Continue</button>
+                    <button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Cancel</button>
+                    <button type="button" data-edit-continue class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Continue</button>
                 </div>
             </div>`;
 
@@ -257,6 +258,40 @@ function loadPanel()
     }
 }
 
+// The lg breakpoint: below it Nudge and Download ride in the section's action bar (its More panel), from it they sit
+// beside the pager, where the server draws them. No matchMedia (an old browser, a test DOM): they stay there.
+const WIDE = "(min-width: 64rem)";
+
+export function placeTools()
+{
+    const tools = document.querySelector("[data-program-tools]");
+    const slot = document.querySelector("[data-program-tools-slot]");
+    const home = document.querySelector("[data-program-tools-home]");
+
+    if (!tools || !slot || !home) {
+        return;
+    }
+
+    const target = window.matchMedia?.(WIDE).matches === false ? slot : home;
+
+    if (tools.parentElement === target) {
+        return;
+    }
+
+    // Moving a focused button drops its focus: it keeps it.
+    const focused = tools.contains(document.activeElement) ? document.activeElement : null;
+
+    target.append(tools);
+    focused?.focus();
+}
+
+// A live search drew a new, closed action bar: it gets its closed state (an inert panel), then the tools move in.
+function afterSwap()
+{
+    bindActionBars();
+    placeTools();
+}
+
 /**
  * @param {HTMLElement} root the page; it holds the rows, the action bar and the grid, whatever a search swaps in
  */
@@ -296,6 +331,11 @@ export function bindProgram(root)
 
     // A live search replaced the panel: the new grid is a placeholder until loaded again.
     document.addEventListener("content:swapped", loadPanel);
+
+    // The swap draws Nudge and Download beside the pager again; a resize past lg moves them.
+    document.addEventListener("content:swapped", afterSwap);
+    window.matchMedia?.(WIDE).addEventListener?.("change", placeTools);
+    placeTools();
 
     loadPanel();
 }

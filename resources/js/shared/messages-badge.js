@@ -21,10 +21,16 @@ export function startBadgePolling(doc = document, fetchImpl = (...args) => fetch
         return () => {};
     }
 
-    const show = (count) => badges.forEach((badge) => {
-        badge.textContent = count > 99 ? "99+" : String(count);
-        badge.hidden = count <= 0;
-    });
+    const dots = [...doc.querySelectorAll("[data-messages-dot]")];
+
+    const show = (count) => {
+        badges.forEach((badge) => {
+            badge.textContent = count > 99 ? "99+" : String(count);
+            badge.hidden = count <= 0;
+        });
+        // The phone header's ⋯ button: a dot, no number.
+        dots.forEach((dot) => { dot.hidden = count <= 0; });
+    };
 
     const poller = createPoller({
         visible: () => doc.visibilityState !== "hidden",

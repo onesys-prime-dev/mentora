@@ -9,7 +9,7 @@
 $tones = ['success' => 'success', 'warning' => 'warning', 'danger' => 'danger', 'info' => 'info'];
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-4 sm:p-10 flex flex-col gap-8">
 
     <?= view('components/page-header', ['icon' => 'assessments', 'title' => 'Assessments'], ['saveData' => false]) ?>
 
@@ -29,7 +29,7 @@ $tones = ['success' => 'success', 'warning' => 'warning', 'danger' => 'danger', 
 
                 <ul class="flex flex-col divide-y divide-gray-100 rounded-2xl border border-[#A9A9A9]/50 bg-white">
                     <?php foreach ($rows as $row): ?>
-                        <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
+                        <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-5">
                             <span class="min-w-0 flex-1 font-semibold text-[#1A1C1E]"><?= esc($row['title']) ?></span>
                             <span class="text-sm text-[#646464]"><?= esc($row['due']) ?></span>
                             <?= view('components/status-badge', ['label' => $row['status'], 'tone' => $tones[$row['tone']] ?? 'neutral'], ['saveData' => false]) ?>

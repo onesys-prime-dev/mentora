@@ -139,7 +139,7 @@ export function bindComposer(root, refresh) {
 
             const remove = document.createElement("button");
             remove.type = "button";
-            remove.className = "text-[#767676] hover:text-red-500";
+            remove.className = "inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-[#767676] hover:text-red-500";
             remove.textContent = "×";
             remove.addEventListener("click", () => {
                 attachments.splice(index, 1);

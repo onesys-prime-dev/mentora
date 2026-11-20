@@ -2,10 +2,10 @@
     id="ai-question-settings-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col max-h-full overflow-y-auto">
 
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 class="text-xl font-bold text-brand">
                 Question Settings
@@ -13,7 +13,8 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-ai-question-settings-modal>
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -27,7 +28,7 @@
         <!-- Body -->
         <form
             id="ai-question-settings-form"
-            class="flex flex-col gap-6 p-8">
+            class="flex flex-col gap-6 p-5 sm:p-8 min-h-0 flex-1 overflow-y-auto">
 
             <input type="hidden" data-ai-question-settings-id>
 
@@ -37,16 +38,17 @@
                     Required Question
                 </label>
 
-                <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
 
                     <input
                         type="checkbox"
                         class="peer sr-only"
+                        aria-label="Required Question"
                         data-ai-question-settings-required>
 
                     <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
-                    <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+                    <div class="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
                 </label>
 
@@ -60,16 +62,17 @@
                         Allow Multiple Answers
                     </label>
 
-                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
 
                         <input
                             type="checkbox"
                             class="peer sr-only"
+                            aria-label="Allow Multiple Answers"
                             data-ai-question-settings-allow-multiple>
 
                         <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
-                        <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+                        <div class="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
                     </label>
 
@@ -85,7 +88,8 @@
                         type="number"
                         min="2"
                         step="1"
-                        class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
+                        aria-label="How many answers?"
+                        class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11"
                         data-ai-question-settings-answers-count>
 
                     <span class="text-xs text-[#767676]">
@@ -105,16 +109,17 @@
                         Case Sensitive
                     </label>
 
-                    <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                    <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
 
                         <input
                             type="checkbox"
                             class="peer sr-only"
+                            aria-label="Case Sensitive"
                             data-ai-question-settings-case-sensitive>
 
                         <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
 
-                        <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+                        <div class="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
 
                     </label>
 
@@ -129,7 +134,7 @@
         </form>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <button
                 type="button"

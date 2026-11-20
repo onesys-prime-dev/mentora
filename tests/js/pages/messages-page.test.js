@@ -39,7 +39,8 @@ const SHELL = `
     <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
   </div>
 </div>
-<span data-messages-badge hidden></span>`;
+<span data-messages-badge hidden></span>
+<span data-messages-dot hidden></span>`;
 
 const conv = (over = {}) => ({ id: 1, type: "direct", name: "Prof. Reyes", initials: "PR", subtitle: null, preview: "Thanks", last_message_at: "2026-11-03 09:41:00", unread: 0, is_locked: 0, can_post: true, ...over });
 const msg = (id, over = {}) => ({ id, sender_id: 2, sender_name: "Prof. Reyes", sender_role: "instructor", mine: false, body: `m${id}`, removed: false, created_at: "2026-11-03 09:00:00", ...over });
@@ -258,6 +259,18 @@ describe("the conversation list", () => {
 
         expect(q("[data-messages-badge]").textContent).toBe("4");
         expect(q("[data-messages-badge]").hidden).toBe(false);
+
+    });
+
+    it("shows the phone header's ⋯ dot while something is unread and hides it at 0", async () => {
+
+        await mount(makeApi({ conversations: vi.fn().mockResolvedValueOnce(ok({ conversations: [conv()], unread: 2 })).mockResolvedValue(ok({ conversations: [conv()], unread: 0 })) }));
+
+        expect(q("[data-messages-dot]").hidden).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(15000);
+
+        expect(q("[data-messages-dot]").hidden).toBe(true);
 
     });
 

@@ -77,12 +77,12 @@ foreach ($statuses as $status) {
         <p class="text-sm text-[#646464]" aria-live="polite" data-course-count>
             <?= esc(number_format($total)) ?> <?= $total === 1 ? 'course' : 'courses' ?><?= $filters->isFiltered() ? ' match' : '' ?>
         </p>
-        <div class="flex items-center gap-1 text-xs text-[#646464]">
+        <div class="flex flex-wrap items-center gap-1 text-xs text-[#646464]">
             Sort:
             <?php foreach ($sortLabel as $column => $label): ?>
                 <a href="<?= esc($sortLink($column)) ?>"
                    <?= $filters->sort === $column ? 'aria-current="true"' : '' ?>
-                   class="rounded-full px-2 py-1 font-semibold <?= $filters->sort === $column ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100' ?>">
+                   class="inline-flex items-center rounded-full px-2 py-1 font-semibold pointer-coarse:min-h-11 <?= $filters->sort === $column ? 'bg-brand/10 text-brand' : 'hover:bg-gray-100' ?>">
                     <?= esc($label) ?><?= $filters->sort === $column ? ($filters->dir === 'asc' ? ' ▲' : ' ▼') : '' ?>
                 </a>
             <?php endforeach; ?>
@@ -95,7 +95,7 @@ foreach ($statuses as $status) {
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your college's courses</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($base) ?>" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
         </div>
 
     <?php elseif ($courses === []): ?>

@@ -12,7 +12,7 @@
  */
 use App\Services\Users\UserFilters;
 
-$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$btn   = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $isAdmin     = in_array('admin', $person['roles'], true);
 $deactivated = (int) $person['active'] === 0 || $person['deactivated_at'] !== null;
@@ -49,14 +49,14 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
         <?php if ($personSisManaged): ?>
             <div class="mt-2" data-sis-managed><?= view('components/alert', ['tone' => 'warning', 'text' => "This person comes from the school's student information system, which decides their name and email. Change them there; the next sync brings it here."], ['saveData' => false]) ?></div>
         <?php endif; ?>
-        <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id']) ?>" class="mt-3 grid gap-3 sm:grid-cols-2">
+        <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id']) ?>" class="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             <?= csrf_field() ?>
             <?= view('components/form-field', ['name' => 'first_name', 'label' => 'First name', 'value' => (string) $personValues['first_name'], 'maxlength' => 100, 'required' => true, 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
             <?= view('components/form-field', ['name' => 'last_name', 'label' => 'Last name', 'value' => (string) $personValues['last_name'], 'maxlength' => 100, 'required' => true, 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
-            <?= view('components/form-field', ['name' => 'email', 'label' => 'Sign-in email', 'type' => 'email', 'value' => (string) $personValues['email'], 'maxlength' => 254, 'required' => true, 'span' => 'sm:col-span-2', 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
+            <?= view('components/form-field', ['name' => 'email', 'label' => 'Sign-in email', 'type' => 'email', 'value' => (string) $personValues['email'], 'maxlength' => 254, 'required' => true, 'span' => 'md:col-span-2', 'attrs' => $personSisManaged ? 'readonly' : ''], ['saveData' => false]) ?>
             <?php if (! $personSisManaged): ?>
-                <div class="sm:col-span-2">
-                    <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
+                <div class="md:col-span-2">
+                    <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
                     <span class="ml-2 text-xs text-[#646464]">Needs your password.</span>
                 </div>
             <?php endif; ?>
@@ -104,8 +104,8 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
             <p class="mt-1 text-sm text-[#646464]">See the platform exactly as they do. It is <strong>view only</strong>: nothing can be changed, it ends by itself after the time limit, and it is kept in the audit log with your reason. Needs your password.</p>
             <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/impersonate') ?>" class="mt-3 flex flex-wrap items-end gap-3">
                 <?= csrf_field() ?>
-                <?= view('components/form-field', ['name' => 'reason', 'label' => 'Why are you viewing as them?', 'maxlength' => 500, 'required' => true, 'placeholder' => 'For example: support ticket 1234, grades not showing', 'span' => 'min-w-[18rem] flex-1', 'attrs' => 'minlength="5"'], ['saveData' => false]) ?>
-                <button type="submit" class="rounded-full bg-[#946200] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#6F4A00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50">View as <?= esc($name !== '' ? $name : (string) $person['username']) ?></button>
+                <?= view('components/form-field', ['name' => 'reason', 'label' => 'Why are you viewing as them?', 'maxlength' => 500, 'required' => true, 'placeholder' => 'For example: support ticket 1234, grades not showing', 'span' => 'min-w-0 flex-1 sm:min-w-[18rem]', 'attrs' => 'minlength="5"'], ['saveData' => false]) ?>
+                <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-[#946200] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#6F4A00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#946200]/50">View as <?= esc($name !== '' ? $name : (string) $person['username']) ?></button>
             </form>
         </section>
     <?php endif; ?>
@@ -119,13 +119,13 @@ $name        = trim(($person['first_name'] ?? '') . ' ' . ($person['last_name'] 
             <form data-dialog-form method="post" action="<?= site_url('admin/users/' . $person['id'] . '/roles') ?>" class="mt-3 flex flex-col gap-2">
                 <?= csrf_field() ?>
                 <?php foreach ($personAssignableRoles as $role): ?>
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
-                        <input type="checkbox" name="roles[]" value="<?= esc($role) ?>" <?= in_array($role, $person['roles'], true) ? 'checked' : '' ?>>
+                    <label class="flex items-center gap-2 text-sm text-gray-700 pointer-coarse:min-h-11">
+                        <input type="checkbox" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300 text-brand focus:ring-brand/40" name="roles[]" value="<?= esc($role) ?>" <?= in_array($role, $person['roles'], true) ? 'checked' : '' ?>>
                         <?= esc(UserFilters::ROLE_LABELS[$role] ?? $role) ?>
                     </label>
                 <?php endforeach; ?>
                 <div class="mt-2">
-                    <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save roles</button>
+                    <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save roles</button>
                     <span class="ml-2 text-xs text-[#646464]">At least one. Needs your password.</span>
                 </div>
             </form>

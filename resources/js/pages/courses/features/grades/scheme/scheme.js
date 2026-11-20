@@ -497,7 +497,7 @@ function setWeightChip(chip, label, total)
 
     chip.textContent = `${label}: ${Math.round(total * 100) / 100}%${ok ? "" : " — must be 100%"}`;
     chip.classList.toggle("bg-[#E8F5EC]", ok);
-    chip.classList.toggle("text-[#2E7D4F]", ok);
+    chip.classList.toggle("text-[#2B7549]", ok);
     chip.classList.toggle("bg-[#FDEDEC]", !ok);
     chip.classList.toggle("text-[#C33939]", !ok);
 }

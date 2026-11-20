@@ -6,6 +6,8 @@
 
 import { bindModal } from "../modals/index.js";
 import { showToast } from "../../../../../shared/toast.js";
+import { bindSidePanels } from "../../../../../shared/side-panel.js";
+import { bindActionBars } from "../../../../../shared/action-bar.js";
 
 import {
     createQuestion,
@@ -77,6 +79,17 @@ export function initializeQuestions(offeringId, assessmentId, refresh) {
     bindDeleteModal();
     bindClearAllModal();
 
+    // The builder arrives through swapContent (no content:swapped): bind its palette panel and phone bar here.
+    bindSidePanels();
+    bindActionBars();
+
+    const list =
+        document.querySelector("[data-question-list]");
+
+    if (list) {
+        renumberQuestions(list);
+    }
+
 }
 
 /*
@@ -118,6 +131,10 @@ function bindPalette() {
 
             item.addEventListener("click", () => {
 
+                // Chosen from the phone bar or the md–lg side panel: close it so the new card shows.
+                item.closest("[data-action-bar][data-open]")?.querySelector("[data-action-bar-toggle]")?.click();
+                item.closest("[data-side-panel][data-open]")?.querySelector("[data-side-panel-close]")?.click();
+
                 createQuestionAt(item.dataset.paletteType, null);
 
             });
@@ -143,13 +160,23 @@ async function createQuestionAt(type, beforeQuestionId) {
                 state.offeringId,
                 state.assessmentId,
                 {
-                    question_text: "",
+                    // The server refuses an empty question (QA MISS-ASM-01), so a new one starts with
+                    // placeholder text, selected below so the first keystroke replaces it.
+                    question_text: "New question",
                     question_type: type,
                     points: 1,
                     is_required: true,
                     choices: defaultChoices,
                 }
             );
+
+        if (!result?.question) {
+
+            showToast(result?.message || "The question could not be added. Try again.", { tone: "danger" });
+
+            return;
+
+        }
 
         const list =
             document.querySelector("[data-question-list]");
@@ -177,30 +204,17 @@ async function createQuestionAt(type, beforeQuestionId) {
             // The card landed wherever it was dropped, but the server
             // still created it at the end of the list (order_index) —
             // persist the DOM order back so a later reload matches.
-            const ids =
-                Array.from(
-                    list.querySelectorAll("[data-question-card]")
-                ).map((c) => c.dataset.questionId);
-
-            try {
-
-                await reorderQuestions(
-                    state.offeringId,
-                    state.assessmentId,
-                    ids
-                );
-
-            } catch (error) {
-
-                console.error(error);
-
-            }
+            await saveQuestionOrder(list);
 
         }
 
         setActiveQuestion(card);
 
-        card.querySelector("[data-question-text]")?.focus();
+        const text =
+            card.querySelector("[data-question-text]");
+
+        text?.focus();
+        text?.select();
 
     } catch (error) {
 
@@ -415,26 +429,115 @@ async function handleDocumentDrop(event) {
 
         renumberQuestions(list);
 
-        const ids =
-            Array.from(
-                list.querySelectorAll("[data-question-card]")
-            ).map((card) => card.dataset.questionId);
-
-        try {
-
-            await reorderQuestions(
-                state.offeringId,
-                state.assessmentId,
-                ids
-            );
-
-        } catch (error) {
-
-            console.error(error);
-
-        }
+        await saveQuestionOrder(list);
 
     }
+
+}
+
+// The order save in flight, and whether the list moved again while it ran.
+let orderSave = null;
+let orderChangedDuringSave = false;
+
+/**
+ * Persists the list's order: the one path a drop, a drop-to-add and the move arrows all use. One request at a
+ * time: moves made while a save runs are sent as one more save of the then-current order once it ends, so the
+ * server always ends on the order on screen. A failed save says so and reloads the builder, which puts the list
+ * back to the order the server has.
+ */
+function saveQuestionOrder(list) {
+
+    if (orderSave) {
+
+        orderChangedDuringSave = true;
+
+        return orderSave;
+
+    }
+
+    orderSave = (async () => {
+
+        do {
+
+            orderChangedDuringSave = false;
+
+            const ids =
+                Array.from(
+                    list.querySelectorAll("[data-question-card]")
+                ).map((card) => card.dataset.questionId);
+
+            try {
+
+                await reorderQuestions(
+                    state.offeringId,
+                    state.assessmentId,
+                    ids
+                );
+
+            } catch (error) {
+
+                console.error(error);
+
+                showToast("The new order could not be saved. Try again.", { tone: "danger" });
+
+                state.refresh?.();
+
+                return;
+
+            }
+
+        } while (orderChangedDuringSave);
+
+    })().finally(() => {
+
+        orderSave = null;
+
+    });
+
+    return orderSave;
+
+}
+
+/**
+ * The ▲ ▼ arrows: swap the card with its neighbour (moving the neighbour, so focus stays on the pressed
+ * arrow), renumber, announce and persist. At the first or last place the arrow is disabled, so focus goes
+ * to the card's other arrow.
+ */
+function moveQuestion(button) {
+
+    if (button.disabled) {
+        return;
+    }
+
+    const card =
+        button.closest("[data-question-card]");
+
+    const list =
+        card.parentElement;
+
+    if (button.dataset.questionMove === "up") {
+        card.after(card.previousElementSibling);
+    } else {
+        card.before(card.nextElementSibling);
+    }
+
+    renumberQuestions(list);
+
+    if (button.disabled) {
+        card.querySelector(`[data-question-move]:not([data-question-move="${button.dataset.questionMove}"])`)?.focus();
+    }
+
+    const cards =
+        [...list.querySelectorAll("[data-question-card]")];
+
+    const status =
+        document.querySelector("[data-question-move-status]");
+
+    if (status) {
+        status.textContent = `Question moved to position ${cards.indexOf(card) + 1} of ${cards.length}.`;
+    }
+
+    saveQuestionOrder(list);
 
 }
 
@@ -602,18 +705,25 @@ function pulseSnap(card) {
 
 function renumberQuestions(list) {
 
-    list
-        .querySelectorAll("[data-question-card]")
-        .forEach((card, index) => {
+    const cards =
+        list.querySelectorAll("[data-question-card]");
 
-            const numberEl =
-                card.querySelector("[data-question-number]");
+    cards.forEach((card, index) => {
 
-            if (numberEl) {
-                numberEl.textContent = `Q${index + 1}`;
-            }
+        const numberEl =
+            card.querySelector("[data-question-number]");
 
-        });
+        if (numberEl) {
+            numberEl.textContent = `Q${index + 1}`;
+        }
+
+        const up = card.querySelector('[data-question-move="up"]');
+        const down = card.querySelector('[data-question-move="down"]');
+
+        if (up) up.disabled = index === 0;
+        if (down) down.disabled = index === cards.length - 1;
+
+    });
 
 }
 
@@ -655,6 +765,17 @@ function bindCardActions() {
     }
 
     list.addEventListener("click", (event) => {
+
+        const moveBtn =
+            event.target.closest("[data-question-move]");
+
+        if (moveBtn) {
+
+            moveQuestion(moveBtn);
+
+            return;
+
+        }
 
         // Short Answer answer key: add / remove an accepted answer.
         const changedAnswers =
@@ -762,6 +883,26 @@ function bindCardActions() {
 
     });
 
+    // Below md the sticky "Add question" bar covers the window's bottom edge: a field focused under it (a tap
+    // near the edge, Tab, the keyboard opening) scrolls up until it clears the bar.
+    list.addEventListener("focusin", (event) => {
+
+        const bar =
+            document.querySelector("[data-quiz-builder-bar]");
+
+        if (!bar || bar.offsetParent === null || !event.target.matches("input, textarea, select")) {
+            return;
+        }
+
+        const overlap =
+            event.target.getBoundingClientRect().bottom - bar.getBoundingClientRect().top + 8;
+
+        if (overlap > 0) {
+            window.scrollBy(0, overlap);
+        }
+
+    });
+
     list.addEventListener("input", (event) => {
 
         const changedAnswers =
@@ -855,24 +996,29 @@ function createChoiceRowElement(questionId, text = "", isCorrect = false, isMult
     row.dataset.choiceRow = "";
 
     row.innerHTML = `
-        <input
-            type="${isMultiple ? "checkbox" : "radio"}"
-            data-choice-correct
-            ${isMultiple ? "" : `name="correct-choice-${questionId}"`}
-            class="h-4 w-4 shrink-0 accent-emerald-600"
-            ${isCorrect ? "checked" : ""}>
+        <label class="flex shrink-0 items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+            <input
+                type="${isMultiple ? "checkbox" : "radio"}"
+                data-choice-correct
+                aria-label="Correct answer"
+                ${isMultiple ? "" : `name="correct-choice-${questionId}"`}
+                class="h-4 w-4 shrink-0 accent-emerald-600"
+                ${isCorrect ? "checked" : ""}>
+        </label>
 
         <input
             type="text"
             data-choice-text
             value="${escapeHtml(text)}"
             placeholder="Choice text"
-            class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-sm outline-none transition ${isCorrect ? "font-semibold text-emerald-700" : "text-gray-700"}">
+            aria-label="Choice text"
+            class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-base outline-none transition sm:text-sm pointer-coarse:min-h-11 ${isCorrect ? "font-semibold text-emerald-700" : "text-gray-700"}">
 
         <button
             type="button"
             data-remove-choice
-            class="shrink-0 rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500">
+            aria-label="Remove choice"
+            class="flex shrink-0 items-center justify-center rounded-lg p-1 text-gray-300 transition hover:bg-red-50 hover:text-red-500 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
 
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -985,11 +1131,20 @@ function queueQuestionSave(questionId, partialPayload, delay = 600) {
 
 function updateSaveStatus(status) {
 
+    // The top bar's status from md up, the phone bar's below md.
+    document
+        .querySelectorAll("[data-builder-save-status]")
+        .forEach((root) => showSaveStatus(root, status));
+
+}
+
+function showSaveStatus(root, status) {
+
     const indicator =
-        document.querySelector("[data-builder-save-indicator]");
+        root.querySelector("[data-builder-save-indicator]");
 
     const message =
-        document.querySelector("[data-builder-save-message]");
+        root.querySelector("[data-builder-save-message]");
 
     if (!indicator || !message) {
         return;
@@ -1399,15 +1554,15 @@ function createQuestionCardElement(question) {
 
     const bodyHtml = question.question_type === "Multiple Choice"
         ? `<div class="flex flex-col gap-2" data-choices-list></div>
-           <button type="button" data-add-choice-inline class="self-start text-xs font-semibold text-brand transition hover:underline">+ Add choice</button>`
+           <button type="button" data-add-choice-inline class="self-start text-xs font-semibold text-brand transition hover:underline pointer-coarse:min-h-11">+ Add choice</button>`
         : question.question_type === "Short Answer"
             ? renderAcceptedAnswersEditor(question.accepted_answers || [], isFlagTrue(question.case_sensitive))
-            : `<div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#767676]">${escapeHtml(PREVIEW_LABELS[question.question_type] || "Students will respond here.")}</div>`;
+            : `<div class="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-xs text-[#646464]">${escapeHtml(PREVIEW_LABELS[question.question_type] || "Students will respond here.")}</div>`;
 
     card.innerHTML = `
-        <div class="flex items-center gap-2 border-b border-gray-100 pb-3">
+        <div class="flex flex-wrap items-center gap-2 border-b border-gray-100 pb-3">
 
-            <button type="button" data-drag-handle title="Drag to reorder" class="cursor-grab rounded p-1 text-[#767676] transition hover:bg-gray-100 active:cursor-grabbing">
+            <button type="button" data-drag-handle title="Drag to reorder" aria-label="Drag to reorder" class="cursor-grab rounded p-1 text-[#646464] transition hover:bg-gray-100 active:cursor-grabbing pointer-coarse:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
                     <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
@@ -1415,33 +1570,38 @@ function createQuestionCardElement(question) {
                 </svg>
             </button>
 
-            <span class="text-sm font-bold text-[#767676]" data-question-number>Q?</span>
+            <span class="text-sm font-bold text-[#646464]" data-question-number>Q?</span>
 
             <span class="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand" data-question-type-badge>${escapeHtml(question.question_type)}</span>
 
-            <input type="number" data-question-points-input min="0" step="0.5" value="${formatPointsValue(question.points)}" class="w-14 rounded-lg border border-gray-200 px-1.5 py-0.5 text-xs text-center outline-none transition focus:border-brand">
-            <span class="text-[10px] text-[#767676]">pts</span>
+            <input type="number" inputmode="decimal" data-question-points-input aria-label="Points" min="0" step="0.5" value="${formatPointsValue(question.points)}" class="w-16 rounded-lg border border-gray-200 px-1.5 py-0.5 text-base text-center outline-none transition focus:border-brand sm:w-14 sm:text-xs pointer-coarse:min-h-11">
+            <span class="text-[10px] text-[#646464]">pts</span>
 
-            <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-500 ${isRequired ? "" : "hidden"}" data-question-required-badge>Required</span>
+            <span class="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700 ${isRequired ? "" : "hidden"}" data-question-required-badge>Required</span>
 
             <span class="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand ${isMultiple ? "" : "hidden"}" data-question-multiple-badge>Select ${answersCount}</span>
 
             <div class="ml-auto flex shrink-0 items-center gap-1">
 
-                <button type="button" data-open-question-settings title="Question settings" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
+                ${[["up", "M5 15l7-7 7 7"], ["down", "M19 9l-7 7-7-7"]].map(([direction, path]) => `
+                <button type="button" data-question-move="${direction}" title="Move ${direction}" aria-label="Move question ${direction}" class="flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand disabled:cursor-not-allowed disabled:opacity-40 pointer-coarse:min-h-11 pointer-coarse:min-w-11 lg:pointer-fine:hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="${path}" /></svg>
+                </button>`).join("")}
+
+                <button type="button" data-open-question-settings title="Question settings" aria-label="Question settings" class="flex items-center justify-center rounded-lg p-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                 </button>
 
-                <button type="button" data-duplicate-question title="Duplicate question" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
+                <button type="button" data-duplicate-question title="Duplicate question" aria-label="Duplicate question" class="flex items-center justify-center rounded-lg p-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                 </button>
 
-                <button type="button" data-delete-question title="Delete question" class="rounded-lg p-1.5 text-gray-500 transition hover:bg-red-50 hover:text-red-500">
+                <button type="button" data-delete-question title="Delete question" aria-label="Delete question" class="flex items-center justify-center rounded-lg p-1.5 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-gray-500 transition hover:bg-red-50 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12zM10 11v6M14 11v6" />
                     </svg>
@@ -1452,7 +1612,7 @@ function createQuestionCardElement(question) {
         </div>
 
         <div class="flex flex-col gap-3 pt-3">
-            <textarea rows="2" data-question-text placeholder="Type your question..." class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-sm font-medium text-[#1A1C1E] outline-none transition placeholder:text-gray-300 focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
+            <textarea rows="2" data-question-text placeholder="Type your question..." aria-label="Question text" class="w-full resize-none rounded-lg border-0 bg-transparent px-1 py-1 text-base sm:text-sm font-medium text-[#1A1C1E] outline-none transition placeholder:text-gray-300 focus:bg-gray-50">${escapeHtml(question.question_text)}</textarea>
             ${bodyHtml}
         </div>
     `;

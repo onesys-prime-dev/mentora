@@ -46,6 +46,8 @@ export function initializeComposerEditor(elementId = "announcement-editor") {
         editorProps: {
             attributes: {
                 class: "announcement-composer-content min-h-[80px] focus:outline-none",
+                // Tiptap gives the editable a textbox role, which needs a name.
+                "aria-label": "Message",
             },
         },
     });

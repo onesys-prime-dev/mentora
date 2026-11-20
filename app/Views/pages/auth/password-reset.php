@@ -6,7 +6,7 @@
  * @var array<string, mixed> $reset      the reset, with the account's `email`
  */
 $min   = (int) config('Auth')->minimumPasswordLength;
-$field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800';
+$field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-base sm:text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-800/40 focus:border-blue-800';
 ?>
 <?= $this->extend('layouts/auth') ?>
 
@@ -14,9 +14,9 @@ $field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-sm placehold
 
 <?= $this->section('content') ?>
 
-<div class="min-h-screen flex items-center justify-center px-4 py-10">
+<div class="min-h-dvh flex items-center justify-center px-gutter pt-safe pb-safe">
 
-    <div class="w-full max-w-sm bg-white rounded-3xl shadow-xl px-8 py-10">
+    <div class="w-full max-w-sm my-10 bg-white rounded-3xl shadow-xl px-6 xs:px-8 py-10">
 
         <div class="flex items-center justify-start">
             <img class="h-10 w-auto" src="<?= base_url('assets/images/logos/Mentora_logo_type.png') ?>" alt="Mentora logo">
@@ -40,7 +40,7 @@ $field = 'w-full h-12 px-4 rounded-full border border-gray-300 text-sm placehold
 
             <p class="text-xs text-gray-500">At least <?= $min ?> characters. Avoid common words and anything that contains your name or email. Every device you are signed in on will be signed out.</p>
 
-            <button type="submit" class="mt-2 h-12 rounded-full bg-blue-800 text-white text-sm font-bold shadow-md transition hover:bg-blue-900">
+            <button type="submit" class="mt-2 h-12 pointer-coarse:min-h-11 rounded-full bg-blue-800 text-white text-sm font-bold shadow-md transition hover:bg-blue-900">
                 Set password
             </button>
 

@@ -31,11 +31,11 @@ $chip = [
 
     <?php else: ?>
 
-        <div class="overflow-x-auto rounded-2xl border border-[#E3E6EE]">
+        <div class="rounded-2xl border border-[#E3E6EE]" tabindex="0" role="region" aria-label="Students at risk" data-scroll-x data-sticky-first>
             <table class="w-full min-w-[34rem] text-left text-sm">
                 <thead class="bg-[#F6F7FA] text-xs font-semibold uppercase tracking-wide text-[#646464]">
                     <tr>
-                        <th scope="col" class="sticky left-0 bg-[#F6F7FA] px-4 py-3">Student</th>
+                        <th scope="col" class="sticky left-0 z-10 bg-[#F6F7FA] px-4 py-3">Student</th>
                         <th scope="col" class="px-4 py-3">Section</th>
                         <th scope="col" class="px-4 py-3">Reason</th>
                     </tr>
@@ -43,7 +43,7 @@ $chip = [
                 <tbody class="divide-y divide-[#E3E6EE]">
                     <?php foreach ($atRisk as $row): ?>
                         <tr class="bg-white" data-risk-row data-offering-id="<?= (int) $row['offering_id'] ?>" data-student-id="<?= (int) $row['student_id'] ?>">
-                            <th scope="row" class="sticky left-0 bg-white px-4 py-3 font-semibold text-[#1A1C1E]"><?= esc($row['name']) ?></th>
+                            <th scope="row" class="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-[#1A1C1E]"><?= esc($row['name']) ?></th>
                             <td class="px-4 py-3">
                                 <?php if ($canOpen): ?>
                                     <a href="<?= esc(site_url("{$area}/courses/{$row['offering_id']}/{$row['slug']}/grades")) ?>" class="rounded font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($row['section']) ?></a>

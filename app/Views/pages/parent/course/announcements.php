@@ -9,7 +9,7 @@
  */
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-4 sm:p-10 flex flex-col gap-8">
 
     <?= view('components/page-header', ['icon' => 'announcement', 'title' => 'Announcements'], ['saveData' => false]) ?>
 
@@ -31,13 +31,13 @@
                     data-announcement-id="<?= (int) $announcement['id'] ?>">
 
                     <?php if ($announcement['is_pinned']): ?>
-                        <div class="flex items-center gap-1.5 rounded-t-2xl bg-brand/5 px-5 py-1.5 text-xs font-bold text-brand">
+                        <div class="flex items-center gap-1.5 rounded-t-2xl bg-brand/5 px-4 py-1.5 sm:px-5 text-xs font-bold text-brand">
                             <?= icon('pin', 'h-3 w-3 text-current') ?>
                             Pinned
                         </div>
                     <?php endif; ?>
 
-                    <div class="flex flex-col gap-2 px-5 py-4">
+                    <div class="flex flex-col gap-2 px-4 py-4 sm:px-5">
                         <h3 class="text-base font-bold text-[#1A1C1E]"><?= esc($announcement['subject']) ?></h3>
 
                         <p class="text-xs text-[#767676]">

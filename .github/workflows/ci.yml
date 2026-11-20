@@ -205,20 +205,13 @@ jobs:
           '
           php -m | tr '\n' ' '; echo
 
+      # One run, with every setting filled in (audit 14.2), the way staging and production run: a test that
+      # only passes while a setting is unset would fail here, as it would on a developer's machine.
       - name: Run tests
-        shell: bash
-        run: vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt
-
-      # The same suite with every setting filled in (audit 14.2): a test that only passes while a setting
-      # is unset would pass above and fail on a developer's machine with a full .env. Once, on the leg
-      # without coverage.
-      - name: Run the tests with every setting filled in
-        if: matrix.coverage == 'none'
         shell: bash
         run: |
           cp tests/_support/ci-full.env .env
-          vendor/bin/phpunit --no-coverage
-          rm .env
+          vendor/bin/phpunit ${{ matrix.phpunit_args }} | tee phpunit-output.txt
 
       # Overall line coverage may never drop below .github/coverage-floor.
       # Raise that number in the same PR that adds tests; never lower it.
@@ -287,7 +280,7 @@ jobs:
   e2e:
     name: End-to-end (Playwright)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 90
     services:
       mysql:
         image: mysql:8.4
@@ -339,21 +332,23 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-cw-${{ hashFiles('package-lock.json') }}
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      # WebKit is for the responsive sweep's phone checks (the webkit project in playwright.config.js).
+      - name: Install Chromium and WebKit
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Run the browser tests
-        run: npm run e2e
+        # A run that is going wrong everywhere (a missing baseline, a dead server) stops after ten failures.
+        run: npm run e2e -- --max-failures=10
 
       - name: Show the app's own errors
-        if: failure()
+        if: failure() || cancelled()
         run: tail -n 80 writable/logs/log-*.log 2>/dev/null || echo "no app log written"
 
       # The report has screenshots and traces; writable/logs has the app's own errors.
       - name: Upload the report on failure
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-report

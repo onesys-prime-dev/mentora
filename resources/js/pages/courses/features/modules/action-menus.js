@@ -87,6 +87,11 @@ export function bindActionMenu(triggerSelector, panelSelector, { floating: float
 
         button.dataset.actionMenuBound = "1";
 
+        // Below md a ⋯ beside it opens the entries as a bottom sheet (shared/row-actions.js, on the document in
+        // capture). The tap must not go on to toggle the module card or unit header the menu sits in.
+        button.closest(".relative").querySelector("[data-row-actions-open]")
+            ?.addEventListener("click", (event) => event.stopPropagation());
+
         button.addEventListener("click", (event) => {
 
             event.preventDefault();

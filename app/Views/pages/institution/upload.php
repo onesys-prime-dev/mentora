@@ -10,9 +10,9 @@
  * @var string                     $uploadToken
  */
 $base    = 'institution/people/upload';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
 
 $labels = [
     'students'    => ['Students', 'email, first_name, last_name; student_number, middle_name and suffix are optional. A student already here is found by student number, or else by email, and updated.'],
@@ -58,7 +58,7 @@ $labels = [
 
     <?php if ($uploadStep === 1): ?>
 
-        <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" data-upload-form>
+        <form method="post" action="<?= esc(site_url($base)) ?>" enctype="multipart/form-data" class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md sm:p-6" data-upload-form>
             <?= csrf_field() ?>
 
             <p class="text-sm text-[#3D3D3D]">Choose the files you have; none is required, but at least one is. People and courses go in first, then enrolments, staff assignments and class times, so those files can refer to people and courses in the same upload. Nothing is saved until you have looked at the preview.</p>
@@ -67,7 +67,7 @@ $labels = [
                 <div class="flex flex-col gap-1" data-field="<?= esc($dataset) ?>">
                     <label class="text-sm font-semibold text-[#1A1C1E]" for="upload-<?= esc($dataset) ?>"><?= esc($labels[$dataset][0] ?? $dataset) ?> (<?= esc($dataset) ?>.csv)</label>
                     <input id="upload-<?= esc($dataset) ?>" name="<?= esc($dataset) ?>" type="file" accept=".csv,text/csv" aria-describedby="upload-<?= esc($dataset) ?>-help"
-                           class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-brand-tint file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-brand" <?= $uploadBlocked || ! $uploadCanEdit ? 'disabled' : '' ?>>
+                           class="block w-full pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:file:py-3 file:mr-3 file:rounded-full file:border-0 file:bg-brand-tint file:px-4 file:py-1.5 file:text-sm file:font-semibold file:text-brand" <?= $uploadBlocked || ! $uploadCanEdit ? 'disabled' : '' ?>>
                     <p id="upload-<?= esc($dataset) ?>-help" class="text-xs text-[#646464]">
                         Columns: <?= esc($labels[$dataset][1] ?? '') ?>
                         <a class="<?= $link ?> ml-1" href="<?= esc(site_url($base . '/template/' . $dataset)) ?>">Download a template</a>
@@ -125,13 +125,13 @@ $labels = [
             <?php endforeach; ?>
         </div>
 
-        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Files">
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md sm:p-6" aria-label="Files">
             <h2 class="text-sm font-bold text-brand">By file</h2>
             <ul class="mt-3 flex flex-col gap-2 text-sm">
                 <?php foreach ($uploadKept['datasets'] as $dataset => $counts): ?>
                     <li class="flex flex-wrap items-center justify-between gap-2" data-upload-file="<?= esc($dataset) ?>">
-                        <span class="font-medium"><?= esc($dataset) ?>.csv</span>
-                        <span class="text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?><?= isset($counts['removed']) ? ' · ' . esc((string) $counts['removed']) . ' to remove' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
+                        <span class="min-w-0 break-words font-medium"><?= esc($dataset) ?>.csv</span>
+                        <span class="min-w-0 break-words text-[#646464]"><?= esc((string) $counts['created']) ?> to create · <?= esc((string) $counts['updated']) ?> to update · <?= esc((string) $counts['skipped']) ?> unchanged<?= isset($counts['ended']) ? ' · ' . esc((string) $counts['ended']) . ' to end' : '' ?><?= isset($counts['removed']) ? ' · ' . esc((string) $counts['removed']) . ' to remove' : '' ?> · <?= esc((string) $counts['failed']) ?> refused</span>
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -142,7 +142,7 @@ $labels = [
         $mailPeople = (int) ($mailPlan['people'] ?? 0);
         ?>
 
-        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Emails" data-upload-mail>
+        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md sm:p-6" aria-label="Emails" data-upload-mail>
             <h2 class="text-sm font-bold text-brand">Emails</h2>
             <?php if (! ($uploadKept['email'] ?? true)): ?>
                 <p class="mt-1 text-sm text-[#3D3D3D]" data-mail-off>You chose not to email anyone. People are added quietly; send password links later from People.</p>
@@ -164,12 +164,12 @@ $labels = [
         ?>
 
         <?php if ($notes !== []): ?>
-            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="New sections" data-upload-notes>
+            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md sm:p-6" aria-label="New sections" data-upload-notes>
                 <h2 class="text-sm font-bold text-brand">New sections</h2>
                 <p class="mt-1 text-xs text-[#646464]">These sections are not in the active term yet and will be created. If one is a typo, fix the file and start over.</p>
                 <ul class="mt-3 flex flex-col gap-1 text-sm">
                     <?php foreach (array_slice($notes, 0, 50) as $issue): ?>
-                        <li><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
+                        <li class="break-words"><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
                     <?php endforeach; ?>
                 </ul>
                 <?php if (count($notes) > 50): ?>
@@ -179,12 +179,12 @@ $labels = [
         <?php endif; ?>
 
         <?php if ($refused !== []): ?>
-            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-label="Refused rows" data-upload-issues>
+            <section class="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-md sm:p-6" aria-label="Refused rows" data-upload-issues>
                 <h2 class="text-sm font-bold text-[#C33939]">Refused rows</h2>
                 <p class="mt-1 text-xs text-[#646464]">These rows are left out. Everything else is still applied.</p>
                 <ul class="mt-3 flex flex-col gap-1 text-sm">
                     <?php foreach (array_slice($refused, 0, 50) as $issue): ?>
-                        <li><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
+                        <li class="break-words"><span class="font-medium"><?= esc($issue['dataset']) ?>.csv <?= esc($issue['item']) ?>:</span> <?= esc($issue['reason']) ?></li>
                     <?php endforeach; ?>
                 </ul>
                 <?php if (count($refused) > 50): ?>

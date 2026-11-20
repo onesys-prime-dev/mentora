@@ -4,19 +4,32 @@
 // The aside runs the full height of the card (its tint and border reach the bottom however short the
 // list). From lg up the inner column stays in view beside the item and scrolls on its own: the module
 // heading and progress stay put, the list of units scrolls. --course-content-h is the height of the
-// card that scrolls (set by the course page's script).
+// card that scrolls (set by the course page's script). Below the lock the window scrolls instead, so the column
+// sticks under the app header and is at most the window's height less the header: its heading stays in view.
+// Below lg the same outline is the panel of a "Contents" dropdown above the item (details-menu.js closes
+// it on an outside click or Escape); from lg up app.css shows it whether or not the <details> is open.
 ?>
-<aside class="w-80 shrink-0 flex flex-col bg-[#F9F9FC] border-r border-[#9E9E9E]" data-learning-item-panel>
+<aside class="flex shrink-0 flex-col bg-[#F9F9FC] border-[#9E9E9E] max-lg:rounded-t-3xl max-lg:border-b max-lg:px-5 max-lg:py-3 sm:max-lg:px-8 lg:w-80 lg:border-r" data-learning-item-panel>
 
-<div class="flex flex-col lg:sticky lg:top-0 lg:max-h-(--course-content-h,100vh)">
+<details class="group/contents relative lg:sticky lg:top-[var(--app-header-h,0px)] lock:top-0" data-menu data-contents>
 
-    <div class="flex shrink-0 flex-col gap-1 p-8 border-b border-[#9E9E9E]">
+    <summary class="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm lg:hidden [&::-webkit-details-marker]:hidden">
+        <span class="shrink-0 font-semibold text-brand">Contents</span>
+        <span class="min-w-0 flex-1 truncate text-[#5E5E5E]">Module <?= esc($module['order_index']) ?> · <?= esc($module['title']) ?></span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 stroke-brand-dark transition-transform duration-(--motion-base) group-open/contents:rotate-180" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+        </svg>
+    </summary>
+
+<div class="flex flex-col bg-white max-lg:absolute max-lg:inset-x-0 max-lg:top-full max-lg:z-30 max-lg:mt-2 max-lg:max-h-[min(70dvh,32rem)] max-lg:overflow-y-auto max-lg:overscroll-contain max-lg:rounded-2xl max-lg:border max-lg:border-gray-200 max-lg:shadow-xl lg:max-h-[calc(100dvh-var(--app-header-h,0px))] lock:max-h-(--course-content-h,100vh) lg:bg-transparent" data-contents-panel>
+
+    <div class="flex shrink-0 flex-col gap-1 p-5 lg:p-8 border-b border-[#9E9E9E]">
 
         <span class="text-xl text-brand font-bold">
             Module <?= esc($module['order_index']) ?>
         </span>
 
-        <span class="text-md text-[#767676] font-bold">
+        <span class="text-md text-[#646464] font-bold">
             <?= esc($module['title']) ?>
         </span>
 
@@ -37,7 +50,8 @@
 
     </div>
 
-    <div class="flex p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain">
+    <?php // Focusable so a keyboard can scroll the list (its item rows are not focusable). ?>
+    <div tabindex="0" class="flex p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50">
 
         <div class="w-full flex flex-col gap-4">
 
@@ -48,7 +62,7 @@
 
                     <!-- header -->
                     <div
-                        class="w-full flex justify-between items-center py-2 cursor-pointer"
+                        class="w-full flex justify-between items-center py-2 cursor-pointer pointer-coarse:min-h-11"
                         data-learning-unit="<?= esc($unit['id']) ?>">
 
                         <span class="text-sm font-bold text-[#646464]/50">
@@ -157,5 +171,7 @@
     </div>
 
 </div>
+
+</details>
 
 </aside>

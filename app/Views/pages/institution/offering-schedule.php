@@ -15,11 +15,14 @@ use App\Services\Institutions\ClassScheduleService;
 $o       = $scheduleOffering;
 $name    = $o['course_code'] . ' ' . $o['section_code'];
 $action  = site_url('institution/offerings/' . $o['id'] . '/schedule');
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] placeholder:text-gray-400 '
+$primary = 'inline-flex items-center justify-center rounded-full bg-brand px-5 py-2 pointer-coarse:min-h-11 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$control = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] placeholder:text-gray-400 '
     . 'focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 $head    = 'px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[#646464]';
 $modes   = ['onsite' => 'Onsite', 'online' => 'Online', 'hybrid' => 'Hybrid'];
+
+// A phone card's field name; the grid's header row says it from md up.
+$lbl = static fn (string $t): string => '<span class="mb-1 block text-xs font-semibold text-[#646464] md:hidden" aria-hidden="true">' . $t . '</span>';
 
 // Three blank rows to add meetings to, after the ones there are.
 $rows = $scheduleRows;
@@ -75,17 +78,19 @@ if ($scheduleCanEdit) {
         <form method="post" action="<?= esc($action) ?>" class="flex flex-col gap-4" data-schedule-form>
             <?= csrf_field() ?>
 
-            <div class="overflow-hidden rounded-2xl bg-white shadow-sm">
+            <?php // A grid from md up (the Day column is pinned); below md each row is a card of labelled fields. The SIS note sits above the scroller, so it never scrolls away. ?>
+            <div class="rounded-2xl bg-white shadow-sm">
                 <?php if ($scheduleSisOwned): ?>
                     <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-3 text-xs text-[#646464]" data-sis-managed>
                         <?= icon('lock', 'h-3 w-3') ?> From the SIS
                     </div>
                 <?php endif; ?>
+                <div class="<?= $scheduleSisOwned ? 'rounded-b-2xl' : 'rounded-2xl' ?>" tabindex="0" role="region" aria-label="Class times of <?= esc($name) ?>" data-scroll-x data-sticky-first>
                 <table class="w-full text-sm">
                     <caption class="sr-only">Class times of <?= esc($name) ?></caption>
                     <thead class="max-md:sr-only border-b border-gray-100 bg-gray-50/70">
                         <tr>
-                            <th class="<?= $head ?>" scope="col">Day</th>
+                            <th class="<?= $head ?> sticky left-0 top-0 z-10 bg-gray-50" scope="col">Day</th>
                             <th class="<?= $head ?>" scope="col">Starts</th>
                             <th class="<?= $head ?>" scope="col">Ends</th>
                             <th class="<?= $head ?>" scope="col">Room</th>
@@ -101,7 +106,8 @@ if ($scheduleCanEdit) {
                             ?>
                             <tr class="max-md:flex max-md:flex-col max-md:gap-2 max-md:p-4" data-schedule-row>
                                 <?php if ($scheduleCanEdit): ?>
-                                    <td class="px-4 py-2 max-md:p-0">
+                                    <td class="sticky left-0 bg-white px-4 py-2 max-md:p-0">
+                                        <?= $lbl('Day') ?>
                                         <select class="<?= $control ?>" name="rows[<?= $i ?>][day]" aria-label="Row <?= $n ?>: day">
                                             <option value="">Choose a day</option>
                                             <?php foreach (ClassScheduleService::DAYS as $key => $label): ?>
@@ -109,10 +115,11 @@ if ($scheduleCanEdit) {
                                             <?php endforeach; ?>
                                         </select>
                                     </td>
-                                    <td class="px-4 py-2 max-md:p-0"><input class="<?= $control ?>" type="time" name="rows[<?= $i ?>][start]" value="<?= esc((string) ($r['start'] ?? '')) ?>" aria-label="Row <?= $n ?>: starts"></td>
-                                    <td class="px-4 py-2 max-md:p-0"><input class="<?= $control ?>" type="time" name="rows[<?= $i ?>][end]" value="<?= esc((string) ($r['end'] ?? '')) ?>" aria-label="Row <?= $n ?>: ends"></td>
-                                    <td class="px-4 py-2 max-md:p-0"><input class="<?= $control ?>" type="text" name="rows[<?= $i ?>][room]" maxlength="50" autocomplete="off" placeholder="Rm 204" value="<?= esc((string) ($r['room'] ?? '')) ?>" aria-label="Row <?= $n ?>: room"></td>
+                                    <td class="px-4 py-2 max-md:p-0"><?= $lbl('Starts') ?><input class="<?= $control ?>" type="time" name="rows[<?= $i ?>][start]" value="<?= esc((string) ($r['start'] ?? '')) ?>" aria-label="Row <?= $n ?>: starts"></td>
+                                    <td class="px-4 py-2 max-md:p-0"><?= $lbl('Ends') ?><input class="<?= $control ?>" type="time" name="rows[<?= $i ?>][end]" value="<?= esc((string) ($r['end'] ?? '')) ?>" aria-label="Row <?= $n ?>: ends"></td>
+                                    <td class="px-4 py-2 max-md:p-0"><?= $lbl('Room') ?><input class="<?= $control ?>" type="text" name="rows[<?= $i ?>][room]" maxlength="50" autocomplete="off" placeholder="Rm 204" value="<?= esc((string) ($r['room'] ?? '')) ?>" aria-label="Row <?= $n ?>: room"></td>
                                     <td class="px-4 py-2 max-md:p-0">
+                                        <?= $lbl('Delivery') ?>
                                         <select class="<?= $control ?>" name="rows[<?= $i ?>][mode]" aria-label="Row <?= $n ?>: delivery">
                                             <?php foreach ($modes as $key => $label): ?>
                                                 <option value="<?= esc($key) ?>"<?= $mode === $key ? ' selected' : '' ?>><?= esc($label) ?></option>
@@ -120,16 +127,17 @@ if ($scheduleCanEdit) {
                                         </select>
                                     </td>
                                 <?php else: ?>
-                                    <td class="px-4 py-3 font-medium max-md:p-0"><?= esc(ClassScheduleService::DAYS[$day] ?? $day) ?></td>
-                                    <td class="px-4 py-3 max-md:p-0"><?= esc((string) $r['start']) ?></td>
-                                    <td class="px-4 py-3 max-md:p-0"><?= esc((string) $r['end']) ?></td>
-                                    <td class="px-4 py-3 max-md:p-0"><?= esc((string) ($r['room'] ?? '') !== '' ? (string) $r['room'] : '—') ?></td>
-                                    <td class="px-4 py-3 max-md:p-0"><?= esc($modes[$mode] ?? $mode) ?></td>
+                                    <td class="sticky left-0 bg-white px-4 py-3 font-medium max-md:p-0"><?= $lbl('Day') ?><?= esc(ClassScheduleService::DAYS[$day] ?? $day) ?></td>
+                                    <td class="px-4 py-3 max-md:p-0"><?= $lbl('Starts') ?><?= esc((string) $r['start']) ?></td>
+                                    <td class="px-4 py-3 max-md:p-0"><?= $lbl('Ends') ?><?= esc((string) $r['end']) ?></td>
+                                    <td class="px-4 py-3 max-md:p-0"><?= $lbl('Room') ?><?= esc((string) ($r['room'] ?? '') !== '' ? (string) $r['room'] : '—') ?></td>
+                                    <td class="px-4 py-3 max-md:p-0"><?= $lbl('Delivery') ?><?= esc($modes[$mode] ?? $mode) ?></td>
                                 <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <?php if ($scheduleCanEdit): ?>

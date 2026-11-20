@@ -24,7 +24,7 @@ $tile = static fn (string $tone) => match ($tone) {
 $isStudent = $role === 'student';
 ?>
 
-<div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
+<div class="flex flex-col gap-6 p-4 pb-6 max-lg:@xs:p-6 max-lg:@xs:pb-8 lg:p-6 lg:pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
     <div class="flex justify-between items-center">
 
@@ -34,7 +34,7 @@ $isStudent = $role === 'student';
 
         <button
             type="button"
-            class="text-sm text-brand cursor-pointer"
+            class="text-sm text-brand cursor-pointer pointer-coarse:min-h-11 pointer-coarse:min-w-11"
             data-course-feature="assessments">
             View All
         </button>
@@ -83,14 +83,14 @@ $isStudent = $role === 'student';
 
                     <div class="flex min-w-0 flex-col">
 
-                        <span class="truncate text-md text-black/70 font-bold transition-colors duration-150 group-hover:text-brand">
+                        <span class="truncate text-md text-[#3D3D3D] font-bold transition-colors duration-150 group-hover:text-brand">
                             <?= esc($deadline['title']) ?>
                         </span>
 
                         <div class="flex items-center gap-2">
                             <?= icon('time-mono', 'h-3 w-3') ?>
 
-                            <span class="truncate text-sm text-black/50">
+                            <span class="truncate text-sm text-[#646464]">
                                 <?= esc($deadline['detail']) ?>
                             </span>
                         </div>

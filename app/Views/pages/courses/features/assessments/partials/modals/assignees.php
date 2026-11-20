@@ -17,11 +17,11 @@
 
     <div class="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 id="assignees-title" class="text-xl font-bold text-brand">Choose students</h2>
 
-            <button type="button" class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" aria-label="Close" data-close-assignees-modal>
+            <button type="button" class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11" aria-label="Close" data-close-assignees-modal>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -29,11 +29,11 @@
 
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-3 px-8 py-5">
+        <div class="flex min-h-0 flex-1 flex-col gap-3 px-5 sm:px-8 py-5 overflow-y-auto">
 
             <div class="flex items-center justify-between gap-3">
 
-                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700">
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-700 pointer-coarse:min-h-11">
                     <input type="checkbox" data-assignees-all class="h-4 w-4 rounded border-gray-300 accent-brand">
                     Select all
                 </label>
@@ -48,13 +48,13 @@
 
         </div>
 
-        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-8 py-5">
+        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 flex-wrap shrink-0">
 
-            <button type="button" data-close-assignees-modal class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+            <button type="button" data-close-assignees-modal class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 pointer-coarse:min-h-11">
                 Cancel
             </button>
 
-            <button type="button" data-assignees-save class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60">
+            <button type="button" data-assignees-save class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11">
                 Save
             </button>
 

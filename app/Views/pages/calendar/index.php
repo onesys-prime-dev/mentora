@@ -29,7 +29,7 @@ $calendarCoursesApiBase = $calendarCoursesApiBase ?? site_url($userRole . '/api/
 $calendarHeading        = $calendarHeading ?? null;
 $readOnly               = $calendarRole === 'parent';
 
-$isInstructor = $userRole === 'instructor';
+$isInstructor = in_array($userRole, ['instructor', 'chairperson'], true);
 
 $legend = array_values(array_filter([
     ['kind' => 'assessment',   'label' => 'Assessment',   'dot' => 'bg-[#946200]'],
@@ -52,7 +52,7 @@ $legend = array_values(array_filter([
 
     <div
         id="calendar-app"
-        class="flex flex-1 min-h-0 flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0"
+        class="flex flex-1 min-h-0 flex-col gap-5 rounded-3xl bg-white p-5 shadow-sm max-sm:-mx-gutter max-sm:rounded-none max-sm:px-0 sm:p-8 lg:min-h-0"
         data-today="<?= esc($today) ?>"
         data-role="<?= esc($calendarRole) ?>"
         data-api-base="<?= esc($calendarApiBase) ?>"
@@ -62,15 +62,17 @@ $legend = array_values(array_filter([
         data-assessment-types="<?= esc(json_encode($assessmentTypes), 'attr') ?>"
         data-abilities="<?= esc(json_encode(in_array($calendarRole, ['instructor', 'chairperson'], true) ? \App\Services\Courses\CourseAbilities::for($user) : []), 'attr') ?>">
 
+        <?php // Below md: navigation and label on the first row, the Key and the view switch on the second.
+              // Below sm the card runs edge to edge (seven 44px day columns fit a 320px phone), so the toolbar keeps the gutter. ?>
         <!-- Toolbar -->
-        <div class="shrink-0 flex flex-wrap items-center justify-between gap-4">
+        <div class="shrink-0 flex flex-col gap-3 max-sm:px-gutter md:flex-row md:flex-wrap md:items-center md:justify-between md:gap-4">
 
-            <div class="flex items-center gap-3">
+            <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-3">
 
                 <button
                     type="button"
                     data-calendar-nav="prev"
-                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5"
+                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                     aria-label="Previous">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -80,7 +82,7 @@ $legend = array_values(array_filter([
                 <button
                     type="button"
                     data-calendar-nav="next"
-                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5"
+                    class="h-10 w-10 flex items-center justify-center rounded-full border border-[#A9A9A9]/50 text-[#646464] transition hover:bg-brand/5 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                     aria-label="Next">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -90,20 +92,34 @@ $legend = array_values(array_filter([
                 <button
                     type="button"
                     data-calendar-today
-                    class="rounded-full border border-[#A9A9A9]/50 px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-brand/5">
+                    class="rounded-full border border-[#A9A9A9]/50 px-4 py-2 text-sm font-semibold text-[#646464] transition hover:bg-brand/5 pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                     Today
                 </button>
 
-                <span data-calendar-label class="text-2xl font-bold text-brand"></span>
+                <span data-calendar-label class="text-fluid-h2 font-bold text-brand lg:text-2xl"></span>
 
             </div>
 
-            <div class="flex items-center gap-4">
+            <div class="flex items-center justify-between gap-4">
 
-                <!-- legend -->
+                <!-- legend: a Key dropdown below md -->
+                <details data-menu class="relative md:hidden">
+                    <summary class="flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#A9A9A9]/50 px-4 py-2 text-sm font-semibold text-[#646464] pointer-coarse:min-h-11 [&::-webkit-details-marker]:hidden">
+                        Key <span aria-hidden="true">&#9662;</span>
+                    </summary>
+                    <div class="absolute left-0 top-full z-20 mt-2 flex w-48 flex-col gap-2 rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
+                        <?php foreach ($legend as $item): ?>
+                            <span class="flex items-center gap-2 text-sm text-[#646464]">
+                                <span class="h-2 w-2 rounded-full <?= $item['dot'] ?>"></span>
+                                <?= esc($item['label']) ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+
                 <div class="hidden md:flex items-center gap-4">
                     <?php foreach ($legend as $item): ?>
-                        <span class="flex items-center gap-1.5 text-xs text-[#878787]">
+                        <span class="flex items-center gap-1.5 text-xs text-[#646464]">
                             <span class="h-2 w-2 rounded-full <?= $item['dot'] ?>"></span>
                             <?= esc($item['label']) ?>
                         </span>
@@ -117,7 +133,7 @@ $legend = array_values(array_filter([
                         <button
                             type="button"
                             data-calendar-view="<?= esc($view) ?>"
-                            class="rounded-full px-4 py-1.5 font-semibold text-[#646464] transition <?= $view === 'month' ? 'bg-brand text-white' : '' ?>">
+                            class="rounded-full px-4 py-1.5 font-semibold text-[#646464] transition pointer-coarse:min-h-11 pointer-coarse:min-w-11 <?= $view === 'month' ? 'bg-brand text-white' : '' ?>">
                             <?= esc($label) ?>
                         </button>
                     <?php endforeach; ?>
@@ -129,12 +145,12 @@ $legend = array_values(array_filter([
         </div>
 
         <!-- Grid -->
-        <div class="flex-1 min-h-0 rounded-2xl border border-[#A9A9A9]/50 overflow-hidden">
+        <div class="flex-1 min-h-0 rounded-2xl border border-[#A9A9A9]/50 overflow-hidden max-sm:rounded-none max-sm:border-x-0">
             <?php // The grid arrives already showing a month's shape; calendar.js replaces it with the real grid. ?>
             <div id="calendar-body" class="h-full min-h-[420px] overflow-y-auto scroll-area bg-white" aria-busy="true">
                 <div class="grid h-full grid-cols-7 animate-pulse" aria-hidden="true" data-server-skeleton-shape>
                     <?php for ($i = 0; $i < 35; $i++): ?>
-                        <div class="min-h-[84px] border-b border-r border-gray-100 p-2">
+                        <div class="min-h-14 border-b border-r border-gray-100 p-2 md:min-h-[84px]">
                             <div class="h-3 w-5 rounded bg-gray-200"></div>
                             <?php if ($i % 4 === 1): ?>
                                 <div class="mt-2 h-4 w-4/5 rounded bg-gray-100"></div>
@@ -156,19 +172,22 @@ $legend = array_values(array_filter([
     </template>
 <?php endif; ?>
 
-<!-- One modal shell, body swapped per action by calendar.js -->
+<!-- One modal shell, body swapped per action by calendar.js. Below sm it is a bottom sheet (app.css: the rise). -->
 <div
     id="calendar-modal"
-    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+    class="hidden fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
     role="dialog"
-    aria-modal="true">
+    aria-modal="true"
+    aria-labelledby="calendar-modal-title">
 
-    <div class="flex max-h-full w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div data-calendar-modal-panel class="flex max-h-[85dvh] w-full max-w-2xl flex-col gap-5 overflow-y-auto overscroll-contain rounded-t-2xl bg-white p-6 shadow-xl max-sm:pt-3 max-sm:pb-safe-4 sm:max-h-full sm:rounded-2xl">
+
+        <div data-dialog-handle class="-my-2 flex justify-center py-2 sm:hidden" aria-hidden="true"><span class="h-1.5 w-10 rounded-full"></span></div>
 
         <div class="flex items-center justify-between">
-            <span data-calendar-modal-title class="text-lg font-bold text-brand"></span>
+            <span id="calendar-modal-title" data-calendar-modal-title class="text-lg font-bold text-brand"></span>
 
-            <button type="button" data-calendar-modal-close class="text-[#A9A9A9] transition hover:text-[#646464]" aria-label="Close">
+            <button type="button" data-calendar-modal-close class="flex items-center justify-center text-[#A9A9A9] transition hover:text-[#646464] pointer-coarse:min-h-11 pointer-coarse:min-w-11" aria-label="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>

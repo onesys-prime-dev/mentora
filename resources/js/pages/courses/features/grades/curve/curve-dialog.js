@@ -13,6 +13,7 @@
 
 import { fetchCurves, previewCurve, applyCurve, undoCurve } from "../api.js";
 import { bindModal } from "../../assessments/modals/index.js";
+import { bindScrollX } from "../../../../../shared/scroll-x.js";
 
 const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -124,7 +125,7 @@ export function bindCurveDialog(reload)
                     ${escapeHtml(curve.label)}
                     ${curve.note ? `<span class="block text-xs text-gray-500">${escapeHtml(curve.note)}</span>` : ""}
                 </span>
-                <button type="button" class="shrink-0 font-semibold text-[#C33939] hover:underline" data-curve-undo="${curve.id}">Remove</button>
+                <button type="button" class="shrink-0 font-semibold text-[#C33939] hover:underline pointer-coarse:min-h-11" data-curve-undo="${curve.id}">Remove</button>
             </li>`).join("");
 
         liveList.querySelectorAll("[data-curve-undo]").forEach((button) => {
@@ -178,14 +179,18 @@ export function bindCurveDialog(reload)
                 <li class="rounded-xl bg-brand-tint px-4 py-3">Passing (${fmt(s.passing_mark)}%): <strong>${s.passing_before}</strong> → <strong>${s.passing_after}</strong></li>
                 <li class="rounded-xl bg-brand-tint px-4 py-3">${s.unchanged} unchanged${s.lowered ? `, ${s.lowered} go down` : ""}</li>
             </ul>
-            <table class="w-full text-left text-sm">
+            <div data-scroll-x role="region" aria-label="Curve preview" tabindex="0" class="overflow-x-auto">
+            <table class="w-full min-w-max text-left text-sm">
                 <thead class="text-xs uppercase text-gray-500"><tr><th class="pb-1">Student</th>${data.scope === "item" ? `<th class="pb-1 text-right">Score</th>` : ""}<th class="pb-1 text-right">Final grade</th></tr></thead>
                 <tbody>${rows}</tbody>
             </table>
+            </div>
             ${data.rows.length > 12 ? `<p class="text-xs text-gray-500">Showing 12 of ${data.rows.length} students.</p>` : ""}`;
 
         result.classList.remove("hidden");
         result.classList.add("flex");
+        // The preview table's edge fades (it scrolls sideways on a phone).
+        bindScrollX(result);
         apply.classList.remove("hidden");
         apply.disabled = false;
 

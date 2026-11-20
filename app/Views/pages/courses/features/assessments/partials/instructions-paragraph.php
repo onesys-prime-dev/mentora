@@ -45,13 +45,13 @@ if (!function_exists('renderInstructionsInline')) {
 
 <?php if (empty($blocks)): ?>
 
-    <p class="text-sm italic text-[#767676]">
+    <p class="text-sm italic text-[#646464]">
         <?= esc($instructionsEmptyText ?? 'No instructions added yet. Click Edit to write some.') ?>
     </p>
 
 <?php else: ?>
 
-    <div class="flex flex-col gap-3 text-sm text-[#646464]">
+    <div class="flex min-w-0 flex-col gap-3 text-sm text-[#646464] wrap-break-word">
 
         <?php foreach ($blocks as $block): ?>
 

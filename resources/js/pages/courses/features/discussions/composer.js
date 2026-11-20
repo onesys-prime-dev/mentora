@@ -84,7 +84,7 @@ export function setupComposer(root, onSaved, { onChange = null } = {}) {
             const remove = document.createElement("button");
             remove.type = "button";
             remove.setAttribute("aria-label", `Remove ${file.original_filename}`);
-            remove.className = "hover:text-[#C33939]";
+            remove.className = "inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 hover:text-[#C33939]";
             remove.textContent = "×";
             remove.onclick = () => {
                 attachments.splice(index, 1);

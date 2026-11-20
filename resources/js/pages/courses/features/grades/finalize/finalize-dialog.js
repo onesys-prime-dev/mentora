@@ -76,7 +76,7 @@ export function bindFinalizeDialog(reload)
                     ${sent}
                     <div class="flex flex-col gap-2">
                         <label for="finalize-reopen-reason" class="text-sm font-semibold text-gray-700">Reason</label>
-                        <textarea id="finalize-reopen-reason" rows="3" data-finalize-reason class="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none transition focus:border-brand" placeholder="e.g. A score was entered wrongly"></textarea>
+                        <textarea id="finalize-reopen-reason" rows="3" data-finalize-reason class="rounded-xl border border-gray-300 px-4 py-3 text-base outline-none sm:text-sm transition focus:border-brand" placeholder="e.g. A score was entered wrongly"></textarea>
                     </div>`;
 
                 confirm.textContent = "Reopen grades";

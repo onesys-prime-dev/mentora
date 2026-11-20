@@ -13,10 +13,10 @@
  * @var list<array<string, mixed>> $structureDeanCandidates people who hold the dean role
  */
 $base    = 'institution/structure';
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$second  = 'rounded-full border border-brand px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
-$warn    = 'text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand px-4 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$warn    = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50 rounded';
 
 $badge = static fn (bool $active, string $label = ''): string => view('components/status-badge', [
     'label' => $label !== '' ? $label : ($active ? 'Active' : 'Inactive'),
@@ -88,14 +88,14 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
             <label class="sr-only" for="structure-search">Search colleges and programs</label>
             <input id="structure-search" type="search" placeholder="Search structure" autocomplete="off" spellcheck="false"
-                class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm placeholder:text-[#767676] focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20" data-structure-search>
+                class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-base pointer-coarse:min-h-11 sm:text-sm placeholder:text-[#767676] focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20" data-structure-search>
 
             <ul class="flex flex-col gap-1" data-structure-tree>
                 <?php foreach ($structureTree as $college): ?>
                     <?php $collegeActive = (int) $college['is_active'] === 1; ?>
                     <li data-tree-college="<?= esc((string) $college['id']) ?>">
                         <button type="button" data-select="college-<?= esc((string) $college['id']) ?>" data-search-text="<?= esc(strtolower($college['code'] . ' ' . $college['name']), 'attr') ?>"
-                            class="group/college flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
+                            class="group/college flex w-full items-center gap-2 rounded-xl px-3 py-2 pointer-coarse:min-h-11 text-left text-sm font-semibold text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:text-brand">
                             <span class="rounded bg-brand-tint px-1.5 py-0.5 font-mono text-[11px] text-brand-dark"><?= esc($college['code']) ?></span>
                             <span class="min-w-0 flex-1 break-words leading-snug <?= $collegeActive ? '' : 'text-[#646464]' ?>"><?= esc($college['name']) ?></span>
                             <span class="text-xs font-normal text-[#646464]"><?= esc((string) count($college['departments'])) ?></span>
@@ -110,7 +110,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                     <?php $departmentActive = (int) $department['is_active'] === 1; ?>
                                     <li>
                                         <button type="button" data-select="department-<?= esc((string) $department['id']) ?>" data-search-text="<?= esc(strtolower($department['code'] . ' ' . $department['name'] . ' ' . implode(' ', array_map(static fn (array $p): string => $p['code'] . ' ' . $p['name'], $department['programs']))), 'attr') ?>"
-                                            class="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-left text-sm text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:font-semibold data-[active=true]:text-brand">
+                                            class="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 pointer-coarse:min-h-11 text-left text-sm text-[#1A1C1E] transition hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 data-[active=true]:bg-brand/10 data-[active=true]:font-semibold data-[active=true]:text-brand">
                                             <span class="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] text-[#646464]"><?= esc($department['code']) ?></span>
                                             <span class="min-w-0 flex-1 break-words leading-snug <?= $departmentActive ? '' : 'text-[#646464]' ?>"><?= esc($department['name']) ?></span>
                                             <span class="text-xs text-[#646464]"><?= esc((string) count($department['programs'])) ?></span>
@@ -184,7 +184,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                         <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                             Dean
                             <?php if ($structureCanEdit && $collegeActive && ($dean === null || ! isset($structureSisDeans[(int) $dean['id']]))): ?>
-                                <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
+                                <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                     data-dialog-open="structure-dean"
                                     data-dialog-title="<?= $dean === null ? 'Assign a dean to ' . esc($college['name']) : 'Replace ' . esc($dean['name']) . ' as dean of ' . esc($college['name']) . '? Their assignment ends.' ?>"
                                     data-dialog-label="<?= $dean === null ? 'Assign' : 'Replace' ?>"
@@ -200,7 +200,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                     <?php if (isset($structureSisDeans[(int) $dean['id']])): ?>
                                         <span class="inline-flex items-center gap-1 text-xs text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here."><?= icon('lock', 'h-3 w-3') ?>From the SIS</span>
                                     <?php elseif ($structureCanEdit): ?>
-                                        <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
+                                        <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
                                             aria-label="Remove <?= esc($dean['name']) ?> as dean"
                                             data-dialog-open="structure-confirm"
                                             data-dialog-title="Remove <?= esc($dean['name']) ?> as dean?"
@@ -245,7 +245,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                     <?php // One department ?>
                     <div class="flex flex-col gap-5" data-department="<?= esc((string) $department['id']) ?>" data-view="department-<?= esc((string) $department['id']) ?>" hidden>
 
-                        <button type="button" class="flex w-fit items-center gap-1 text-xs font-semibold uppercase tracking-wide text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded" data-select="college-<?= esc((string) $college['id']) ?>">
+                        <button type="button" class="flex w-fit items-center gap-1 pointer-coarse:min-h-11 text-xs font-semibold uppercase tracking-wide text-[#646464] hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded" data-select="college-<?= esc((string) $college['id']) ?>">
                             <svg class="h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg><?= esc($college['name']) ?>
                         </button>
 
@@ -295,14 +295,14 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                             <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                                 Chairperson
                                 <?php if ($structureCanEdit && $departmentActive && $chairs === []): ?>
-                                    <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
+                                    <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-chair"
                                         data-dialog-title="Assign a chairperson to <?= esc($department['name']) ?>"
                                         data-dialog-label="Assign"
                                         data-dialog-action="<?= esc(site_url($base . '/departments/' . $department['id'] . '/chairpersons')) ?>">Assign chairperson</button>
                                 <?php elseif ($structureCanEdit && $departmentActive && ! isset($structureSisChairs[(int) $chairs[0]['id']])): ?>
                                     <?php // One chairperson per department (16.0): choosing someone else replaces them, once confirmed here. ?>
-                                    <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
+                                    <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-chair"
                                         data-dialog-title="Replace <?= esc($chairs[0]['name']) ?> as chairperson of <?= esc($department['name']) ?>? Their assignment ends and they are told."
                                         data-dialog-label="Replace"
@@ -320,7 +320,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                         <?php if (isset($structureSisChairs[(int) $chair['id']])): ?>
                                             <span class="inline-flex items-center gap-1 text-xs text-[#646464]" data-sis-managed title="Managed by your student information system. Change it there; the next sync brings it here."><?= icon('lock', 'h-3 w-3') ?>From the SIS</span>
                                         <?php elseif ($structureCanEdit): ?>
-                                            <button type="button" class="rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
+                                            <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded text-xs font-semibold text-[#C33939] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"
                                                 aria-label="Remove <?= esc($chair['name']) ?> as chairperson"
                                                 data-dialog-open="structure-confirm"
                                                 data-dialog-title="Remove <?= esc($chair['name']) ?> as chairperson?"
@@ -337,7 +337,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                             <h3 class="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-wide text-[#646464]">
                                 Programs
                                 <?php if ($structureCanEdit && $departmentActive): ?>
-                                    <button type="button" class="text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
+                                    <button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold normal-case tracking-normal text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded"
                                         data-dialog-open="structure-program"
                                         data-dialog-title="Add a program to <?= esc($department['name']) ?>"
                                         data-dialog-label="Add program"
@@ -362,9 +362,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
                                                 <?php if ($structureCanEdit): ?>
                                                     <details class="relative" data-row-menu>
-                                                        <summary class="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-lg border border-gray-200 text-[#3D3D3D] marker:content-none hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" aria-label="Actions for <?= esc($program['name']) ?>">⋯</summary>
+                                                        <summary class="flex h-8 w-8 pointer-coarse:min-h-11 pointer-coarse:min-w-11 cursor-pointer list-none items-center justify-center rounded-lg border border-gray-200 text-[#3D3D3D] marker:content-none hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" aria-label="Actions for <?= esc($program['name']) ?>">⋯</summary>
                                                         <div class="absolute right-0 z-10 mt-1 flex min-w-44 flex-col rounded-xl border border-gray-200 bg-white p-1 shadow-lg">
-                                                            <button type="button" class="rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
+                                                            <button type="button" class="flex items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
                                                                 data-dialog-open="structure-program"
                                                                 data-dialog-title="Edit program"
                                                                 data-dialog-label="Save"
@@ -372,7 +372,7 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                                                 data-dialog-values="<?= $json(['code' => $program['code'], 'name' => $program['name']]) ?>">Edit</button>
 
                                                             <?php if ($program['status'] === 'active'): ?>
-                                                                <button type="button" class="rounded-lg px-3 py-2 text-left text-sm text-[#C33939] hover:bg-gray-50"
+                                                                <button type="button" class="flex items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm text-[#C33939] hover:bg-gray-50"
                                                                     data-dialog-open="structure-confirm"
                                                                     data-dialog-title="Deactivate <?= esc($program['name']) ?>?"
                                                                     data-dialog-text="Students and instructors keep their history, but no new courses or offerings can be added. It must have no active courses and no offerings in an active term."
@@ -381,12 +381,12 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
                                                             <?php elseif ($departmentActive): ?>
                                                                 <form method="post" action="<?= esc(site_url($base . '/programs/' . $program['id'] . '/reactivate')) ?>">
                                                                     <?= csrf_field() ?>
-                                                                    <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50">Reactivate</button>
+                                                                    <button type="submit" class="flex w-full items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50">Reactivate</button>
                                                                 </form>
                                                             <?php endif; ?>
 
                                                             <?php if ($program['status'] !== 'archived'): ?>
-                                                                <button type="button" class="rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
+                                                                <button type="button" class="flex items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm hover:bg-gray-50"
                                                                     data-dialog-open="structure-confirm"
                                                                     data-dialog-title="Archive <?= esc($program['name']) ?>?"
                                                                     data-dialog-text="Archiving is for programs that have ended. It is kept for reports and history. You can reactivate it later."
@@ -426,8 +426,8 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
             . csrf_field() . $fields
             . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
             . '<div class="flex flex-wrap items-center justify-end gap-3">'
-            . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-            . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
+            . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+            . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Save</button>'
             . '</div></form>';
 
         return [$body, ''];
@@ -476,9 +476,9 @@ $programTone = ['active' => 'success', 'inactive' => 'neutral', 'archived' => 'n
 
     <?= view('components/dialog', ['id' => 'structure-college', 'title' => 'College', 'body' => $collegeBody, 'footer' => $collegeFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-college-new', 'title' => 'Add a college', 'body' => $collegeNewBody, 'footer' => $collegeNewFooter], ['saveData' => false]) ?>
-    <?= view('components/dialog', ['id' => 'structure-dean', 'title' => 'Assign a dean', 'body' => $deanBody, 'footer' => $deanFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-dean', 'variant' => 'default', 'title' => 'Assign a dean', 'body' => $deanBody, 'footer' => $deanFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-sub', 'title' => 'Department', 'body' => $departmentBody, 'footer' => $departmentFooter], ['saveData' => false]) ?>
-    <?= view('components/dialog', ['id' => 'structure-chair', 'title' => 'Assign a chairperson', 'body' => $chairBody, 'footer' => $chairFooter], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'structure-chair', 'variant' => 'default', 'title' => 'Assign a chairperson', 'body' => $chairBody, 'footer' => $chairFooter], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'structure-program', 'title' => 'Program', 'body' => $progBody, 'footer' => $progFooter], ['saveData' => false]) ?>
 
     <?= view('components/confirm', [

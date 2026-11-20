@@ -60,7 +60,7 @@ foreach ($requests as $r) {
     $rows[] = [
         'id'      => (int) $r['id'],
         'cells'   => $cells,
-        'actions' => $decided ? '' : '<button type="button" data-dialog-open="review-' . (int) $r['id'] . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark">Review</button>',
+        'actions' => $decided ? '' : '<button type="button" data-dialog-open="review-' . (int) $r['id'] . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Review</button>',
     ];
 }
 
@@ -93,9 +93,9 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
         'description' => ($area === 'dean' ? 'Requests to change a final grade in your college.' : 'Requests to change a final grade in a college with no dean who decides them.') . ' Approving changes the grade; rejecting leaves it as it is.',
     ], ['saveData' => false]) ?>
 
-    <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
-        <a href="<?= esc($tabLink('pending')) ?>" <?= ! $decided ? 'aria-current="true"' : '' ?> class="rounded-full px-3 py-1.5 font-semibold <?= ! $decided ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">Waiting for you <span data-pending-count>(<?= (int) $pending ?>)</span></a>
-        <a href="<?= esc($tabLink('decided')) ?>" <?= $decided ? 'aria-current="true"' : '' ?> class="rounded-full px-3 py-1.5 font-semibold <?= $decided ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">Decided</a>
+    <div class="flex flex-wrap items-center gap-1 text-xs" role="group" aria-label="Show">
+        <a href="<?= esc($tabLink('pending')) ?>" <?= ! $decided ? 'aria-current="true"' : '' ?> class="rounded-full px-3 py-1.5 font-semibold pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:gap-1 pointer-coarse:min-h-11 <?= ! $decided ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">Waiting for you <span data-pending-count>(<?= (int) $pending ?>)</span></a>
+        <a href="<?= esc($tabLink('decided')) ?>" <?= $decided ? 'aria-current="true"' : '' ?> class="rounded-full px-3 py-1.5 font-semibold pointer-coarse:inline-flex pointer-coarse:items-center pointer-coarse:gap-1 pointer-coarse:min-h-11 <?= $decided ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">Decided</a>
     </div>
 
     <?= view('components/toolbar', [
@@ -117,7 +117,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the requests</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been decided.</span>
-            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($base) ?>" class="inline-flex items-center rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 pointer-coarse:min-h-11">Try again</a>
         </div>
 
     <?php else: ?>
@@ -140,7 +140,10 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
         <?php
         $field = static fn (array $f): string => view('components/form-field', $f, ['saveData' => false]);
 
-        $closeButton = '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>';
+        $approveClass = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11';
+        $rejectClass  = 'rounded-full border border-[#C33939]/50 px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC] pointer-coarse:min-h-11';
+
+        $closeButton = '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Cancel</button>';
         ?>
 
         <?php foreach ($requests as $r): ?>
@@ -152,6 +155,7 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             $asked    = $pct($r['requested_percentage']);
             $was      = $pct($r['calculated_percentage']);
             $now      = $pct($r['current_calculated']);
+            $approveLabel = $removal ? 'Approve removal' : 'Approve ' . $asked;
 
             $consequence = $removal
                 ? 'Approve removing the override for ' . $student . ' in ' . $course . '? The grade returns to the calculated ' . $now . '.'
@@ -178,17 +182,22 @@ $sortUrl = static fn (string $column, string $next): string => $base . '?' . htt
             $body = '<div class="flex flex-col gap-4">' . $details . $drift
                 . ($breakdown !== '' ? '<div><p class="mb-1 text-xs font-semibold uppercase tracking-wide text-[#646464]">How the grade is made up</p><ul class="flex flex-col gap-1 rounded-xl bg-gray-50 px-3 py-2 text-sm" data-breakdown>' . $breakdown . '</ul></div>' : '')
 
-                . '<form method="post" action="' . esc(site_url("{$area}/approvals/{$id}/approve"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
+                . '<form id="review-' . $id . '-approve" method="post" action="' . esc(site_url("{$area}/approvals/{$id}/approve"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
                 . '<p class="text-sm font-medium text-[#1A1C1E]">' . esc($consequence) . '</p>'
                 . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
-                . '<div class="flex justify-end"><button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($removal ? 'Approve removal' : 'Approve ' . $asked) . '</button></div>'
+                . '<div class="flex justify-end max-sm:hidden"><button type="submit" data-dialog-label class="' . $approveClass . '">' . esc($approveLabel) . '</button></div>'
                 . '</form>'
 
-                . '<form method="post" action="' . esc(site_url("{$area}/approvals/{$id}/reject"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
+                . '<form id="review-' . $id . '-reject" method="post" action="' . esc(site_url("{$area}/approvals/{$id}/reject"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
                 . $field(['name' => 'reason', 'label' => 'Or reject, and say why', 'type' => 'textarea', 'maxlength' => 2000, 'help' => esc(trim((string) $r['requester_name']) ?: 'The requester') . ' will read this. The grade stays as it is.'])
                 . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
-                . '<div class="flex flex-wrap items-center justify-end gap-3">' . $closeButton . '<button type="submit" data-dialog-label class="rounded-full border border-[#C33939]/50 px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Reject</button></div>'
-                . '</form></div>';
+                . '<div class="flex flex-wrap items-center justify-end gap-3 max-sm:hidden">' . $closeButton . '<button type="submit" data-dialog-label class="' . $rejectClass . '">Reject</button></div>'
+                . '</form></div>'
+
+                // Two forms, so no one row can be pinned: on a phone both submits sit in one bar pinned to the bottom (app.css), above the keyboard.
+                . '<div data-dialog-actions class="flex items-center justify-end gap-3 sm:hidden">'
+                . '<button type="submit" form="review-' . $id . '-reject" class="' . $rejectClass . '">Reject</button>'
+                . '<button type="submit" form="review-' . $id . '-approve" class="' . $approveClass . '">' . esc($approveLabel) . '</button></div>';
             ?>
             <?= view('components/dialog', ['id' => "review-{$id}", 'title' => $student . ', ' . $course, 'body' => $body, 'size' => 'lg'], ['saveData' => false]) ?>
         <?php endforeach; ?>

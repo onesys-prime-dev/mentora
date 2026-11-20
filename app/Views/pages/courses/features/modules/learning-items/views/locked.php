@@ -14,7 +14,7 @@ $lockLinks ??= true;
 $prerequisites = $lock['prerequisites'] ?? [];
 ?>
 
-<section class="flex flex-col items-center justify-center gap-5 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] px-8 py-16 text-center">
+<section class="flex flex-col items-center justify-center gap-5 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] px-5 py-12 text-center sm:px-8 sm:py-16">
 
     <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
         <?= icon('lock', 'h-8 w-8') ?>

@@ -23,7 +23,7 @@ $students = $data['students'] ?? [];
 $seeAll = static fn (string $tab): ?string => $userRole === 'instructor' && (new \App\Services\Auth\RolePermissions())->allows($user, 'courses.view', 'instructor')
     ? site_url('instructor/grades?tab=' . $tab)
     : null;
-$seeAllClass = 'text-xs font-semibold text-blue-900 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 rounded';
+$seeAllClass = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-xs font-semibold text-blue-900 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 rounded';
 
 $reasonStyles = [
     'inactive' => ['chip' => 'bg-red-500/15 text-red-700',     'label' => 'Inactive',   'bar' => 'bg-red-600'],
@@ -64,14 +64,17 @@ $reasonStyles = [
 
                 <?php foreach ($students as $index => $student): ?>
 
+                    <?php $beyondCap = $index >= 5 ? ' max-lg:hidden' : ''; ?>
+
                     <?php if ($index > 0): ?>
-                        <div class="h-px -mx-3 bg-black/5" aria-hidden="true"></div>
+                        <div class="h-px -mx-3 bg-black/5<?= $beyondCap ?>" aria-hidden="true"></div>
                     <?php endif; ?>
 
                     <?php $style = $reasonStyles[$student['reason']] ?? $reasonStyles['behind']; ?>
 
                     <a
-                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
+                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45<?= $beyondCap ?>"
+                        data-at-risk-row
                         href="<?= site_url($userRole . '/courses/' . $student['offering_id'] . '/' . $student['slug'] . '/grades?roster=1&student=' . $student['student_id']) ?>">
 
                         <img
@@ -112,6 +115,11 @@ $reasonStyles = [
                 <?php endforeach; ?>
 
             </div>
+
+            <?php // Phones list the first five; "View all" leads to the rest. ?>
+            <?php if (count($students) > 5 && ($all = $seeAll('at-risk')) !== null): ?>
+                <a href="<?= esc($all, 'attr') ?>" data-view-all class="lg:hidden mt-2 inline-flex items-center pointer-coarse:min-h-11 text-xs font-medium text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View all</a>
+            <?php endif; ?>
 
         <?php endif; ?>
 

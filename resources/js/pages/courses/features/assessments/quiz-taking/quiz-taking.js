@@ -23,6 +23,8 @@ let state = {
 
 const saveTimers = new Map();
 
+let saveErrorToast = null;
+
 let timerInterval = null;
 
 // What watches the attempt in progress (see attempt-guard.js); only one at a time.
@@ -251,6 +253,11 @@ function queueAnswerSave(questionId, payload, delay = 600) {
 
             setSaveStatus("error");
 
+            // The top bar's "Save failed" scrolls away below lg and submit does not resend, so say it where it is seen (once).
+            if (!saveErrorToast?.isConnected) {
+                saveErrorToast = showToast("Your last answer was not saved. Check your connection and answer it again.", { tone: "danger" });
+            }
+
         }
 
     }, delay);
@@ -353,8 +360,13 @@ function bindTimer() {
     const endsAt =
         new Date(timerEl.dataset.endsAt).getTime();
 
-    const valueEl =
-        document.querySelector("[data-quiz-timer-value]");
+    // The top bar's timer, and below lg its copy in the pinned submit bar.
+    const valueEls =
+        document.querySelectorAll("[data-quiz-timer-value]");
+
+    const show = (text) => valueEls.forEach((el) => {
+        el.textContent = text;
+    });
 
     const form =
         document.querySelector("#quiz-answer-form");
@@ -368,9 +380,7 @@ function bindTimer() {
 
             clearInterval(timerInterval);
 
-            if (valueEl) {
-                valueEl.textContent = "0:00";
-            }
+            show("0:00");
 
             if (form) {
                 submitNow(form, { timeUp: true });
@@ -389,9 +399,7 @@ function bindTimer() {
         const seconds =
             totalSeconds % 60;
 
-        if (valueEl) {
-            valueEl.textContent = `${minutes}:${String(seconds).padStart(2, "0")}`;
-        }
+        show(`${minutes}:${String(seconds).padStart(2, "0")}`);
 
     }
 

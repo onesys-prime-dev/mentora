@@ -80,14 +80,14 @@ $reasons = [
             </ul>
 
             <details class="mt-3">
-                <summary class="<?= $btn ?> inline-block cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Override for this institution</summary>
+                <summary class="<?= $btn ?> inline-flex items-center pointer-coarse:min-h-11 cursor-pointer border-gray-300 bg-white text-[#3D3D3D] hover:bg-gray-50">Override for this institution</summary>
                 <form method="post" action="<?= site_url('admin/institutions/' . $flagInstitution['id'] . '/flags/' . $key) ?>" class="mt-3 grid max-w-2xl gap-3 sm:grid-cols-2">
                     <?= csrf_field() ?>
                     <?= view('components/form-field', ['name' => 'state', 'label' => 'For this institution', 'type' => 'select', 'options' => ['default' => 'No override (follow plan and default)', 'on' => 'On', 'off' => 'Off'], 'value' => (string) $state], ['saveData' => false]) ?>
                     <?= view('components/form-field', ['name' => 'ends_on', 'label' => 'Last day (optional)', 'type' => 'date', 'value' => (string) ($override['ends_on'] ?? '')], ['saveData' => false]) ?>
                     <?= view('components/form-field', ['name' => 'note', 'label' => 'Note', 'value' => (string) ($override['note'] ?? ''), 'maxlength' => 500, 'span' => 'sm:col-span-2', 'help' => 'Required when turning it on or off.'], ['saveData' => false]) ?>
                     <div class="sm:col-span-2">
-                        <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
+                        <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>
                     </div>
                 </form>
             </details>

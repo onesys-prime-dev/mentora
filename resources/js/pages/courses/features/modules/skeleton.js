@@ -10,7 +10,7 @@ export function renderModulesSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-10" aria-hidden="true">
+    <div class="p-5 sm:p-8 lg:p-10 animate-pulse flex flex-col gap-10" aria-hidden="true">
 
         ${renderToolbar()}
 
@@ -62,15 +62,15 @@ function renderModule() {
         <!-- Header -->
         <div class="flex justify-between items-center p-6">
 
-            <div class="flex gap-5 items-center flex-1">
+            <div class="flex min-w-0 gap-5 items-center flex-1">
 
-                <div class="h-15 w-15 rounded-full bg-gray-200"></div>
+                <div class="h-15 w-15 shrink-0 rounded-full bg-gray-200"></div>
 
-                <div class="flex flex-col gap-3 flex-1">
+                <div class="flex min-w-0 flex-col gap-3 flex-1">
 
                     <div class="h-3 w-24 rounded bg-gray-200"></div>
 
-                    <div class="h-7 w-72 rounded bg-gray-200"></div>
+                    <div class="h-7 w-72 max-w-full rounded bg-gray-200"></div>
 
                 </div>
 
@@ -98,7 +98,7 @@ export function renderModulePageSkeleton() {
 
     return `
 
-    <div class="p-10 animate-pulse flex flex-col gap-8" aria-hidden="true">
+    <div class="p-5 sm:p-8 lg:p-10 animate-pulse flex flex-col gap-8" aria-hidden="true">
 
         <!-- top bar -->
         <div class="flex items-start justify-between gap-5 pb-6 border-b border-black/10">
@@ -240,7 +240,10 @@ export function renderLearningItemSkeleton() {
 
     return `
 
-    <div class="flex animate-pulse" aria-hidden="true">
+    <div class="flex flex-col lg:flex-row animate-pulse" aria-hidden="true">
+
+        <!-- the Contents control (below lg) -->
+        <div class="bg-[#F9F9FC] px-5 py-3 sm:px-8 lg:hidden"><div class="h-11 rounded-xl bg-gray-200"></div></div>
 
         <!-- left nav panel -->
         <div class="hidden w-72 shrink-0 flex-col gap-4 border-r border-gray-100 p-6 lg:flex">
@@ -253,7 +256,7 @@ export function renderLearningItemSkeleton() {
 
         </div>
 
-        <div class="flex min-w-0 flex-1 flex-col gap-5 p-10">
+        <div class="flex min-w-0 flex-1 flex-col gap-5 p-5 sm:p-8 lg:p-10">
 
             <!-- breadcrumb -->
             <div class="h-4 w-64 rounded bg-gray-200"></div>

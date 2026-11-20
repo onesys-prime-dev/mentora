@@ -14,7 +14,7 @@ $category = static function (array $c): string {
 };
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="@container flex flex-col gap-8 p-5 sm:p-10">
 
     <?= view('components/page-header', [
         'icon'    => 'grades',
@@ -76,7 +76,7 @@ $category = static function (array $c): string {
                             <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600"><?= esc(grade_number($period['weight'])) ?>%</span>
                             <span class="ml-auto font-bold text-brand"><?= esc(grade_percent($period['percentage'])) ?></span>
                         </div>
-                        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                        <div class="grid grid-cols-2 gap-3 @lg:grid-cols-4">
                             <?php foreach ($period['categories'] as $c): ?>
                                 <?= $category($c) ?>
                             <?php endforeach; ?>
@@ -89,7 +89,7 @@ $category = static function (array $c): string {
 
             <div class="flex flex-col gap-3" data-grade-categories>
                 <span class="uppercase font-bold text-xs tracking-wide text-[#767676]">How the grade is made up</span>
-                <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div class="grid grid-cols-2 gap-3 @lg:grid-cols-4">
                     <?php foreach ($standing['categories'] as $c): ?>
                         <?= $category($c) ?>
                     <?php endforeach; ?>

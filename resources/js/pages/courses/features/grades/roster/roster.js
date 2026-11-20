@@ -17,6 +17,7 @@ import { overrideDialogState } from "./override-dialog.js";
 import { bindIncompleteDialog } from "./incomplete-dialog.js";
 import { bindReportTriggers } from "../reports/report-menu.js";
 import { bindRosterControls } from "./roster-view.js";
+import { bindScrollX } from "../../../../../shared/scroll-x.js";
 
 let backToGrades = null;
 let overrideModal = null;
@@ -171,6 +172,9 @@ function bind(container)
     bindReportTriggers(container);
 
     bindRosterControls(container);
+
+    // The grid arrives through innerHTML, which fires no content:swapped.
+    bindScrollX(container);
 }
 
 function updateFinalCell(row, percentage)

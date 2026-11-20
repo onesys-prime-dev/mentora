@@ -23,18 +23,18 @@ $filterOptions = [
             placeholder="Search discussions"
             value="<?= esc($filters['search']) ?>"
             autocomplete="off"
-            class="w-full bg-transparent text-sm outline-none placeholder:text-gray-500">
+            class="w-full bg-transparent text-base sm:text-sm pointer-coarse:min-h-11 outline-none placeholder:text-gray-500">
     </label>
 
     <div class="flex flex-wrap items-center gap-2">
 
-        <select data-discussions-filter aria-label="Filter discussions" class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-[#1A1C1E] outline-none">
+        <select data-discussions-filter aria-label="Filter discussions" class="rounded-full border border-gray-300 bg-white px-4 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] outline-none">
             <?php foreach ($filterOptions as $value => $label): ?>
                 <option value="<?= esc($value) ?>" <?= $filters['filter'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
             <?php endforeach; ?>
         </select>
 
-        <select data-discussions-sort aria-label="Sort discussions" class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-[#1A1C1E] outline-none">
+        <select data-discussions-sort aria-label="Sort discussions" class="rounded-full border border-gray-300 bg-white px-4 py-2 text-base sm:text-sm pointer-coarse:min-h-11 text-[#1A1C1E] outline-none">
             <?php foreach ($sorts as $value => $label): ?>
                 <option value="<?= esc($value) ?>" <?= $filters['sort'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
             <?php endforeach; ?>

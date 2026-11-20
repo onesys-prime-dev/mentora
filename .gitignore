@@ -165,3 +165,6 @@ python-question-builder-service/eval/report*.json
 
 # Ignore superpowers brainstorming sessions (visual companion mockups, server state)
 .superpowers/
+
+# Responsive screenshot baselines (about 650 MB) are an Actions artifact, not committed
+/tests/e2e/__screenshots__/

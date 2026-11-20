@@ -156,7 +156,10 @@ final class AdminHomePageTest extends RouteTestCase
         $body = $this->step('GET', 'admin/backups')->response()->getBody();
 
         $this->assertMatchesRegularExpression('/href="[^"]*admin\/backups"\s+aria-current="page"/', $body);
-        $this->assertSame(1, preg_match_all('/aria-current="page"/', $body));
+        // Once in the sidebar; the phone tile menu (#nav-menu) marks its own copy.
+        $this->assertSame(1, preg_match('#<nav[^>]*data-admin-menu.*?</nav>#s', $body, $sidebar));
+        $this->assertSame(1, preg_match_all('/aria-current="page"/', $sidebar[0]));
+        $this->assertSame(2, preg_match_all('/aria-current="page"/', $body));
     }
 
     public function testEveryAdminPageHasTheMenu(): void

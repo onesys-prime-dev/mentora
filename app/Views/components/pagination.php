@@ -20,18 +20,18 @@ if ($pages <= 1) {
 $link = static fn (int $n): string => $baseUrl . '?' . http_build_query(array_merge($query, ['page' => $n]));
 ?>
 
-<nav class="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label="Pages">
+<nav class="flex flex-wrap items-center justify-between gap-3 text-sm max-sm:flex-col max-sm:items-stretch" aria-label="Pages">
 
     <span class="text-[#646464]">
         Page <?= esc((string) $page) ?> of <?= esc((string) $pages) ?><?= $total !== null ? ' · ' . esc(number_format((int) $total)) . ' in all' : '' ?>
     </span>
 
-    <span class="flex gap-2">
+    <span class="flex gap-2 max-sm:w-full">
         <?php if ($page > 1): ?>
-            <a class="rounded-full border border-brand px-4 py-1.5 font-semibold text-brand transition hover:bg-brand/10" href="<?= esc($link($page - 1)) ?>" rel="prev">Previous</a>
+            <a class="inline-flex items-center justify-center rounded-full border border-brand px-4 py-1.5 font-semibold max-sm:flex-1 max-sm:text-center pointer-coarse:min-h-11 text-brand transition hover:bg-brand/10" href="<?= esc($link($page - 1)) ?>" rel="prev">Previous</a>
         <?php endif; ?>
         <?php if ($page < $pages): ?>
-            <a class="rounded-full border border-brand px-4 py-1.5 font-semibold text-brand transition hover:bg-brand/10" href="<?= esc($link($page + 1)) ?>" rel="next">Next</a>
+            <a class="inline-flex items-center justify-center rounded-full border border-brand px-4 py-1.5 font-semibold max-sm:flex-1 max-sm:text-center pointer-coarse:min-h-11 text-brand transition hover:bg-brand/10" href="<?= esc($link($page + 1)) ?>" rel="next">Next</a>
         <?php endif; ?>
     </span>
 

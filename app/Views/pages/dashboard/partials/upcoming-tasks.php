@@ -26,7 +26,7 @@ $urgencyStyles = [
 <!-- pending tasks card -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 bg-black/10">
+    <div class="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/10">
         <span class="text-xl font-display">Pending Tasks</span>
 
         <span class="text-xs text-gray-700">
@@ -34,7 +34,7 @@ $urgencyStyles = [
         </span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4">
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-4 sm:px-6 py-4">
 
         <?php if ($tasks === []): ?>
 
@@ -49,8 +49,11 @@ $urgencyStyles = [
 
                 <?php foreach ($tasks as $index => $task): ?>
 
+                    <?php // Phones list the first five; "View all" leads to the rest. ?>
+                    <?php $beyondCap = $index >= 5 ? ' max-lg:hidden' : ''; ?>
+
                     <?php if ($index > 0): ?>
-                        <div class="h-px -mx-3 bg-black/5" aria-hidden="true"></div>
+                        <div class="h-px -mx-3 bg-black/5<?= $beyondCap ?>" aria-hidden="true"></div>
                     <?php endif; ?>
 
                     <?php
@@ -58,7 +61,8 @@ $urgencyStyles = [
                     ?>
 
                     <a
-                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45"
+                        class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl transition-colors duration-150 hover:bg-white/45<?= $beyondCap ?>"
+                        data-task-row
                         href="<?= site_url($userRole . '/courses/' . $task['offering_id'] . '/' . $task['slug'] . '/assessments?assessment=' . $task['id'] . '&view=1') ?>">
 
                         <div class="w-11 h-11 shrink-0 flex justify-center items-center <?= $style['bubble'] ?> rounded-full transition-transform duration-150 group-hover:scale-110">
@@ -87,6 +91,10 @@ $urgencyStyles = [
                 <?php endforeach; ?>
 
             </div>
+
+            <?php if (count($tasks) > 5): ?>
+                <a href="<?= site_url($userRole . '/calendar') ?>" data-view-all class="lg:hidden mt-2 inline-flex items-center pointer-coarse:min-h-11 text-xs font-medium text-blue-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">View all</a>
+            <?php endif; ?>
 
         <?php endif; ?>
 

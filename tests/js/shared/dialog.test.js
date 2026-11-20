@@ -551,3 +551,242 @@ describe("fields an outside system decides", () => {
         expect(document.querySelector("#d input").readOnly).toBe(false);
     });
 });
+
+describe("dialog variants", () => {
+    const SHEET = `
+        <button id="opener" data-dialog-open="s">Open</button>
+        <div id="s" data-dialog data-dialog-variant="sheet" hidden class="hidden">
+            <div data-dialog-panel>
+                <div id="handle" data-dialog-handle></div>
+                <div data-dialog-header><h2>Pick</h2><button id="x" data-dialog-close>Close</button></div>
+                <ul id="list"><li>One</li></ul>
+            </div>
+        </div>`;
+
+    const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    // jsdom has no PointerEvent; a MouseEvent carrying a pointerId is what the handler reads.
+    const pointer = (target, type, clientY) => {
+        const event = new MouseEvent(type, { bubbles: true, cancelable: true, clientY });
+        Object.defineProperty(event, "pointerId", { value: 1 });
+        target.dispatchEvent(event);
+    };
+
+    const drag = (target, from, to) => {
+        pointer(target, "pointerdown", from);
+        pointer(target, "pointermove", to);
+        pointer(target, "pointerup", to);
+    };
+
+    it("marks an open dialog data-state=open and removes it on close", () => {
+        page(DIALOG);
+        bindDialogs();
+        const dialog = document.getElementById("d");
+
+        document.getElementById("opener").click();
+        expect(dialog.dataset.state).toBe("open");
+
+        document.getElementById("first").click();
+        expect(dialog.hidden).toBe(true);
+        expect(dialog.hasAttribute("data-state")).toBe(false);
+    });
+
+    it("closes synchronously when nothing animates (jsdom, reduced motion)", () => {
+        page(DIALOG);
+        bindDialogs();
+        const dialog = document.getElementById("d");
+        expect(dialog.getAnimations).toBeUndefined();
+
+        document.getElementById("opener").click();
+        document.getElementById("first").click();
+        expect(dialog.hidden).toBe(true);
+
+        vi.stubGlobal("matchMedia", (q) => ({ matches: q.includes("reduce") }));
+        dialog.getAnimations = () => [{ finished: new Promise(() => {}) }];
+        document.getElementById("opener").click();
+        document.getElementById("first").click();
+        expect(dialog.hidden).toBe(true);
+    });
+
+    it("waits for the exit animation, then hides once", async () => {
+        page(DIALOG);
+        bindDialogs();
+        const dialog = document.getElementById("d");
+        const opener = document.getElementById("opener");
+        dialog.getAnimations = () => [{ finished: Promise.resolve() }];
+        opener.focus();
+        opener.click();
+        const focus = vi.spyOn(opener, "focus");
+        const closed = vi.fn();
+        dialog.addEventListener("dialog:close", closed);
+
+        document.getElementById("first").click();
+        document.getElementById("first").click();
+
+        expect(dialog.dataset.state).toBe("closing");
+        expect(dialog.hidden).toBe(false);
+
+        await tick();
+
+        expect(dialog.hidden).toBe(true);
+        expect(dialog.hasAttribute("data-state")).toBe(false);
+        expect(focus).toHaveBeenCalledTimes(1);
+        expect(closed).toHaveBeenCalledTimes(1);
+        expect(document.body.classList.contains("overflow-hidden")).toBe(false);
+    });
+
+    it("closes a sheet when the handle is dragged down 80px", () => {
+        page(SHEET);
+        bindDialogs();
+        document.getElementById("opener").click();
+
+        drag(document.getElementById("handle"), 100, 190);
+
+        expect(document.getElementById("s").hidden).toBe(true);
+    });
+
+    it("springs back when the drag is short", () => {
+        page(SHEET);
+        bindDialogs();
+        document.getElementById("opener").click();
+        const panel = document.querySelector("#s [data-dialog-panel]");
+        let now = 1000;
+        vi.spyOn(performance, "now").mockImplementation(() => now);
+
+        pointer(document.getElementById("handle"), "pointerdown", 100);
+        now += 400;
+        pointer(document.getElementById("handle"), "pointermove", 140);
+        expect(panel.style.transform).toBe("translateY(40px)");
+        pointer(document.getElementById("handle"), "pointerup", 140);
+
+        expect(document.getElementById("s").hidden).toBe(false);
+        expect(panel.style.transform).toBe("");
+        expect(panel.style.transition).toBe("");
+    });
+
+    it("ignores drags that start in the body", () => {
+        page(SHEET);
+        bindDialogs();
+        document.getElementById("opener").click();
+
+        drag(document.getElementById("list"), 100, 300);
+
+        expect(document.getElementById("s").hidden).toBe(false);
+    });
+
+    it("does not swipe a dialog that is not a sheet", () => {
+        page(SHEET.replace('data-dialog-variant="sheet"', 'data-dialog-variant="fullscreen"'));
+        bindDialogs();
+        document.getElementById("opener").click();
+
+        drag(document.getElementById("handle"), 100, 300);
+
+        expect(document.getElementById("s").hidden).toBe(false);
+    });
+});
+
+describe("review fixes", () => {
+    it("disables a submit button linked from outside the form while it sends, and re-enables it after", async () => {
+        page(`
+            <button id="top" type="submit" form="f">Post</button>
+            <form id="f" action="/save" method="post" data-dialog-form>
+                <p data-form-error hidden></p>
+                <button type="submit" id="go">Save</button>
+            </form>`);
+        bindDialogs();
+        let answer;
+        vi.stubGlobal("fetch", vi.fn(() => new Promise((resolve) => (answer = resolve))));
+
+        document.getElementById("f").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+        expect(document.getElementById("top").disabled).toBe(true);
+        expect(document.getElementById("go").disabled).toBe(true);
+
+        answer({ ok: false, status: 500, json: () => Promise.resolve({}) });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(document.getElementById("top").disabled).toBe(false);
+        expect(document.getElementById("go").disabled).toBe(false);
+    });
+
+    it("does not swipe a sheet from sm up, where it is a centered dialog", () => {
+        page(`
+            <button id="opener" data-dialog-open="s">Open</button>
+            <div id="s" data-dialog data-dialog-variant="sheet" hidden class="hidden">
+                <div data-dialog-panel><div id="handle" data-dialog-handle></div></div>
+            </div>`);
+        vi.stubGlobal("matchMedia", () => ({ matches: false }));
+        bindDialogs();
+        document.getElementById("opener").click();
+
+        for (const [type, clientY] of [["pointerdown", 100], ["pointermove", 180], ["pointerup", 180]]) {
+            const event = new MouseEvent(type, { bubbles: true, clientY });
+            Object.defineProperty(event, "pointerId", { value: 1 });
+            document.getElementById("handle").dispatchEvent(event);
+        }
+
+        expect(document.getElementById("s").hidden).toBe(false);
+    });
+});
+
+describe("returning focus", () => {
+    const FALLBACK = `
+        <button id="back">Back</button>
+        <button id="opener" data-return-focus="back">Open</button>
+        <div id="d" data-dialog hidden class="hidden"><button id="x" data-dialog-close>Close</button></div>`;
+
+    it("focuses the opener's fallback when the opener is hidden", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        opener.checkVisibility = () => false;
+        dialog.close();
+
+        expect(document.activeElement.id).toBe("back");
+    });
+
+    it("focuses the fallback when the opener left the page", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        opener.remove();
+        dialog.close();
+
+        expect(document.activeElement.id).toBe("back");
+    });
+
+    it("still focuses a visible opener, fallback or not", () => {
+        page(FALLBACK);
+        const opener = document.getElementById("opener");
+        const dialog = createDialog(document.getElementById("d"));
+
+        dialog.open(opener);
+        dialog.close();
+
+        expect(document.activeElement).toBe(opener);
+    });
+
+    it("an instant close cuts short an exit already running", () => {
+        page(FALLBACK);
+        const el = document.getElementById("d");
+        const dialog = createDialog(el);
+        const closed = vi.fn();
+        el.addEventListener("dialog:close", closed);
+        el.getAnimations = () => [{ finished: new Promise(() => {}) }];
+
+        dialog.open(document.getElementById("opener"));
+        dialog.close();
+        expect(el.dataset.state).toBe("closing");
+
+        dialog.close({ instant: true });
+
+        expect(el.hidden).toBe(true);
+        expect(dialog.isOpen()).toBe(false);
+        expect(closed).toHaveBeenCalledTimes(1);
+        expect(document.body.classList.contains("overflow-hidden")).toBe(false);
+    });
+});

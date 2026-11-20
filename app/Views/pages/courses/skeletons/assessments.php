@@ -6,14 +6,14 @@
  */
 $instructor = ($role ?? '') === 'instructor';
 ?>
-<div class="flex animate-pulse flex-col gap-10 p-10" aria-hidden="true" data-server-skeleton-shape>
+<div class="flex animate-pulse flex-col gap-6 p-5 sm:p-8 lg:gap-10 lg:p-10" aria-hidden="true" data-server-skeleton-shape>
 
     <div class="flex items-center gap-4">
         <div class="h-6 w-6 rounded bg-gray-200"></div>
         <div class="h-8 w-40 rounded bg-gray-200"></div>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <?php for ($i = 0; $i < 4; $i++): ?>
             <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 px-5 py-5">
                 <div class="flex items-start justify-between">
@@ -42,7 +42,7 @@ $instructor = ($role ?? '') === 'instructor';
             </div>
             <div class="flex flex-col gap-3">
                 <?php for ($i = 0; $i < 3; $i++): ?>
-                    <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-8 py-6">
+                    <div class="flex items-center justify-between rounded-2xl border border-gray-200 px-4 py-4 sm:px-8 sm:py-6">
                         <div class="flex items-center gap-5">
                             <div class="h-10 w-10 rounded-full bg-gray-200"></div>
                             <div class="flex flex-col gap-2">

@@ -42,7 +42,7 @@ $metrics = [
 
     <?php foreach ($metrics as $metric): ?>
 
-        <div class="flex-1 min-h-0 flex items-center justify-between gap-3 bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl px-5 py-3">
+        <div class="flex-1 min-h-0 flex items-center justify-between gap-3 bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl px-4 sm:px-5 py-3">
 
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-9 h-9 shrink-0 flex justify-center items-center <?= $metric['accent'] ?> rounded-full">

@@ -12,9 +12,9 @@
 $suffix = isset($path) && $path !== '' ? '/' . $path : '';
 ?>
 
-<div class="flex items-center gap-2">
+<div class="flex w-full items-center gap-2 sm:w-auto">
     <label for="child-switcher" class="text-xs font-medium text-gray-600">Showing</label>
-    <select id="child-switcher" data-child-switcher data-select-link class="min-h-10 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-[#1A1C1E] focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40">
+    <select id="child-switcher" data-child-switcher data-select-link class="min-h-10 min-w-0 flex-1 pointer-coarse:min-h-11 sm:flex-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm text-[#1A1C1E] focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40">
         <?php foreach ($children as $kid): ?>
             <option value="<?= esc(site_url('parent/children/' . $kid['student_id'] . $suffix)) ?>" <?= (int) $kid['student_id'] === (int) $selected ? 'selected' : '' ?>><?= esc($kid['name']) ?></option>
         <?php endforeach; ?>

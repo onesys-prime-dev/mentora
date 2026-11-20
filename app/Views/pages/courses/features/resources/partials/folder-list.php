@@ -20,7 +20,7 @@
     <?php endforeach; ?>
 
     <?php if ($items === []): ?>
-        <div class="flex flex-col items-center justify-center gap-2 px-8 py-14 text-center">
+        <div class="flex flex-col items-center justify-center gap-2 px-5 py-14 sm:px-8 text-center">
             <?= icon('folder', 'h-10 w-10 text-gray-300') ?>
             <span class="text-sm font-semibold text-[#646464]"><?= esc($emptyLabel) ?></span>
         </div>

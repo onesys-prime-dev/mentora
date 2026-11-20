@@ -35,16 +35,17 @@ $previousLocked = $isStudent && $previousItem && !empty($previousItem['is_locked
 // "Complete “X” to continue." — from ModuleService (lockMessage wording).
 $nextLockHint = $nextLocked ? ($nextLockHint ?? '') : '';
 
-$continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0056E0]';
+// `flex`, not `inline-flex`: Tailwind emits .inline-flex after .hidden, so a hidden Continue would still show.
+$continueClasses = 'flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:w-full rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0056E0]';
 ?>
 
 <footer
-    class="flex items-center justify-between py-4 border-t border-white/10"
+    class="flex items-center justify-between py-4 max-lg:flex-wrap max-lg:gap-3 border-t border-white/10 bg-white max-lg:sticky max-lg:bottom-0 max-lg:z-10 max-lg:-mx-5 max-lg:px-5 max-lg:pt-2 max-lg:pb-safe-2 sm:max-lg:-mx-8 sm:max-lg:px-8"
     data-learning-item-footer>
 
     <button
         type="button"
-        class="learning-item-link inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
+        class="learning-item-link inline-flex items-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm font-medium transition
             <?= $previousItem && !$previousLocked ? 'text-gray-500 hover:border-brand hover:bg-brand/10 hover:text-[#6EA8FF]' : 'cursor-not-allowed opacity-50' ?>"
         <?= $previousItem && !$previousLocked ? 'data-learning-item="' . esc($previousItem['id']) . '"' : 'disabled' ?>
         <?= $previousLocked ? 'title="Locked"' : '' ?>
@@ -65,13 +66,13 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2
         <span>Previous</span>
     </button>
 
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 max-lg:contents">
 
         <?php if ($isStudent && !$isLocked): ?>
 
             <span
                 data-complete-hint
-                class="max-w-xs text-right text-xs text-[#767676] <?= ($isCompleted || $canComplete) ? 'hidden' : '' ?>">
+                class="max-w-xs text-right text-xs text-[#767676] max-lg:order-first max-lg:max-w-none max-lg:basis-full max-lg:text-left <?= ($isCompleted || $canComplete) ? 'hidden' : '' ?>">
                 <?= esc($currentItem['complete_hint'] ?? '') ?>
             </span>
 
@@ -81,7 +82,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2
                 data-learning-item-id="<?= esc($currentItem['id']) ?>"
                 data-completed="<?= $isCompleted ? '1' : '0' ?>"
                 <?= ($isCompleted || !$canComplete) ? 'disabled' : '' ?>
-                class="inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-semibold transition
+                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:flex-1 rounded-lg border px-5 py-2.5 text-sm font-semibold transition
                     data-[completed=1]:border-[#CFE6D5] data-[completed=1]:bg-[#E6F4EA] data-[completed=1]:text-[#5C9F72]
                     data-[completed=0]:border-brand data-[completed=0]:text-brand data-[completed=0]:hover:bg-brand/10
                     data-[completed=0]:disabled:cursor-not-allowed data-[completed=0]:disabled:border-gray-300 data-[completed=0]:disabled:text-gray-400 data-[completed=0]:disabled:hover:bg-transparent">
@@ -102,7 +103,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2
 
             <?php if ($nextLocked): ?>
                 <!-- Why Continue is disabled; completion.js removes it once the next item unlocks. -->
-                <span data-continue-lock-hint class="max-w-xs text-right text-xs text-[#767676] <?= $showContinue ? '' : 'hidden' ?>">
+                <span data-continue-lock-hint class="max-w-xs text-right text-xs text-[#767676] max-lg:order-first max-lg:max-w-none max-lg:basis-full max-lg:text-left <?= $showContinue ? '' : 'hidden' ?>">
                     <?= esc($nextLockHint) ?>
                 </span>
             <?php endif; ?>
@@ -149,7 +150,7 @@ $continueClasses = 'inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2
 
             <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
+                class="inline-flex items-center justify-center gap-2 max-lg:min-h-11 pointer-coarse:min-h-11 max-lg:w-full rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white opacity-50 cursor-not-allowed"
                 disabled>
                 <span>Continue</span>
             </button>

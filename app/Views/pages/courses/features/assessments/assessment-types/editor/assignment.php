@@ -21,7 +21,7 @@
 
                 <button
                     type="button"
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors pointer-coarse:min-h-11
                         hover:bg-brand/10"
                     data-edit-instructions>
 
@@ -133,13 +133,13 @@
             </div>
 
             <div
-                class="<?= $currentRubric ? 'flex' : 'hidden' ?> relative flex-col gap-3 rounded-2xl border border-[#DBDBDB] bg-[#fcfcfc] p-5"
+                class="<?= $currentRubric ? 'flex' : 'hidden' ?> relative flex-col gap-3 rounded-2xl border border-[#DBDBDB] bg-[#F9F9FC] p-5"
                 data-rubric-container>
 
                 <button
                     type="button"
                     title="Remove rubric" aria-label="Remove rubric"
-                    class="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#646464] shadow-sm transition-colors
+                    class="absolute -right-3 -top-3 flex h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full border border-[#DBDBDB] bg-white text-[#646464] shadow-sm transition-colors
                         hover:bg-brand hover:text-white hover:border-brand"
                     data-unselect-rubric
                     data-rubric-id="<?= esc($currentRubric['id'] ?? '') ?>">
@@ -167,7 +167,7 @@
 
                     <?php foreach (($currentRubric['criteria'] ?? []) as $criterion): ?>
 
-                        <div class="flex flex-col gap-2 rounded-xl bg-[#F2F2F2] p-4">
+                        <div class="flex min-w-0 flex-col gap-2 rounded-xl bg-[#F2F2F2] p-4 wrap-break-word">
 
                             <span class="font-bold text-md text-brand">
                                 <?= esc((int) $criterion['max_points']) ?> pts
@@ -191,7 +191,7 @@
 
                     <button
                         type="button"
-                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors pointer-coarse:min-h-11
                             hover:bg-brand/10"
                         data-edit-rubric
                         data-rubric-id="<?= esc($currentRubric['id'] ?? '') ?>">
@@ -277,7 +277,7 @@
                 <button
                     type="button"
                     title="Configure submission types" aria-label="Configure submission types"
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors
+                    class="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition-colors pointer-coarse:min-h-11
                         hover:bg-brand/10"
                     data-configure-submission-type>
 

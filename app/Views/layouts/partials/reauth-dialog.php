@@ -15,8 +15,8 @@ $reauthBody = '<form method="post" action="' . esc(site_url($reauthAction)) . '"
     . view('components/form-field', ['name' => 'password', 'label' => 'Password', 'type' => 'password', 'required' => true, 'attrs' => 'autocomplete="current-password" autofocus'], ['saveData' => false])
     . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
     . '<div class="flex flex-wrap items-center justify-end gap-3">'
-    . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-    . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Confirm</button>'
+    . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Cancel</button>'
+    . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Confirm</button>'
     . '</div></form>';
 ?>
-<?= view('components/dialog', ['id' => 'reauth-dialog', 'title' => 'Confirm your password', 'body' => $reauthBody, 'size' => 'sm'], ['saveData' => false]) ?>
+<?= view('components/dialog', ['id' => 'reauth-dialog', 'title' => 'Confirm your password', 'body' => $reauthBody, 'size' => 'sm', 'centered' => true], ['saveData' => false]) ?>

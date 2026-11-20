@@ -52,7 +52,7 @@ if ($summary['blocked_actions'] > 0) {
 
 <details data-security-report class="rounded-xl border border-[#F3D9A4] bg-[#FFF8E8] px-4 py-3 text-sm text-[#7A5600]">
 
-    <summary class="cursor-pointer font-semibold">
+    <summary class="cursor-pointer font-semibold pointer-coarse:py-3">
         Quiz security: <?= esc(implode(' · ', $facts)) ?>
     </summary>
 

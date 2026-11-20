@@ -2,10 +2,10 @@
     id="learning-unit-editor-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+    <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col max-h-full overflow-y-auto">
 
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <div class="flex flex-col">
 
@@ -29,7 +29,8 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-learning-unit-modal>
 
                 <svg
@@ -54,7 +55,7 @@
         <!-- Body -->
         <form
             id="learning-unit-editor-form"
-            class="flex flex-col gap-6 p-8">
+            class="flex flex-col gap-6 p-5 sm:p-8 min-h-0 flex-1 overflow-y-auto">
 
             <?= csrf_field() ?>
 
@@ -76,12 +77,12 @@
 
                 </label>
 
-                <input
+                <input aria-label="Learning Unit Title"
                     type="text"
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Introduction to Programming"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm"
                     required>
 
             </div>
@@ -95,12 +96,12 @@
 
                 </label>
 
-                <textarea
+                <textarea aria-label="Description"
                     name="description"
                     autocomplete="off"
                     rows="5"
                     placeholder="Write a short description for this learning unit..."
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"></textarea>
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm"></textarea>
 
             </div>
 
@@ -109,7 +110,7 @@
         </form>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <button
                 type="button"

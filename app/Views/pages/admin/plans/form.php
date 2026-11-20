@@ -10,8 +10,8 @@
 $isEdit = $plan !== null;
 $action = $isEdit ? site_url('admin/plans/' . $plan['id']) : site_url('admin/plans');
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$cancel  = 'rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$cancel  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 
 $featureHelp = 'Feature keys, one per line or separated by commas. '
     . ($planFeatureKeys === [] ? 'There are no feature flags to choose from yet.' : 'Available: ' . implode(', ', $planFeatureKeys));

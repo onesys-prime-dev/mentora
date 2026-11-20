@@ -17,7 +17,7 @@ foreach ($actionNames as $actionName) {
     $actionOptions[$actionName] = $actionName;
 }
 
-$ctl   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$ctl   = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 $label = 'flex flex-col gap-1 text-xs font-medium text-gray-600';
 
 // Quick date ranges: plain links, so they work without a script and can be shared.
@@ -58,13 +58,13 @@ $auditRows = $rows;
 $rows      = [];
 
 foreach ($auditRows as $row) {
-    $who = esc($row['actor_label'] ?? 'system')
+    $who = '<span class="[overflow-wrap:anywhere]">' . esc($row['actor_label'] ?? 'system') . '</span>'
         . ($row['impersonator_user_id'] !== null ? '<span class="block text-xs text-[#946200]">via admin #' . esc((string) $row['impersonator_user_id']) . '</span>' : '');
 
     $changes = '<span class="text-[#646464]">—</span>';
 
     if ($row['old_values'] !== null || $row['new_values'] !== null) {
-        $changes = '<details><summary class="cursor-pointer text-brand hover:underline">View</summary>'
+        $changes = '<details><summary class="cursor-pointer pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center text-brand hover:underline">View</summary>'
             . ($row['old_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">Before: ' . esc((string) $row['old_values']) . '</pre>' : '')
             . ($row['new_values'] !== null ? '<pre class="mt-1 whitespace-pre-wrap text-xs text-[#646464]">After: ' . esc((string) $row['new_values']) . '</pre>' : '')
             . '</details>';
@@ -74,9 +74,9 @@ foreach ($auditRows as $row) {
         'created_at'     => (string) $row['created_at'],
         'actor_label'    => ['html' => $who],
         'acting_role'    => (string) ($row['acting_role'] ?? '—'),
-        'action'         => ['html' => '<span class="font-mono text-xs">' . esc($row['action']) . '</span>'],
-        'target'         => trim(((string) ($row['target_type'] ?? '')) . ' ' . ((string) ($row['target_id'] ?? ''))) ?: '—',
-        'institution_id' => (string) ($row['institution_name'] ?? ($row['institution_id'] !== null ? '#' . $row['institution_id'] : '—')),
+        'action'         => ['html' => '<span class="font-mono text-xs [overflow-wrap:anywhere]">' . esc($row['action']) . '</span>'],
+        'target'         => ['html' => '<span class="[overflow-wrap:anywhere]">' . esc(trim(((string) ($row['target_type'] ?? '')) . ' ' . ((string) ($row['target_id'] ?? ''))) ?: '—') . '</span>'],
+        'institution_id' => ['html' => '<span class="[overflow-wrap:anywhere]">' . esc((string) ($row['institution_name'] ?? ($row['institution_id'] !== null ? '#' . $row['institution_id'] : '—'))) . '</span>'],
     ];
 
     if ($showIp) {
@@ -91,14 +91,14 @@ foreach ($auditRows as $row) {
 $columns = [
     ['key' => 'created_at', 'label' => 'Time', 'sortable' => true],
     ['key' => 'actor_label', 'label' => 'Actor', 'sortable' => true],
-    ['key' => 'acting_role', 'label' => 'Role', 'sortable' => true],
+    ['key' => 'acting_role', 'label' => 'Role', 'sortable' => true, 'priority' => 2],
     ['key' => 'action', 'label' => 'Action', 'sortable' => true],
     ['key' => 'target', 'label' => 'Target'],
     ['key' => 'institution_id', 'label' => 'Institution', 'sortable' => true],
 ];
 
 if ($showIp) {
-    $columns[] = ['key' => 'ip', 'label' => 'Source IP'];
+    $columns[] = ['key' => 'ip', 'label' => 'Source IP', 'priority' => 2];
 }
 
 $columns[] = ['key' => 'changes', 'label' => 'Changes'];
@@ -111,7 +111,7 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 <?php // From lg up the page fills the screen and only the table scrolls, on its own. ?>
 <div class="flex flex-col rounded-3xl bg-white p-5 shadow-sm sm:p-8" data-page-panel tabindex="0" role="region" aria-label="Page content">
 
-<?= view('components/page-head', ['title' => 'Audit log', 'icon' => 'tasks', 'actions' => '<button type="button" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-dialog-open="audit-settings">Display settings</button> <a class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc($exportUrl) . '">Export CSV</a>'], ['saveData' => false]) ?>
+<?= view('components/page-head', ['title' => 'Audit log', 'icon' => 'tasks', 'actions' => '<button type="button" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-dialog-open="audit-settings">Display settings</button> <a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-audit-export href="' . esc($exportUrl) . '">Export CSV</a>'], ['saveData' => false]) ?>
 
 <?php if (session()->has('message')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'success', 'text' => (string) session('message')], ['saveData' => false]) ?></div>
@@ -138,20 +138,20 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
                     <?php endforeach; ?>
                 </select>
             </label>
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Search</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Search</button>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-xs font-medium text-gray-600">When</span>
             <?php foreach ($ranges as $rangeLabel => $range): ?>
                 <?php $rangeQuery = $query($range + ['page' => null]); ?>
-                <a class="rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 <?= $rangeActive($range) ? 'border-brand bg-brand text-white' : 'border-brand/30 bg-white text-brand hover:bg-brand-tint' ?>"
+                <a class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 <?= $rangeActive($range) ? 'border-brand bg-brand text-white' : 'border-brand/30 bg-white text-brand hover:bg-brand-tint' ?>"
                    href="<?= site_url('admin/audit-log') . ($rangeQuery === '' ? '' : '?' . $rangeQuery) ?>" <?= $rangeActive($range) ? 'aria-current="true"' : '' ?>><?= esc($rangeLabel) ?></a>
             <?php endforeach; ?>
         </div>
 
         <details class="group" <?= $moreCount > 0 ? 'open' : '' ?>>
-            <summary class="inline-flex cursor-pointer list-none items-center gap-2 rounded-full px-1 py-1 text-sm font-semibold text-brand hover:underline [&::-webkit-details-marker]:hidden">
+            <summary class="inline-flex cursor-pointer list-none items-center gap-2 pointer-coarse:min-h-11 rounded-full px-1 py-1 text-sm font-semibold text-brand hover:underline [&::-webkit-details-marker]:hidden">
                 More filters
                 <?php if ($moreCount > 0): ?><span class="rounded-full bg-brand px-2 text-xs text-white"><?= $moreCount ?></span><?php endif; ?>
                 <svg class="h-4 w-4 transition group-open:rotate-180" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg>
@@ -170,9 +170,9 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
         <div class="flex flex-wrap items-center gap-2 text-xs">
             <?php foreach ($chips as $chipLabel => $keys): ?>
                 <?php $dropQuery = $query(array_fill_keys((array) $keys, null) + ['page' => null]); ?>
-                <a class="inline-flex items-center gap-1 rounded-full bg-brand-tint px-3 py-1 font-semibold text-brand hover:bg-brand/10" href="<?= site_url('admin/audit-log') . ($dropQuery === '' ? '' : '?' . $dropQuery) ?>" aria-label="Remove filter <?= esc($chipLabel, 'attr') ?>"><?= esc($chipLabel) ?> <span aria-hidden="true">�</span></a>
+                <a class="inline-flex items-center gap-1 pointer-coarse:min-h-11 rounded-full bg-brand-tint px-3 py-1 font-semibold text-brand hover:bg-brand/10" href="<?= site_url('admin/audit-log') . ($dropQuery === '' ? '' : '?' . $dropQuery) ?>" aria-label="Remove filter <?= esc($chipLabel, 'attr') ?>"><?= esc($chipLabel) ?> <span aria-hidden="true">�</span></a>
             <?php endforeach; ?>
-            <a class="px-2 py-1 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
+            <a class="inline-flex items-center pointer-coarse:min-h-11 px-2 py-1 text-sm font-semibold text-brand hover:underline" href="<?= site_url('admin/audit-log') ?>">Clear</a>
         </div>
     <?php endif; ?>
 
@@ -201,16 +201,16 @@ $columns[] = ['key' => 'changes', 'label' => 'Changes'];
 $settingsForm = '<form data-dialog-form method="post" action="' . site_url('admin/audit-log/settings') . '" class="flex flex-col gap-5">' . csrf_field()
     . '<input type="hidden" name="show_ip" value="0">'
     . '<label class="flex items-start gap-3 text-sm text-[#3D3D3D]">'
-    . '<input type="checkbox" name="show_ip" value="1" class="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-brand focus:ring-brand/40"' . ($showIp ? ' checked' : '') . '>'
+    . '<input type="checkbox" name="show_ip" value="1" class="mt-0.5 h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 shrink-0 rounded border-gray-300 text-brand focus:ring-brand/40"' . ($showIp ? ' checked' : '') . '>'
     . '<span>Show the source IP of each entry<span class="mt-1 block text-xs text-[#646464]">Addresses are always recorded; this only controls whether they are shown and exported.</span></span>'
     . '</label>'
     . '<div class="flex flex-wrap items-center justify-end gap-3">'
-    . '<button type="button" data-dialog-close class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Cancel</button>'
-    . '<button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>'
+    . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Cancel</button>'
+    . '<button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button>'
     . '</div></form>';
 ?>
 
-<?= view('components/dialog', ['id' => 'audit-settings', 'title' => 'Display settings', 'body' => $settingsForm], ['saveData' => false]) ?>
+<?= view('components/dialog', ['id' => 'audit-settings', 'title' => 'Display settings', 'body' => $settingsForm, 'variant' => 'default'], ['saveData' => false]) ?>
 
 </div>
 

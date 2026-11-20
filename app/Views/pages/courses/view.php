@@ -98,7 +98,7 @@ $features = $courseFeatures ?? [
 
             </div>
 
-            <div class="mt-5 flex gap-2 overflow-x-auto px-4 transition-[margin] duration-200 sm:px-10 group-data-[collapsed=true]/course:mt-2" role="tablist" aria-label="Course sections">
+            <div class="mt-5 flex gap-2 overflow-x-auto px-4 transition-[margin] duration-200 sm:px-10 group-data-[collapsed=true]/course:mt-2" role="tablist" aria-label="Course sections" data-scroll-x data-scroll-current>
 
                 <?php foreach ($features as $feature => $label): ?>
 
@@ -133,9 +133,10 @@ $features = $courseFeatures ?? [
         $skeletonShape = array_key_exists($activeFeature ?? '', $features) ? $activeFeature : 'overview';
         ?>
         <div
-            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden"
+            class="w-full rounded-3xl bg-white shadow-xl ring-1 ring-brand/15 lg:min-h-0 lg:flex-1 lock:overflow-y-auto lock:overscroll-contain lock:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden"
             id="course-content"
             role="tabpanel"
+            tabindex="0"
             aria-busy="true"
             data-server-skeleton
         >

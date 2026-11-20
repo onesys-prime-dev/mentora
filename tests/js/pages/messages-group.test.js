@@ -237,3 +237,22 @@ describe("creating the group", () => {
         expect(create().disabled).toBe(false);
     });
 });
+
+// A pick redraws the results and the chips, so the button that was tapped is gone: focus must stay in the dialog
+// (on the search), or Escape and Tab would leave it.
+describe("focus after a pick", () => {
+    it("stays on the search after picking a person and after removing a chip", async () => {
+        await mount(makeApi());
+        // Open, as the dialog is when a person picks (nothing inside a hidden dialog takes focus).
+        q("#messages-group").hidden = false;
+        await type("[data-role=group-search]", "alpha");
+
+        results()[0].focus();
+        results()[0].click();
+        expect(document.activeElement).toBe(q("[data-role=group-search]"));
+
+        chips()[0].querySelector("button").focus();
+        chips()[0].querySelector("button").click();
+        expect(document.activeElement).toBe(q("[data-role=group-search]"));
+    });
+});

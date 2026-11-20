@@ -10,6 +10,7 @@
 | then the page reloads so the lock labels update.
 */
 
+import { closeAllActionMenus } from "../action-menus.js";
 import { fetchContainerDependencies, saveContainerDependencies } from "../api.js";
 
 const KINDS = {
@@ -98,7 +99,7 @@ export function bindContainerDependenciesModal({ kind, modal, refresh }) {
 
             const empty = document.createElement("p");
 
-            empty.className = "px-2 py-3 text-center text-xs text-[#767676]";
+            empty.className = "px-2 py-3 text-center text-xs text-[#646464]";
             empty.textContent = words.none;
             candidateList.append(empty);
 
@@ -111,7 +112,7 @@ export function bindContainerDependenciesModal({ kind, modal, refresh }) {
             const name = document.createElement("span");
             const meta = document.createElement("span");
 
-            row.className = "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-white";
+            row.className = "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-white pointer-coarse:min-h-11";
 
             checkbox.type = "checkbox";
             checkbox.value = String(candidate.id);
@@ -122,7 +123,7 @@ export function bindContainerDependenciesModal({ kind, modal, refresh }) {
             name.className = "flex-1 truncate";
             name.textContent = candidate.title;
 
-            meta.className = "shrink-0 text-xs capitalize text-[#767676]";
+            meta.className = "shrink-0 text-xs capitalize text-[#646464]";
             meta.textContent = candidate.status === "published" ? "" : candidate.status;
 
             row.append(checkbox, name, meta);
@@ -150,6 +151,9 @@ export function bindContainerDependenciesModal({ kind, modal, refresh }) {
 
             event.preventDefault();
             event.stopPropagation();
+
+            // The tap stops here, so the menu it came from (a floating one sits over the dialog) is closed by hand.
+            closeAllActionMenus();
 
             currentId = Number(button.dataset[words.idKey]);
 

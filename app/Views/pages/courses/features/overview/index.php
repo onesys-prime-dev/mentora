@@ -20,7 +20,7 @@
 */
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-8" data-overview-page>
 
     <?= view('components/page-header', ['icon' => 'info', 'title' => 'Overview'], ['saveData' => false]) ?>
 
@@ -28,7 +28,8 @@
 
     <div class="grid grid-cols-1 gap-8 xl:grid-cols-5">
 
-        <div class="flex min-w-0 flex-col gap-8 xl:col-span-3">
+        <?php // Each column is the query container its cards size their padding by (a query never matches the element itself). ?>
+        <div class="@container flex min-w-0 flex-col gap-8 xl:col-span-3">
 
             <?= $this->include(
                 $role === 'student'
@@ -42,7 +43,7 @@
 
         </div>
 
-        <div class="flex min-w-0 flex-col gap-6 xl:col-span-2">
+        <div class="@container flex min-w-0 flex-col gap-6 xl:col-span-2">
 
             <?= $this->include('pages/courses/features/overview/partials/course-info') ?>
 

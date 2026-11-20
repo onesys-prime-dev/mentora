@@ -1,14 +1,45 @@
-<div class="flex min-w-0 flex-1 flex-col p-10">
+<?php
 
-    <div class="sticky-bar-top flex items-center justify-between border-b border-gray-200 pb-4">
+// The question types, shared by the palette (lg pane / md–lg side panel) and the phone bar's "Add question".
+$questionTypes = [
+    [
+        'type' => 'Multiple Choice',
+        'label' => 'Multiple Choice',
+        'description' => 'Students pick one correct answer.',
+        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    ],
+    [
+        'type' => 'Short Answer',
+        'label' => 'Short Answer',
+        'description' => 'Students type a brief response.',
+        'icon' => 'M4 6h16M4 12h10',
+    ],
+    [
+        'type' => 'Essay',
+        'label' => 'Essay',
+        'description' => 'Students write a longer response.',
+        'icon' => 'M4 6h16M4 10h16M4 14h16M4 18h10',
+    ],
+    [
+        'type' => 'File Upload',
+        'label' => 'File Upload',
+        'description' => 'Students upload a file as their answer.',
+        'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    ],
+];
+?>
+<div class="flex min-w-0 flex-1 flex-col p-5 sm:p-8 lg:p-10 max-md:min-h-dvh max-md:pb-0">
 
-        <div class="flex items-center gap-3">
+    <div class="sticky-bar-top flex items-center justify-between gap-2 border-b border-gray-200 pb-4">
+
+        <div class="flex min-w-0 items-center gap-3">
 
             <button
                 type="button"
                 data-back-to-assessment-editor
                 data-assessment-id="<?= esc($currentAssessment['id']) ?>"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100">
+                aria-label="Back"
+                class="shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:p-3">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -16,17 +47,17 @@
 
             </button>
 
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 items-center gap-2">
 
-                <span class="text-xl font-bold text-brand">
+                <span class="text-xl font-bold text-brand max-md:hidden">
                     Quiz Builder
                 </span>
 
-                <span class="text-gray-300">
+                <span class="text-gray-300 max-md:hidden">
                     ·
                 </span>
 
-                <span class="text-lg font-semibold text-[#646464]">
+                <span class="truncate text-lg font-semibold text-[#646464]">
                     <?= esc($currentAssessment['title']) ?>
                 </span>
 
@@ -34,11 +65,11 @@
 
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex shrink-0 items-center gap-4 max-md:gap-1">
 
             <div
                 data-builder-save-status
-                class="flex items-center gap-2 text-sm text-gray-500">
+                class="flex items-center gap-2 text-sm text-gray-500 max-md:hidden">
 
                 <div class="h-2 w-2 rounded-full bg-emerald-500" data-builder-save-indicator></div>
 
@@ -46,7 +77,16 @@
 
             </div>
 
-            <div class="h-5 w-px bg-gray-200"></div>
+            <div class="h-5 w-px bg-gray-200 max-md:hidden"></div>
+
+            <button
+                type="button"
+                data-side-panel-toggle
+                aria-controls="quiz-builder-palette"
+                aria-expanded="false"
+                class="hidden md:inline-flex lg:hidden items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-brand hover:text-brand pointer-coarse:min-h-11">
+                <span aria-hidden="true">＋</span> Add question
+            </button>
 
             <button
                 type="button"
@@ -54,7 +94,7 @@
                 title="Export"
                 aria-label="Export"
                 aria-haspopup="dialog"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-brand">
+                class="rounded-lg p-2 text-gray-500 pointer-coarse:p-3 transition hover:bg-gray-100 hover:text-brand">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
@@ -66,7 +106,7 @@
                 type="button"
                 data-open-import-questions
                 title="Import questions"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-brand" aria-label="Import questions">
+                class="rounded-lg p-2 text-gray-500 pointer-coarse:p-3 transition hover:bg-gray-100 hover:text-brand" aria-label="Import questions">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M7.5 7.5L12 3m0 0l4.5 4.5M12 3v13.5" />
@@ -78,7 +118,7 @@
                 type="button"
                 data-clear-all-questions
                 title="Clear all questions"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-500" aria-label="Clear all questions">
+                class="rounded-lg p-2 text-gray-500 pointer-coarse:p-3 transition hover:bg-red-50 hover:text-red-500" aria-label="Clear all questions">
 
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m3 0v12a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12zM10 11v6M14 11v6" />
@@ -92,7 +132,7 @@
 
     <div class="flex flex-1 items-start gap-6 py-6">
 
-        <?= $this->include('pages/courses/features/assessments/partials/quiz-builder-palette') ?>
+        <?= view('pages/courses/features/assessments/partials/quiz-builder-palette', ['elements' => $questionTypes], ['saveData' => false]) ?>
 
         <div class="flex min-w-0 flex-1 flex-col gap-3">
 
@@ -114,12 +154,15 @@
 
                         <?= view(
                             'pages/courses/features/assessments/partials/quiz-builder-card',
-                            ['question' => $question, 'index' => $index]
+                            ['question' => $question, 'index' => $index],
+                            ['saveData' => false]
                         ) ?>
 
                     <?php endforeach; ?>
 
                 </div>
+
+                <p class="sr-only" aria-live="polite" data-question-move-status></p>
 
                 <div
                     class="<?= empty($currentQuestions) ? 'flex' : 'hidden' ?> flex-col items-center gap-2 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center"
@@ -129,8 +172,9 @@
                         No questions yet
                     </span>
 
-                    <span class="text-xs text-[#767676]">
-                        Drag a question type from the left, or click one to add it here.
+                    <span class="text-xs text-[#646464]">
+                        <span class="lg:hidden">Tap ＋ Add question to add one here.</span>
+                        <span class="max-lg:hidden">Drag a question type from the left, or click one to add it here.</span>
                     </span>
 
                 </div>
@@ -140,6 +184,8 @@
         </div>
 
     </div>
+
+    <?= view('pages/courses/features/assessments/partials/quiz-builder-bar', ['elements' => $questionTypes], ['saveData' => false]) ?>
 
     <?= $this->include('pages/courses/features/assessments/partials/modals/question-settings') ?>
     <?= $this->include('pages/courses/features/assessments/partials/modals/question-delete') ?>

@@ -12,7 +12,7 @@
 
 $state = $resume['state'];
 
-$button = 'inline-flex items-center gap-2 self-start rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark';
+$button = 'inline-flex items-center gap-2 self-start pointer-coarse:min-h-11 rounded-4xl bg-brand px-5 py-2 text-sm font-semibold text-white shadow transition-colors duration-300 hover:bg-brand-dark';
 
 $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
 ?>
@@ -21,7 +21,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
 
     <div class="flex items-center justify-between gap-3">
 
-        <span class="uppercase text-sm font-bold text-[#767676]">
+        <span class="uppercase text-sm font-bold text-[#646464]">
             <?= in_array($state, ['resume', 'next'], true) ? 'Continue where you left off' : 'Course content' ?>
         </span>
 
@@ -37,7 +37,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
 
         <div class="flex flex-col gap-1">
 
-            <span class="text-sm text-[#767676]">
+            <span class="text-sm text-[#646464]">
                 <?= esc($resume['module']) ?> › <?= esc($resume['unit']) ?>
             </span>
 
@@ -57,7 +57,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
                         style="width: <?= esc($resume['progress']) ?>%;"></div>
                 </div>
 
-                <span class="text-xs text-[#767676]"><?= esc($resume['progress']) ?>% watched</span>
+                <span class="text-xs text-[#646464]"><?= esc($resume['progress']) ?>% watched</span>
 
             </div>
 
@@ -70,7 +70,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
                 <?= $arrow ?>
             </a>
 
-            <span class="text-sm text-[#767676]">
+            <span class="text-sm text-[#646464]">
                 <?= esc($resume['completed']) ?> of <?= esc($resume['total']) ?> items done
             </span>
 
@@ -84,7 +84,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
                 You've finished every lesson
             </span>
 
-            <span class="text-sm text-[#767676]">
+            <span class="text-sm text-[#646464]">
                 All <?= esc($resume['total']) ?> items are complete. Check your upcoming deadlines for what's left.
             </span>
 
@@ -98,7 +98,7 @@ $arrow = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" vi
                 No lessons yet
             </span>
 
-            <span class="text-sm text-[#767676]">
+            <span class="text-sm text-[#646464]">
                 Your instructor hasn't published any content for this course. It'll show up here once they do.
             </span>
 

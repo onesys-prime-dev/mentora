@@ -26,6 +26,7 @@ import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
 import { bindMenuTriggers } from "./gestures.js";
+import { createPhoneNav } from "./phone-nav.js";
 import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
@@ -126,6 +127,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             el.textContent = count > 99 ? "99+" : String(count);
             el.hidden = count <= 0;
         });
+        // The phone header's ⋯ dot; messages-badge.js stays out of this page.
+        document.querySelectorAll("[data-messages-dot]").forEach((el) => { el.hidden = count <= 0; });
     }
 
     const serverItems = () => state.items.filter((item) => typeof item.id === "number");
@@ -562,7 +565,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    async function open(id) {
+    async function open(id, { deepLink = false } = {}) {
         state.poller?.stop();
 
         const token = threadGuard.next();
@@ -591,6 +594,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         root.dataset.view = "thread";
         $("[data-state=none]").hidden = true;
         $("[data-role=thread]").hidden = false;
+        // After the thread shows, so its Back button can take focus.
+        phoneNav.opened(id, { deepLink });
         messagesEl.replaceChildren();
         olderEl.hidden = true;
         bodyEl.value = "";
@@ -646,6 +651,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         $("[data-state=none]").hidden = false;
         root.dataset.view = "list";
         renderList();
+        phoneNav.closed();
     }
 
     async function loadOlder() {
@@ -1045,11 +1051,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
 
             button.type = "button";
-            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             button.textContent = entry.name;
             button.title = ROLE_WORDS[entry.role] ?? entry.role;
             button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
-            button.addEventListener("click", () => groupPicker.toggle(entry));
+            // The pick redraws the results and chips, so the tapped button goes: focus stays in the dialog, on the search.
+            button.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
             item.append(button);
 
             return item;
@@ -1063,10 +1070,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             item.className = "inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-xs text-brand-dark";
             name.textContent = entry.name;
             remove.type = "button";
-            remove.className = "ml-1 rounded-full px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            remove.className = "ml-1 inline-flex items-center justify-center rounded-full px-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             remove.setAttribute("aria-label", `Remove ${entry.name}`);
             remove.textContent = "×";
-            remove.addEventListener("click", () => groupPicker.toggle(entry));
+            remove.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
             item.append(name, document.createTextNode(" "), remove);
 
             return item;
@@ -1331,7 +1338,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const label = document.createElement("label");
             const box = document.createElement("input");
 
-            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-brand-tint";
+            label.className = "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm pointer-coarse:min-h-11 hover:bg-brand-tint";
             box.type = "checkbox";
             box.className = "h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40";
             box.addEventListener("change", () => {
@@ -1591,6 +1598,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     $("[data-role=retry-list]").addEventListener("click", () => { listState("loading"); loadList(); });
     $("[data-role=retry-thread]").addEventListener("click", () => open(state.openId));
     $("[data-role=back]").addEventListener("click", closeThread);
+    // Below md: Back, the browser's Back and a swipe all return to the list (see phone-nav.js).
+    const phoneNav = createPhoneNav({ root, onBack: closeThread });
     olderEl.addEventListener("click", loadOlder);
 
     // ---- go ------------------------------------------------------------
@@ -1602,7 +1611,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         listPoller.start();
 
         if (root.dataset.open) {
-            return open(Number(root.dataset.open));
+            // On a phone a deep link gets a list entry under its own, so Back lands on the list.
+            return open(Number(root.dataset.open), { deepLink: true });
         }
 
         return undefined;
@@ -1614,6 +1624,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             listPoller.stop();
             state.poller?.stop();
             unwatch();
+            phoneNav.destroy();
         },
     };
 }

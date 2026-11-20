@@ -19,29 +19,29 @@ $formatDuration = static function (int $minutes): string {
 $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 ?>
 
-<div class="p-10 flex flex-col gap-8">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-8">
 
     <?php $isDraft = $isInstructor && $module['status'] === 'draft'; ?>
     <?php $moduleIsDraft = $module['status'] !== 'published'; ?>
 
     <!-- top bar -->
-    <div class="sticky-bar-top flex items-start justify-between gap-5 pb-6 border-b border-black/10">
+    <div class="sticky-bar-top flex flex-wrap items-start justify-between gap-x-5 gap-y-3 pb-6 border-b border-black/10">
 
-        <div class="flex items-center gap-4">
+        <div class="flex min-w-0 items-center gap-3 sm:gap-4">
 
             <button
                 type="button"
                 data-back-to-modules
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                class="shrink-0 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 title="Back to Modules" aria-label="Back to Modules">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
             </button>
 
-            <div class="flex flex-col">
-                <div class="flex items-center gap-2">
-                    <span class="text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
+            <div class="flex min-w-0 flex-col">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="min-w-0 break-words text-xl sm:text-2xl font-bold text-brand"><?= esc($module['title']) ?></span>
                     <?php if ($isDraft): ?>
                         <span class="rounded-full border border-dashed border-[#B9B9B9] px-2.5 py-0.5 text-[10px] font-bold uppercase text-[#767676]" data-publish-chip="<?= !empty($module['scheduled_publish_at']) ? 'scheduled' : 'draft' ?>">
                             <?= !empty($module['scheduled_publish_at']) ? 'Scheduled · ' . esc(date('M j, g:i A', strtotime($module['scheduled_publish_at']))) : 'Draft' ?>
@@ -51,7 +51,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                     <?php endif; ?>
                     <?= view('pages/courses/features/modules/partials/dependency-chip', ['lockedBy' => $module['locked_by'] ?? [], 'labels' => $module['dependency_labels'] ?? []], ['saveData' => false]) ?>
                 </div>
-                <span class="text-sm font-normal text-[#A3A3A3]">
+                <span class="text-sm font-normal text-[#646464]">
                     <?php if ($module['display_number'] !== null): ?>Module <?= esc($module['display_number']) ?><?php endif; ?>
                     <?php if ($formatDuration((int) $module['duration_minutes']) !== ''): ?>
                         • <?= esc($formatDuration((int) $module['duration_minutes'])) ?>
@@ -122,6 +122,8 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
     <?php endif; ?>
 
+    <p class="sr-only" aria-live="polite" data-module-move-status></p>
+
     <!-- learning units -->
     <div class="flex flex-col gap-3" data-learning-unit-list>
 
@@ -140,7 +142,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                 <?php if ($canEditContent): ?>
 
-                    <div data-learning-unit-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
+                    <div data-learning-unit-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing pointer-coarse:hidden">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                             <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                             <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
@@ -148,17 +150,19 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                         </svg>
                     </div>
 
+                    <?= view('pages/courses/features/modules/partials/move-buttons', ['attr' => 'data-learning-unit-move', 'noun' => 'learning unit', 'title' => $learning_unit['title'], 'class' => 'self-start mt-2'], ['saveData' => false]) ?>
+
                 <?php endif; ?>
 
                 <div
-                    class="flex flex-col flex-1 rounded-2xl border <?= $isResumeUnit ? 'border-brand/30 border-l-4 border-l-brand' : ($unitIsDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10') ?> <?= $unitFullyLocked ? 'bg-gray-50' : 'bg-white' ?> transition-colors hover:border-brand/30"
+                    class="flex min-w-0 flex-col flex-1 rounded-2xl border <?= $isResumeUnit ? 'border-brand/30 border-l-4 border-l-brand' : ($unitIsDraft ? 'border-dashed border-[#B9B9B9]' : 'border-black/10') ?> <?= $unitFullyLocked ? 'bg-gray-50' : 'bg-white' ?> transition-colors hover:border-brand/30"
                     data-learning-unit-wrapper
                     data-learning-unit-id="<?= esc($learning_unit['id']) ?>">
 
-                    <div class="flex justify-between items-center cursor-pointer px-5 py-4" data-learning-unit="<?= esc($learning_unit['id']) ?>">
+                    <div class="flex justify-between items-center gap-2 cursor-pointer px-5 py-4 max-sm:px-3" data-learning-unit="<?= esc($learning_unit['id']) ?>">
 
-                        <div class="flex items-center gap-4 min-w-0">
-                            <div class="w-10 h-10 shrink-0 flex justify-center items-center rounded-full <?= $unitFullyLocked ? 'bg-gray-100' : 'bg-[#1E7A8C]/10' ?>">
+                        <div class="flex items-center gap-4 min-w-0 max-sm:flex-wrap max-sm:gap-x-2 max-sm:gap-y-1">
+                            <div class="w-10 h-10 shrink-0<?= $canEditContent ? ' max-sm:hidden' : '' ?> flex justify-center items-center rounded-full <?= $unitFullyLocked ? 'bg-gray-100' : 'bg-[#1E7A8C]/10' ?>">
                                 <?= $unitFullyLocked ? icon('lock', 'h-4 w-4') : icon('learning-unit', 'h-5 w-5') ?>
                             </div>
                             <span class="text-lg truncate <?= $unitFullyLocked ? 'text-[#767676]' : 'text-[#1A1C1E]' ?>"><?= esc($learning_unit['title']) ?></span>
@@ -206,7 +210,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                         data-learning-unit-content="<?= esc($learning_unit['id']) ?>"
                         class="flex transition-all duration-300 overflow-hidden <?= $startsOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0' ?>">
 
-                        <div class="w-full flex flex-col gap-1 px-3 pb-4" data-learning-unit-items>
+                        <div class="w-full flex flex-col gap-1 px-3 pb-4 max-sm:px-1" data-learning-unit-items>
 
                             <?php if ($unitItems === []): ?>
                                 <p class="px-3 pb-2 text-sm text-[#767676] italic">No items yet</p>
@@ -219,20 +223,22 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                 <div class="flex items-center p-1" data-learning-item-row>
 
                                     <div
-                                        class="group w-full flex items-center gap-4 px-5 py-3.5 rounded-xl border border-transparent <?= $itemBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-brand/15 hover:bg-[#F4F6FB]' ?>"
+                                        class="group w-full flex items-center gap-4 px-5 py-3.5 max-sm:gap-2 max-sm:px-2 rounded-xl border border-transparent <?= $itemBlocked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-brand/15 hover:bg-[#F4F6FB]' ?>"
                                         data-learning-item-wrapper
                                         data-learning-item="<?= esc($learning_item['id']) ?>"
                                         <?php if ($itemBlocked): ?>data-locked="1" aria-disabled="true"<?php endif; ?>>
 
                                         <?php if ($canEditContent): ?>
 
-                                            <div data-learning-item-drag-handle class="flex h-8 w-8 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing">
+                                            <div data-learning-item-drag-handle class="flex h-8 w-8 shrink-0 pl-1 cursor-grab items-center text-[#1A1C1E] active:cursor-grabbing pointer-coarse:hidden">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-4" viewBox="0 0 16 24" fill="currentColor">
                                                     <circle cx="4" cy="4" r="2"/><circle cx="12" cy="4" r="2"/>
                                                     <circle cx="4" cy="12" r="2"/><circle cx="12" cy="12" r="2"/>
                                                     <circle cx="4" cy="20" r="2"/><circle cx="12" cy="20" r="2"/>
                                                 </svg>
                                             </div>
+
+                                            <?= view('pages/courses/features/modules/partials/move-buttons', ['attr' => 'data-learning-item-move', 'noun' => 'learning item', 'title' => $learning_item['title']], ['saveData' => false]) ?>
 
                                         <?php else: ?>
 
@@ -254,11 +260,11 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 
                                         <?php endif; ?>
 
-                                        <div class="w-full flex justify-between items-center">
-                                            <div class="flex flex-col gap-1">
+                                        <div class="w-full min-w-0 flex justify-between items-center">
+                                            <div class="flex min-w-0 flex-col gap-1">
 
-                                                <div class="flex items-center gap-4">
-                                                    <span class="text-md <?= !empty($learning_item['is_locked']) ? 'text-[#767676]' : '' ?>">
+                                                <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                                                    <span class="text-md min-w-0 break-words <?= !empty($learning_item['is_locked']) ? 'text-[#767676]' : '' ?>">
                                                         <?= esc($learning_item['title']) ?>
                                                     </span>
 
@@ -273,7 +279,7 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
                                                         <?php if (!empty($learning_item['dependency_labels'])): ?>
                                                             <span
                                                                 title="Students must complete: <?= esc(implode(', ', $learning_item['dependency_labels'])) ?>"
-                                                                class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                                                                class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
                                                                 <?= icon('lock', 'h-3 w-3 text-current') ?>
                                                                 After <?= esc(implode(', ', $learning_item['dependency_labels'])) ?>
                                                             </span>
@@ -381,29 +387,29 @@ $resumeUnitId = $resume_item['learning_unit_id'] ?? null;
 </div>
 
 <!-- modals -->
-<?php if ($isInstructor): ?>
+<?php // The editing dialogs only for someone who may change the content (a view-only reader gets none of their Save buttons). ?>
+<?php if ($canEditContent): ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/module-editor') ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/module-delete') ?>
-<?php endif; ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-editor') ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-delete') ?>
-<?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
-<?php if ($isInstructor): ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-editor') ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-unit-delete') ?>
+    <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-create') ?>
+    <?= view('pages/courses/features/modules/partials/content-actions-sheet', [], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-dependencies') ?>
-<?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
-<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
-    'id' => 'learning-unit-dependencies-modal',
-    'closeAttr' => 'data-close-learning-unit-dependencies-modal',
-    'noun' => 'learning unit',
-    'earlier' => 'earlier learning units in this module',
-    'previousLabel' => 'Previous learning unit',
-], ['saveData' => false]) ?>
-<?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
-    'id' => 'module-dependencies-modal',
-    'closeAttr' => 'data-close-module-dependencies-modal',
-    'noun' => 'module',
-    'earlier' => 'earlier modules in this course',
-    'previousLabel' => 'Previous module',
-], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/content-transfer', [], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+        'id' => 'learning-unit-dependencies-modal',
+        'closeAttr' => 'data-close-learning-unit-dependencies-modal',
+        'noun' => 'learning unit',
+        'earlier' => 'earlier learning units in this module',
+        'previousLabel' => 'Previous learning unit',
+    ], ['saveData' => false]) ?>
+    <?= view('pages/courses/features/modules/partials/modals/container-dependencies', [
+        'id' => 'module-dependencies-modal',
+        'closeAttr' => 'data-close-module-dependencies-modal',
+        'noun' => 'module',
+        'earlier' => 'earlier modules in this course',
+        'previousLabel' => 'Previous module',
+    ], ['saveData' => false]) ?>
     <?= $this->include('pages/courses/features/modules/partials/modals/learning-item-delete') ?>
 <?php endif; ?>

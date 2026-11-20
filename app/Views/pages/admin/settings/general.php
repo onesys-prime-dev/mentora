@@ -12,7 +12,7 @@ foreach ($genZones as $zone) {
 }
 
 $field   = static fn (array $spec): string => view('components/form-field', $spec, ['saveData' => false]);
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
 $legend  = 'text-lg font-bold text-brand';
 ?>
 
@@ -65,7 +65,7 @@ $legend  = 'text-lg font-bold text-brand';
         <fieldset class="flex flex-col gap-3">
             <legend class="<?= $legend ?>">Subscriptions and backups</legend>
             <p class="text-xs text-[#646464]">The default timeline for every institution that has no timeline of its own, in days after the end date, and how old the last good backup may get before an alert.</p>
-            <div class="grid gap-3 sm:grid-cols-2">
+            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <?= $field(['name' => 'expiryWarningDays', 'label' => 'Warn this many days before the end', 'type' => 'number', 'value' => $value('expiryWarningDays'), 'required' => true, 'attrs' => 'min="0" max="365"']) ?>
                 <?= $field(['name' => 'expiryGraceDays', 'label' => 'Grace period (full access) in days', 'type' => 'number', 'value' => $value('expiryGraceDays'), 'required' => true, 'attrs' => 'min="0" max="365"']) ?>
                 <?= $field(['name' => 'expiryReadOnlyDays', 'label' => 'Read-only period in days', 'type' => 'number', 'value' => $value('expiryReadOnlyDays'), 'required' => true, 'attrs' => 'min="0" max="365"']) ?>

@@ -19,11 +19,11 @@ $links = array_merge(global_apps($userRole), $data['extra'] ?? []);
 <!-- quick access -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
-    <div class="shrink-0 px-6 py-3 bg-black/10">
+    <div class="shrink-0 px-4 sm:px-6 py-3 bg-black/10">
         <span class="text-xl font-display">Quick Access</span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4">
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-4 sm:px-6 py-4">
 
         <div class="grid grid-cols-3 gap-4">
 

@@ -15,7 +15,7 @@ $loadError = $loadError ?? false;
 <div class="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:p-8 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain lg:scroll-smooth lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden" data-page-panel>
 
     <div class="flex flex-col gap-1">
-        <h1 class="flex items-center gap-4 text-2xl font-bold text-brand">
+        <h1 class="flex items-center gap-4 text-fluid-h1 lg:text-2xl font-bold text-brand">
             <?= icon('hat', 'h-6 w-6 shrink-0 text-brand') ?>
             Courses
         </h1>
@@ -47,7 +47,8 @@ $loadError = $loadError ?? false;
 
     <?php else: ?>
 
-        <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Your courses">
+        <div class="@container w-full min-w-0">
+        <ul class="grid grid-cols-1 gap-5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4" aria-label="Your courses">
 
             <?php foreach ($courses as $course): ?>
                 <li class="h-full min-w-0">
@@ -60,6 +61,7 @@ $loadError = $loadError ?? false;
             <?php endforeach; ?>
 
         </ul>
+        </div>
 
     <?php endif; ?>
 
@@ -69,7 +71,8 @@ $loadError = $loadError ?? false;
             <h2 id="past-courses" class="text-lg font-bold text-brand">Past courses</h2>
             <p class="text-sm text-[#3D3D3D]">Courses whose term has ended. You can still look at them and download what is there, but nothing in them can be changed.</p>
 
-            <ul class="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Past courses">
+            <div class="@container w-full min-w-0">
+            <ul class="grid grid-cols-1 gap-5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4" aria-label="Past courses">
                 <?php foreach ($pastCourses as $course): ?>
                     <li class="h-full min-w-0">
                         <?= view('pages/courses/partials/course-card', [
@@ -80,6 +83,7 @@ $loadError = $loadError ?? false;
                     </li>
                 <?php endforeach; ?>
             </ul>
+            </div>
         </section>
 
     <?php endif; ?>

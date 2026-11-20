@@ -29,8 +29,8 @@ $when = static fn (?string $at): string => $at === null || $at === '' ? '—' : 
 
 $field = static fn (array $f): string => view('components/form-field', $f, ['saveData' => false]);
 
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2';
-$ghost   = 'rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50';
+$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 inline-flex items-center pointer-coarse:min-h-11';
+$ghost   = 'rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11';
 
 $rows = [];
 
@@ -53,7 +53,7 @@ foreach ($list['rows'] as $r) {
             'due'     => ['html' => esc($when($r['due_on'])) . ($r['due_date'] === null ? '<span class="block text-xs text-[#646464]">no date set</span>' : '')],
             'status'  => ['html' => $status . ($r['passed_to'] ? '<span class="mt-1 block text-xs text-[#646464]">Passed to ' . esc($r['passed_to']['name']) . ($r['passed_to']['status'] === 'done' ? ' (done)' : '') . '</span>' : '')],
         ],
-        'actions' => '<button type="button" data-dialog-open="thread-' . $id . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark">Open</button>',
+        'actions' => '<button type="button" data-dialog-open="thread-' . $id . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Open</button>',
     ];
 }
 
@@ -100,9 +100,9 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
     ], ['saveData' => false]) ?>
 
     <?php if (count($boxes) > 1): ?>
-        <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
+        <div class="flex flex-wrap items-center gap-1 text-xs" role="group" aria-label="Show">
             <?php foreach ($boxes as $name): ?>
-                <a href="<?= esc($link($name, 'open')) ?>" <?= $box === $name ? 'aria-current="true"' : '' ?> class="rounded-full px-3 py-1.5 font-semibold <?= $box === $name ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
+                <a href="<?= esc($link($name, 'open')) ?>" <?= $box === $name ? 'aria-current="true"' : '' ?> class="inline-flex items-center rounded-full px-3 py-1.5 font-semibold pointer-coarse:min-h-11 <?= $box === $name ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
                     <?= esc($boxLabels[$name]) ?><?= $name === 'received' ? ' (' . (int) $received . ' open)' : '' ?>
                 </a>
             <?php endforeach; ?>
@@ -152,7 +152,7 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                 . '<dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">'
                 . '<dt class="text-[#646464]">From</dt><dd>' . esc($r['sender_name'] ?: '—') . ' (' . esc((string) $r['sender_role']) . ')</dd>'
                 . '<dt class="text-[#646464]">To</dt><dd>' . esc($r['recipient_name'] ?: '—') . ' (' . esc((string) $r['recipient_role']) . ')</dd>'
-                . '<dt class="text-[#646464]">About</dt><dd><a class="font-semibold text-brand hover:underline" href="' . esc(site_url($area === 'instructor' ? "instructor/courses/{$r['offering_id']}/{$r['slug']}" : "{$area}/courses/{$r['offering_id']}/{$r['slug']}")) . '">' . esc($r['label']) . '</a>' . ($r['student_name'] ? ' · ' . esc($r['student_name']) : '') . '</dd>'
+                . '<dt class="text-[#646464]">About</dt><dd><a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc(site_url($area === 'instructor' ? "instructor/courses/{$r['offering_id']}/{$r['slug']}" : "{$area}/courses/{$r['offering_id']}/{$r['slug']}")) . '">' . esc($r['label']) . '</a>' . ($r['student_name'] ? ' · ' . esc($r['student_name']) : '') . '</dd>'
                 . '<dt class="text-[#646464]">Kind</dt><dd>' . esc(FollowUpRules::REASONS[$r['reason']] ?? 'Something else') . '</dd>'
                 . '<dt class="text-[#646464]">Due</dt><dd>' . esc($when($r['due_on'])) . ($r['overdue'] ? ' <strong class="text-[#C33939]">(overdue)</strong>' : '') . '</dd>'
                 . '</dl>'
@@ -161,10 +161,10 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                 . ($thread !== '' ? '<ul class="flex flex-col gap-2" aria-label="Replies">' . $thread . '</ul>' : '');
 
             if ($isOpen) {
-                $body .= '<form method="post" action="' . esc(site_url("{$area}/follow-ups/{$id}/reply"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
+                $body .= '<form id="thread-' . $id . '-reply" method="post" action="' . esc(site_url("{$area}/follow-ups/{$id}/reply"), 'attr') . '" data-dialog-form class="flex flex-col gap-3 border-t border-gray-100 pt-4">' . csrf_field()
                     . $field(['name' => 'body', 'label' => 'Reply', 'type' => 'textarea', 'maxlength' => 2000])
                     . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
-                    . '<div class="flex justify-end"><button type="submit" data-dialog-label class="' . esc($primary, 'attr') . '">Send reply</button></div></form>';
+                    . '<div class="flex justify-end max-sm:hidden"><button type="submit" data-dialog-label class="' . esc($primary, 'attr') . '">Send reply</button></div></form>';
 
                 if ($canSend && ! empty($passTo[$id])) {
                     $choices = ['' => 'Choose an instructor'];
@@ -180,13 +180,20 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                         . '<div class="flex justify-end"><button type="submit" data-dialog-label class="' . esc($ghost, 'attr') . '">Pass on</button></div></form>';
                 }
 
-                $body .= '<form method="post" action="' . esc(site_url("{$area}/follow-ups/{$id}/done"), 'attr') . '" data-dialog-form class="flex flex-col gap-2 border-t border-gray-100 pt-4">' . csrf_field()
+                $body .= '<form id="thread-' . $id . '-done" method="post" action="' . esc(site_url("{$area}/follow-ups/{$id}/done"), 'attr') . '" data-dialog-form class="flex flex-col gap-2 border-t border-gray-100 pt-4">' . csrf_field()
                     . '<p class="text-sm text-[#3D3D3D]">' . esc($sent ? 'Mark this done if you no longer need an answer. ' : 'Mark this done when you have dealt with it. ') . esc($r['sender_name'] ?: 'The sender') . ' is told.</p>'
                     . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
-                    . '<div class="flex justify-end"><button type="submit" data-dialog-label class="' . esc($ghost, 'attr') . '">Mark as done</button></div></form>';
+                    . '<div class="flex justify-end max-sm:hidden"><button type="submit" data-dialog-label class="' . esc($ghost, 'attr') . '">Mark as done</button></div></form>';
             }
 
             $body .= '</div>';
+
+            if ($isOpen) {
+                // Several forms, so no one row can be pinned: on a phone Mark as done and Send reply share one bar pinned to the bottom (app.css).
+                $body .= '<div data-dialog-actions class="flex items-center justify-end gap-3 sm:hidden">'
+                    . '<button type="submit" form="thread-' . $id . '-done" class="' . esc($ghost, 'attr') . '">Mark as done</button>'
+                    . '<button type="submit" form="thread-' . $id . '-reply" class="' . esc($primary, 'attr') . '">Send reply</button></div>';
+            }
             ?>
             <?= view('components/dialog', ['id' => "thread-{$id}", 'title' => $r['title'], 'body' => $body, 'size' => 'lg'], ['saveData' => false]) ?>
         <?php endforeach; ?>
@@ -206,7 +213,7 @@ foreach ([['open', 'Open'], ['overdue', 'Overdue'], ['done', 'Done']] as [$key, 
                 . '<input type="hidden" name="reason" value="other">'
                 . '<div class="flex justify-end gap-3"><button type="button" data-dialog-close class="' . esc($ghost, 'attr') . '">Cancel</button><button type="submit" class="' . esc($primary, 'attr') . '">Continue</button></div></form>';
             ?>
-            <?= view('components/dialog', ['id' => 'follow-up-pick', 'title' => 'New follow-up', 'body' => $pick, 'size' => 'sm'], ['saveData' => false]) ?>
+            <?= view('components/dialog', ['id' => 'follow-up-pick', 'title' => 'New follow-up', 'body' => $pick, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
 
             <?php if ($prefill !== null): ?>
                 <?php

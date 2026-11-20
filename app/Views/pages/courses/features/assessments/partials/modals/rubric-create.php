@@ -5,7 +5,7 @@
     <div class="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
 
         <!-- Header -->
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <div class="flex flex-col">
 
@@ -21,7 +21,8 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                aria-label="Close"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 data-close-rubric-modal>
 
                 <svg
@@ -46,7 +47,7 @@
         <!-- Body -->
         <form
             id="rubric-create-form"
-            class="flex flex-1 flex-col gap-6 overflow-y-auto p-8">
+            class="flex flex-1 flex-col gap-6 overflow-y-auto p-5 sm:p-8">
 
             <div class="flex flex-col gap-2">
 
@@ -54,12 +55,12 @@
                     Rubric Title
                 </label>
 
-                <input
+                <input aria-label="Rubric Title"
                     type="text"
                     name="title"
                     autocomplete="off"
                     placeholder="e.g. Programming Assignment Rubric"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm"
                     data-rubric-create-title
                     required>
 
@@ -71,12 +72,12 @@
                     Description
                 </label>
 
-                <textarea
+                <textarea aria-label="Description"
                     name="description"
                     autocomplete="off"
                     rows="3"
                     placeholder="Briefly describe what this rubric evaluates..."
-                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand"
+                    class="resize-none rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm"
                     data-rubric-create-description></textarea>
 
             </div>
@@ -91,7 +92,7 @@
 
                     <button
                         type="button"
-                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10"
+                        class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-brand transition hover:bg-brand/10 pointer-coarse:min-h-11"
                         data-add-rubric-criteria
                         data-context="create">
 
@@ -137,7 +138,7 @@
         </form>
 
         <!-- Footer -->
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <button
                 type="button"

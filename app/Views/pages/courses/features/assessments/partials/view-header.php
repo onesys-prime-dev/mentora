@@ -5,11 +5,11 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 <!-- header -->
 <header class="flex flex-col gap-2 py-2">
     
-    <span class="text-3xl font-bold text-brand">
+    <span class="wrap-break-word text-2xl font-bold text-brand sm:text-3xl">
         <?= esc($currentAssessment['title']) ?>
     </span>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
         <div class="flex justify-center items-center">
             <?= learning_item_icon($currentAssessment['assessment_type'], 'h-4 w-4') ?>
         </div>

@@ -47,20 +47,21 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
 
     <?php if (! $loadError): ?>
         <div class="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand-tint p-3 sm:flex-row sm:items-center sm:justify-between">
-        <nav aria-label="Filter announcements" class="flex flex-wrap items-center gap-2" data-level-filter>
+        <?php // Below lg the levels are one sideways-scrolling strip (shared/scroll-x.js); from lg up they wrap as before. ?>
+        <nav aria-label="Filter announcements" class="flex flex-wrap items-center gap-2 max-lg:flex-nowrap" data-level-filter data-scroll-x data-scroll-current>
             <?php foreach (['platform' => 'Platform', 'institution' => 'Institution', 'college' => 'College', 'course' => 'Courses'] as $key => $label): ?>
                 <a href="<?= esc($link($key)) ?>"
-                   class="rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $level === $key ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
+                   class="shrink-0 whitespace-nowrap rounded-full pointer-coarse:inline-flex pointer-coarse:items-center px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 <?= $level === $key ? 'bg-brand text-white' : 'bg-white text-brand-dark shadow-sm hover:bg-white/70' ?>"
                    <?= $level === $key ? 'aria-current="page"' : '' ?>><?= esc($label) ?> <span class="ml-1 rounded-full px-2 py-0.5 text-xs font-bold <?= $level === $key ? 'bg-white/25 text-white' : 'bg-brand-tint text-brand-dark' ?>" data-level-count="<?= esc($key) ?>"><?= (int) ($counts[$key] ?? 0) ?></span></a>
             <?php endforeach; ?>
         </nav>
-        <form method="get" action="<?= esc(site_url($area . '/announcements')) ?>" role="search" class="flex gap-2" data-announcement-search>
+        <form method="get" action="<?= esc(site_url($area . '/announcements')) ?>" role="search" class="flex w-full gap-2 sm:w-auto" data-announcement-search>
             <input type="hidden" name="level" value="<?= esc($level) ?>">
             <label class="sr-only" for="announcement-q">Search announcements</label>
             <span class="relative flex min-w-0 flex-1">
                 <?= icon('search', 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400') ?>
             <input id="announcement-q" type="search" name="q" data-auto-search value="<?= esc($query) ?>" maxlength="100" placeholder="Search announcements"
-                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
+                   class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-base sm:text-sm pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
             </span>
         </form>
         </div>
@@ -72,7 +73,7 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load your announcements</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing has been lost.</span>
-            <a href="<?= esc(site_url($area . '/announcements')) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc(site_url($area . '/announcements')) ?>" class="inline-flex items-center rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 pointer-coarse:min-h-11">Try again</a>
         </div>
 
     <?php else: ?>

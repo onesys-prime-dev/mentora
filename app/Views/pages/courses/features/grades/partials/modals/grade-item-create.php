@@ -6,15 +6,15 @@
     id="grade-item-create-modal"
     class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
 
-    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col max-h-full overflow-y-auto">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 class="text-xl font-bold text-brand">
                 Add Manual Item
             </h2>
 
-            <button type="button" class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" data-close-grade-item-modal>
+            <button type="button" aria-label="Close" class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11" data-close-grade-item-modal>
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -22,20 +22,20 @@
 
         </div>
 
-        <form id="grade-item-create-form" class="flex flex-col gap-6 p-8">
+        <form id="grade-item-create-form" class="flex flex-col gap-6 p-5 sm:p-8 min-h-0 flex-1 overflow-y-auto">
 
             <input type="hidden" data-grade-item-create-category>
 
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-700">Name</label>
-                <input type="text" data-grade-item-create-name required placeholder="e.g. Attendance"
-                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand">
+                <input type="text" aria-label="Name" data-grade-item-create-name required placeholder="e.g. Attendance"
+                    class="rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm">
             </div>
 
             <div class="flex flex-col gap-2">
                 <label class="text-sm font-semibold text-gray-700">Max points</label>
-                <input type="number" min="0.01" step="0.01" data-grade-item-create-max required value="100"
-                    class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand">
+                <input type="number" inputmode="decimal" aria-label="Max points" min="0.01" step="0.01" data-grade-item-create-max required value="100"
+                    class="w-32 rounded-xl border border-gray-300 px-4 py-3 outline-none transition focus:border-brand text-base sm:text-sm">
                 <span class="text-xs text-[#767676]">Scores are entered through the offline grade sheet.</span>
             </div>
 
@@ -43,7 +43,7 @@
 
         </form>
 
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <button type="button" class="rounded-xl border border-gray-300 px-6 py-3 font-medium transition hover:bg-gray-100" data-close-grade-item-modal>
                 Cancel

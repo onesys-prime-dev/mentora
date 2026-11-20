@@ -42,7 +42,7 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
 <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="connection">
     <h2 class="text-lg font-semibold text-brand">Student information system</h2>
     <p class="mt-1 text-sm text-[#646464]">Connector: <?= esc($sisType['label']) ?>.</p>
-    <dl class="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+    <dl class="mt-3 grid gap-2 text-sm md:grid-cols-2">
         <div><dt class="text-xs text-[#646464]">Inbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['inbound']) ?></dd></div>
         <div><dt class="text-xs text-[#646464]">Outbound folder</dt><dd class="break-all font-mono text-xs"><?= esc($sisConnection['folders']['outbound']) ?></dd></div>
     </dl>
@@ -71,12 +71,12 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
             <p class="text-xs text-[#646464]" data-credentials="none">No credentials saved.</p>
         <?php endif; ?>
 
-        <div><button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save (asks for your password)</button></div>
+        <div><button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save (asks for your password)</button></div>
     </form>
 
     <form class="mt-4" method="post" action="<?= site_url($base . '/test') ?>">
         <?= csrf_field() ?>
-        <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Test connection</button>
+        <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Test connection</button>
     </form>
 </section>
 
@@ -86,11 +86,11 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-sis-preview>Preview (dry run)</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-sis-preview>Preview (dry run)</button>
         </form>
         <form data-dialog-form method="post" action="<?= site_url($base . '/run') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-sis-run>Import now</button>
         </form>
     </div>
 
@@ -100,12 +100,12 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
             <?= esc((string) $sisLatest['run']['message']) ?>
         </h3>
         <?php if ($sisLatest['issues'] !== []): ?>
-            <div class="mt-2 overflow-x-auto">
+            <div class="mt-2" data-scroll-x data-sticky-first tabindex="0" role="region" aria-label="Rows that were not imported">
                 <table class="min-w-full divide-y divide-gray-200 text-sm" data-issues>
-                    <thead class="bg-gray-50"><tr><th class="<?= $th ?>">File</th><th class="<?= $th ?>">Record</th><th class="<?= $th ?>">Why it was not imported</th></tr></thead>
+                    <thead class="bg-gray-50"><tr><th class="<?= $th ?> sticky left-0 z-[1] bg-gray-50">File</th><th class="<?= $th ?>">Record</th><th class="<?= $th ?>">Why it was not imported</th></tr></thead>
                     <tbody class="divide-y divide-gray-100">
                         <?php foreach ($sisLatest['issues'] as $issue): ?>
-                            <tr><td class="px-3 py-2"><?= esc($issue['dataset']) ?>.csv</td><td class="px-3 py-2 font-mono text-xs"><?= esc($issue['item']) ?></td><td class="px-3 py-2"><?= esc($issue['reason']) ?></td></tr>
+                            <tr><td class="sticky left-0 z-[1] bg-white px-3 py-2"><?= esc($issue['dataset']) ?>.csv</td><td class="px-3 py-2 font-mono text-xs"><?= esc($issue['item']) ?></td><td class="px-3 py-2"><?= esc($issue['reason']) ?></td></tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -123,22 +123,22 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
     <div class="mt-4 flex flex-wrap gap-3">
         <form method="post" action="<?= site_url($base . '/grades/preview') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-grades-preview>Preview what would be sent</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-grades-preview>Preview what would be sent</button>
         </form>
         <form data-dialog-form method="post" action="<?= site_url($base . '/grades/send') ?>">
             <?= csrf_field() ?>
-            <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
+            <button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:opacity-50" <?= $sisConnection['enabled'] ? '' : 'disabled' ?> data-grades-send>Send final grades now</button>
         </form>
     </div>
 </section>
 
 <section class="mt-6 rounded-2xl bg-white p-6 shadow-sm" data-section="runs">
     <h2 class="text-lg font-semibold text-brand">Run history</h2>
-    <div class="mt-3 overflow-x-auto">
+    <div class="mt-3" data-scroll-x data-sticky-first tabindex="0" role="region" aria-label="Run history">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="<?= $th ?>">Started</th><th class="<?= $th ?>">Direction</th><th class="<?= $th ?>">Trigger</th><th class="<?= $th ?>">Result</th>
+                    <th class="<?= $th ?> sticky left-0 z-[1] bg-gray-50">Started</th><th class="<?= $th ?>">Direction</th><th class="<?= $th ?>">Trigger</th><th class="<?= $th ?>">Result</th>
                     <th class="<?= $th ?>">Created</th><th class="<?= $th ?>">Updated</th><th class="<?= $th ?>">Skipped</th><th class="<?= $th ?>">Failed</th><th class="<?= $th ?>">Message</th>
                 </tr>
             </thead>
@@ -148,7 +148,7 @@ $base  = 'admin/institutions/' . $sisInstitution['id'] . '/integrations';
                 <?php endif; ?>
                 <?php foreach ($sisRuns as $run): ?>
                     <tr data-run="<?= esc($run['status']) ?>">
-                        <td class="px-3 py-2"><?= esc(substr((string) $run['started_at'], 0, 16)) ?></td>
+                        <td class="sticky left-0 z-[1] bg-white px-3 py-2"><?= esc(substr((string) $run['started_at'], 0, 16)) ?></td>
                         <td class="px-3 py-2"><?= esc(ucfirst((string) $run['direction'])) ?><?= (int) $run['dry_run'] === 1 ? ' (dry run)' : '' ?></td>
                         <td class="px-3 py-2"><?= esc(ucfirst((string) $run['trigger'])) ?></td>
                         <td class="px-3 py-2"><span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $badge[$run['status']] ?? '' ?>"><?= esc(ucfirst((string) $run['status'])) ?></span></td>

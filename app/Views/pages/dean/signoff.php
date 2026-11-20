@@ -41,7 +41,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
         'title'       => 'Term-end sign-off',
         'icon'        => 'check',
         'description' => 'Sign off the final grades of ' . $scope . '. Instructors finalize first; you then sign them off, and ' . $reopener . ' reopen a sign-off.',
-        'actions'     => $loadError || $board['term'] === null || $area !== 'dean' ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/signoff') . '?term=' . (int) $board['term'], 'attr') . '" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
+        'actions'     => $loadError || $board['term'] === null || $area !== 'dean' ? '' : '<a data-export="csv" href="' . esc(site_url('dean/reports/export/signoff') . '?term=' . (int) $board['term'], 'attr') . '" class="inline-flex items-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Download CSV</a>',
     ], ['saveData' => false]) ?>
 
     <?php if ($termOptions !== []): ?>
@@ -59,7 +59,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
             <?= icon('warning', 'h-10 w-10 text-[#C33939]') ?>
             <span class="text-sm font-semibold text-[#1A1C1E]">We could not load the sections</span>
             <span class="text-xs text-[#646464]">Something went wrong on our side. Nothing was signed off.</span>
-            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">Try again</a>
+            <a href="<?= esc($base) ?>" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2 inline-flex items-center pointer-coarse:min-h-11">Try again</a>
         </div>
 
     <?php elseif ($board['programs'] === []): ?>
@@ -87,7 +87,7 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                     </div>
 
                     <?php if ($ready > 0): ?>
-                        <button type="button" data-dialog-open="signoff-program-<?= (int) $program['id'] ?>" data-signoff-all class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                        <button type="button" data-dialog-open="signoff-program-<?= (int) $program['id'] ?>" data-signoff-all class="pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
                             Sign off all <?= $ready ?> ready
                         </button>
                     <?php endif; ?>
@@ -109,11 +109,11 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                                 <?php if ($section['state'] === GradeSignoffService::BLOCKED): ?>
                                     <span class="text-xs text-[#946200]" data-blockers><?= esc(implode(' ', $section['blockers'])) ?></span>
                                     <span class="flex flex-wrap gap-3 text-xs font-semibold" data-blocker-links>
-                                        <a class="text-brand hover:underline" href="<?= esc($section['grades_url']) ?>">See the grades (view only)</a>
+                                        <a class="text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc($section['grades_url']) ?>">See the grades (view only)</a>
                                         <?php if ((int) $section['counts']['open_requests'] > 0): ?>
-                                            <a class="text-brand hover:underline" href="<?= esc(site_url($area . '/approvals')) ?>">Decide the open requests</a>
+                                            <a class="text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url($area . '/approvals')) ?>">Decide the open requests</a>
                                         <?php endif; ?>
-                                        <?php if ($area === 'dean'): ?><a data-follow-up-link class="text-brand hover:underline" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $section['offering_id'], 'reason' => 'blocked_signoff'])) ?>">Send a follow-up</a><?php endif; ?>
+                                        <?php if ($area === 'dean'): ?><a data-follow-up-link class="text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url('dean/follow-ups') . '?' . http_build_query(['offering' => (int) $section['offering_id'], 'reason' => 'blocked_signoff'])) ?>">Send a follow-up</a><?php endif; ?>
                                     </span>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
                                     <span class="text-xs text-[#2B7549]" data-signed-by>
@@ -132,9 +132,9 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                                 <?php if ($section['state'] === GradeSignoffService::READY && ! empty($section['own_section'])): ?>
                                     <span class="text-xs text-[#646464]" data-own-section>You teach this section, so another administrator signs it off.</span>
                                 <?php elseif ($section['state'] === GradeSignoffService::READY): ?>
-                                    <button type="button" data-dialog-open="signoff-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-brand px-4 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-tint">Sign off</button>
+                                    <button type="button" data-dialog-open="signoff-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-brand px-4 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-tint pointer-coarse:min-h-11">Sign off</button>
                                 <?php elseif ($section['state'] === GradeSignoffService::SIGNED_OFF): ?>
-                                    <button type="button" data-dialog-open="reopen-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Reopen…</button>
+                                    <button type="button" data-dialog-open="reopen-<?= (int) $section['offering_id'] ?>" class="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Reopen…</button>
                                 <?php endif; ?>
                             </div>
                         </li>
@@ -175,8 +175,8 @@ $field = static fn (array $f): string => view('components/form-field', $f, ['sav
                         . '<p class="text-sm text-[#3D3D3D]">This ends the sign-off of ' . esc($label) . '. The grades stay finalized, and the instructor and chairperson are told why.</p>'
                         . $field(['name' => 'reason', 'label' => 'Why are you reopening it?', 'type' => 'textarea', 'required' => true, 'maxlength' => 2000])
                         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
-                        . '<div class="flex flex-wrap items-center justify-end gap-3"><button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-                        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Reopen</button></div></form>';
+                        . '<div class="flex flex-wrap items-center justify-end gap-3"><button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Cancel</button>'
+                        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Reopen</button></div></form>';
                     ?>
                     <?= view('components/dialog', ['id' => 'reopen-' . (int) $section['offering_id'], 'title' => 'Reopen ' . $label, 'body' => $reopenBody], ['saveData' => false]) ?>
                 <?php endif; ?>

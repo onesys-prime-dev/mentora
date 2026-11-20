@@ -4,7 +4,7 @@
 
     <div class="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 class="text-xl font-bold text-brand">
                 Import Questions
@@ -12,7 +12,7 @@
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 aria-label="Close"
                 data-close-import-questions-modal>
 
@@ -24,26 +24,26 @@
 
         </div>
 
-        <ol class="flex items-center gap-2 border-b border-gray-100 px-8 py-3 text-xs font-semibold" aria-label="Import steps">
+        <ol class="flex shrink-0 flex-wrap items-center gap-2 border-b border-gray-100 px-5 sm:px-8 py-3 text-xs font-semibold" aria-label="Import steps">
             <li data-import-stepper="upload" class="flex items-center gap-2"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[11px] text-white">1</span> Choose</li>
             <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
-            <li data-import-stepper="review" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">2</span> Review</li>
+            <li data-import-stepper="review" class="flex items-center gap-2 text-[#646464]"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">2</span> Review</li>
             <li class="h-px w-6 bg-gray-300" aria-hidden="true"></li>
-            <li data-import-stepper="done" class="flex items-center gap-2 text-gray-400"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">3</span> Done</li>
+            <li data-import-stepper="done" class="flex items-center gap-2 text-[#646464]"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-200 text-[11px] text-gray-600">3</span> Done</li>
         </ol>
 
         <!-- Step 1: choose the file -->
-        <div data-import-step="upload" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-8">
+        <div data-import-step="upload" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-8">
 
             <p class="text-sm text-gray-600">
                 Bring in questions from a file, from pasted text, or from another of your quizzes. You see every question,
                 can correct it or skip it, and nothing is saved until you confirm. You can undo an import for 10 minutes.
             </p>
 
-            <div class="inline-flex w-fit rounded-xl bg-gray-100 p-1" role="tablist">
-                <button type="button" role="tab" data-import-source-tab="file" class="rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-brand shadow transition">Upload a file</button>
-                <button type="button" role="tab" data-import-source-tab="text" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">Paste text</button>
-                <button type="button" role="tab" data-import-source-tab="quiz" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-gray-500 transition">From another quiz</button>
+            <div class="inline-flex w-fit max-w-full flex-wrap rounded-xl bg-gray-100 p-1" role="tablist">
+                <button type="button" role="tab" data-import-source-tab="file" class="rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-brand shadow transition pointer-coarse:min-h-11">Upload a file</button>
+                <button type="button" role="tab" data-import-source-tab="text" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-[#646464] transition pointer-coarse:min-h-11">Paste text</button>
+                <button type="button" role="tab" data-import-source-tab="quiz" class="rounded-lg px-4 py-1.5 text-sm font-semibold text-[#646464] transition pointer-coarse:min-h-11">From another quiz</button>
             </div>
 
             <div data-import-source-panel="file" data-import-dropzone class="flex flex-col gap-2 rounded-xl border-2 border-dashed border-gray-200 p-4 transition">
@@ -52,7 +52,7 @@
                     data-import-file-input
                     accept=".docx,.rtf,.xlsx,.csv,.txt,.pdf,.html,.htm,.xml,.dat,.zip,.tst"
                     aria-label="Quiz file to import"
-                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                    class="max-w-full rounded-lg border border-gray-300 px-3 py-2 text-base outline-none transition focus:border-brand sm:text-sm pointer-coarse:min-h-11">
 
                 <p data-import-file-name class="hidden text-xs font-semibold text-gray-700" aria-live="polite"></p>
                 <p class="text-xs font-medium text-gray-700">Drag a file here, or choose one. Up to 5 MB.</p>
@@ -70,7 +70,7 @@
                     rows="8"
                     aria-label="Questions to import"
                     placeholder="1. Which layer routes packets?&#10;a) Transport&#10;b) Network&#10;Answer: b"
-                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand"></textarea>
+                    class="rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand"></textarea>
             </div>
 
             <div data-import-source-panel="quiz" class="hidden flex-col gap-3">
@@ -80,7 +80,7 @@
                     <select
                         data-picker-source
                         disabled
-                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-800 outline-none transition focus:border-brand disabled:bg-gray-50">
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm font-normal text-gray-800 outline-none transition focus:border-brand disabled:bg-gray-50 pointer-coarse:min-h-11">
                     </select>
                 </label>
 
@@ -90,8 +90,8 @@
                         data-picker-search
                         aria-label="Search these questions"
                         placeholder="Search these questions"
-                        class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
-                    <button type="button" data-picker-select-all class="shrink-0 text-xs font-semibold text-brand hover:underline">Select all</button>
+                        class="min-w-0 flex-1 rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm outline-none transition focus:border-brand pointer-coarse:min-h-11">
+                    <button type="button" data-picker-select-all class="shrink-0 text-xs font-semibold text-brand hover:underline pointer-coarse:min-h-11">Select all</button>
                 </div>
 
                 <div data-picker-list class="flex max-h-72 flex-col gap-1.5 overflow-y-auto"></div>
@@ -109,7 +109,7 @@
             </div>
 
             <details data-import-layout-guide class="rounded-xl border border-gray-200 p-3 text-xs text-gray-600">
-                <summary class="cursor-pointer font-semibold text-gray-700">What layout can I use?</summary>
+                <summary class="cursor-pointer font-semibold text-gray-700 pointer-coarse:min-h-11 pointer-coarse:py-3">What layout can I use?</summary>
                 <div class="mt-3 flex flex-col gap-3">
 
                     <div class="flex flex-col gap-1">
@@ -163,7 +163,7 @@
         </div>
 
         <!-- Step 2: review -->
-        <div data-import-step="review" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
+        <div data-import-step="review" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-8">
 
             <p class="text-xs font-medium text-[#767676]">Nothing has been saved yet.</p>
 
@@ -201,7 +201,7 @@
 
                 <div class="flex items-center justify-between gap-3">
                     <span class="text-xs font-semibold text-gray-700">In the quiz but not in the file</span>
-                    <button type="button" data-import-remove-all class="text-xs font-semibold text-brand hover:underline">Select all</button>
+                    <button type="button" data-import-remove-all class="text-xs font-semibold text-brand hover:underline pointer-coarse:min-h-11">Select all</button>
                 </div>
 
                 <p class="text-xs text-[#767676]">
@@ -220,7 +220,7 @@
         </div>
 
         <!-- Step 3: done -->
-        <div data-import-step="done" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-8">
+        <div data-import-step="done" class="hidden flex-1 flex-col gap-4 overflow-y-auto p-5 sm:p-8">
 
             <p class="text-base font-semibold text-gray-800" data-import-result-message></p>
 
@@ -231,7 +231,7 @@
                 <button
                     type="button"
                     data-import-undo-button
-                    class="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60">
+                    class="rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11">
                     Undo this import
                 </button>
 
@@ -241,7 +241,7 @@
 
         </div>
 
-        <div class="flex items-center justify-between gap-3 border-t border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 sm:py-6 flex-wrap shrink-0">
 
             <span data-import-status class="text-xs text-[#767676]" aria-live="polite"></span>
 

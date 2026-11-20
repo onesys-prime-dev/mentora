@@ -17,6 +17,12 @@ export const accounts = {
 
     // The demo institutional administrator of institution 1.
     institutionAdmin: { email: "institution.admin@mentora.test", password: "Institution123!" },
+
+    // The demo chairperson and dean (the same accounts as support/messages.js).
+    chairperson: { email: "chairperson1@mentora.test", password: "Chairperson123!" },
+    dean: { email: "dean1@mentora.test", password: "Dean123!" },
+    // The dean of the College of Business and Management, the college with the courses (dean1's has none).
+    dean2: { email: "dean2@mentora.test", password: "Dean123!" },
 };
 
 // The system administrator tests/e2e/support/serve.js creates (the demo seeder refuses to run in

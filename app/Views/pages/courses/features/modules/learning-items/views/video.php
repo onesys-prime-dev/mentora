@@ -19,7 +19,7 @@ $progressAttributes = $trackProgress
 
 ?>
 
-<div class="w-full aspect-video overflow-hidden rounded-xl bg-neutral-900">
+<div class="w-full max-w-full aspect-video overflow-hidden rounded-xl bg-neutral-900">
 
     <?php if ($file): ?>
 

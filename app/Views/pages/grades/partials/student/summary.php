@@ -35,17 +35,17 @@ $count      = count($notCounted);
 
     <h2 id="grades-summary" class="sr-only">This term so far</h2>
 
-    <div class="grid grid-cols-2 gap-3 sm:gap-4 <?= $hasScale ? 'lg:grid-cols-5' : 'lg:grid-cols-4' ?>" data-grades-summary>
+    <div class="@container"><div class="grid grid-cols-2 gap-3 @xl:grid-cols-4 @xl:gap-4 <?= $hasScale ? '@4xl:grid-cols-5' : '' ?>" data-grades-summary>
         <?php foreach ($cards as $key => $card): ?>
             <?php // The GWA spans the row on a phone and carries a brand ring, so it reads first. ?>
-            <div class="flex min-w-0 <?= $key === 'gwa' ? 'col-span-2 rounded-2xl ring-2 ring-brand lg:col-span-1' : '' ?>" data-summary="<?= esc($key) ?>">
+            <div class="flex min-w-0 <?= $key === 'gwa' ? 'col-span-2 rounded-2xl ring-2 ring-brand @4xl:col-span-1' : '' ?>" data-summary="<?= esc($key) ?>">
                 <?= view('components/metric-card', $card, ['saveData' => false]) ?>
             </div>
         <?php endforeach; ?>
-    </div>
+    </div></div>
 
     <?php if ($count > 0): ?>
-        <p class="rounded-xl border border-[#E3E6EE] bg-[#FAFBFD] px-4 py-2.5 text-xs leading-relaxed text-[#646464]" data-not-counted><?= esc(
+        <p class="rounded-xl border border-[#E3E6EE] bg-white px-4 py-2.5 text-xs leading-relaxed text-[#646464]" data-not-counted><?= esc(
             $count . ' ' . ($count === 1 ? 'course' : 'courses') . ' not counted in the GWA: '
             . implode(', ', array_map(static fn (array $c): string => $c['code'] . ' (' . $c['reason'] . ')', $notCounted)),
         ) ?></p>

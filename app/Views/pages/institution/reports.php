@@ -109,10 +109,10 @@ $gradedAny = array_sum($d['distribution']) > 0;
         'icon'        => 'score',
         'description' => 'How your courses are doing: enrolment, grades, grading and who needs attention.',
         // One menu for the four CSVs; each is the same scope as the page (the filters travel in the link).
-        'actions'     => '<details class="relative" data-menu><summary class="' . $second . ' flex cursor-pointer list-none items-center gap-2">Export CSV <span aria-hidden="true">&#9662;</span></summary>'
+        'actions'     => '<details class="relative" data-menu><summary class="' . $second . ' flex cursor-pointer list-none items-center gap-2 pointer-coarse:min-h-11">Export CSV <span aria-hidden="true">&#9662;</span></summary>'
             . '<div class="absolute right-0 z-20 mt-2 flex w-64 flex-col rounded-2xl border border-gray-200 bg-white p-1.5 shadow-lg">'
             . implode('', array_map(
-                static fn (string $kind, string $label): string => '<a class="block rounded-lg px-3 py-2 text-sm text-[#1A1C1E] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/export/' . $kind) . $tabQuery) . '" data-export="' . esc($kind) . '">' . esc($label) . ' (CSV)</a>',
+                static fn (string $kind, string $label): string => '<a class="flex items-center rounded-lg px-3 py-2 pointer-coarse:min-h-11 text-sm text-[#1A1C1E] transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" href="' . esc(site_url($base . '/export/' . $kind) . $tabQuery) . '" data-export="' . esc($kind) . '">' . esc($label) . ' (CSV)</a>',
                 array_keys($reportExports),
                 array_values($reportExports),
             ))
@@ -169,7 +169,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
         </div>
 
 
-        <section class="rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
+        <section class="@container rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-md" aria-labelledby="distribution" data-report-distribution>
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 id="distribution" class="text-sm font-bold text-brand">Grade distribution</h2>
                 <?php if ($d['grading']['average'] !== null): ?>
@@ -183,7 +183,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
                 <ul class="mt-4 flex flex-col gap-2">
                     <?php foreach ($d['distribution'] as $bucket => $count): ?>
                         <li class="flex items-center gap-3 text-sm">
-                            <span class="w-16 shrink-0 text-xs font-semibold text-[#646464]"><?= esc((string) $bucket) ?></span>
+                            <span class="w-12 shrink-0 text-xs font-semibold text-[#646464] @xs:w-16"><?= esc((string) $bucket) ?></span>
                             <span class="h-3 flex-1 overflow-hidden rounded-full bg-gray-100" role="presentation">
                                 <span class="block h-full rounded-full bg-brand" style="width: <?= (int) round($count / $maxBucket * 100) ?>%"></span>
                             </span>
@@ -226,7 +226,7 @@ $gradedAny = array_sum($d['distribution']) > 0;
                     ['key' => 'enrolled', 'label' => 'Enrolled', 'sortable' => true],
                     ['key' => 'completion_percentage', 'label' => 'Completion', 'sortable' => true],
                     ['key' => 'average_percentage', 'label' => 'Average grade', 'sortable' => true],
-                    ['key' => 'avg_grading_turnaround_hours', 'label' => 'Grading time', 'sortable' => true],
+                    ['key' => 'avg_grading_turnaround_hours', 'label' => 'Grading time', 'sortable' => true, 'priority' => 2],
                 ],
                 'rows'    => $courseRows,
                 'fill'    => true,

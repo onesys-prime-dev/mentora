@@ -37,7 +37,86 @@
         "Montserrat",
         system-ui,
         sans-serif;
+
+    /* Two extra breakpoints: xs for large phones, 3xl so ultra-wide screens stop stretching layouts. */
+    --breakpoint-xs: 25rem;
+    --breakpoint-3xl: 120rem;
+
+    /* Fluid type for headings and metrics only (body stays 16px); scales over 320 to 1440px. */
+    --text-fluid-h1: clamp(1.5rem, 1.357rem + 0.714vw, 2rem);
+    --text-fluid-h1--line-height: 1.25;
+    --text-fluid-h2: clamp(1.25rem, 1.179rem + 0.357vw, 1.5rem);
+    --text-fluid-h2--line-height: 1.25;
+    --text-fluid-metric: clamp(1.75rem, 1.536rem + 1.071vw, 2.5rem);
+    --text-fluid-metric--line-height: 1.1;
+
+    /* Page gutter and fluid gap, so padding grows with the viewport instead of jumping at breakpoints. */
+    --spacing-gutter: clamp(1rem, 4vw, 2.5rem);
+    --spacing-fluid: clamp(0.75rem, 0.536rem + 1.071vw, 1.5rem);
+
+    /* One enter (springy) and one exit curve so every animation moves the same way. */
+    --ease-spring: cubic-bezier(.34,1.45,.64,1);
+    --ease-exit: cubic-bezier(.4,0,1,1);
+
+    /* Readable line length for prose, and a cap for the app shell on very wide screens. */
+    --max-width-reading: 70ch;
+    --max-width-shell: 105rem;
 }
+
+/* Motion durations are not a Tailwind namespace, so they live on :root; reduced-motion users get none. */
+:root {
+    --motion-fast: 180ms;
+    --motion-base: 380ms;
+    --motion-slow: 480ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --motion-fast: 0ms;
+        --motion-base: 0ms;
+        --motion-slow: 0ms;
+    }
+}
+
+@custom-variant lock (@media (min-width: 80rem) and (min-height: 47.5rem));
+
+/* Inside a side menu (partials/institution-menu, admin-menu): drawn as the icon rail. That is collapsed at xl,
+   or at lg to xl unless peeked open: hover (pointers that hover), keyboard focus inside, or data-peek="true".
+   data-peek="false" (Escape, the toggle, an outside click; shared/institution-menu.js) closes it over all three.
+   The panel rule in @layer components below repeats these two selectors. */
+@custom-variant rail {
+    @media (width >= 80rem) {
+        [data-collapsed="true"] & {
+            @slot;
+        }
+    }
+    @media (width >= 64rem) and (width < 80rem) and (hover: hover) {
+        :is([data-institution-menu], [data-admin-menu]):is([data-peek="false"], :not(:hover, :has(:focus-visible), [data-peek="true"])) & {
+            @slot;
+        }
+    }
+    @media (width >= 64rem) and (width < 80rem) and (not (hover: hover)) {
+        :is([data-institution-menu], [data-admin-menu]):is([data-peek="false"], :not(:has(:focus-visible), [data-peek="true"])) & {
+            @slot;
+        }
+    }
+}
+
+/* The header gains a shadow and blur once the page has scrolled (set by the layout's script).
+   The blur lives on a ::before layer: backdrop-filter on the header itself would make it the
+   containing block of position:fixed descendants (the dropdown panels on phones). */
+[data-app-header] { transition: box-shadow var(--motion-fast); }
+[data-app-header]::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+[data-app-header][data-scrolled] { box-shadow: 0 4px 6px -1px rgb(0 0 0 / .1), 0 2px 4px -2px rgb(0 0 0 / .1); }
+[data-app-header][data-scrolled]::before { backdrop-filter: blur(12px); }
+
+/* Safe-area padding so content clears notches and home indicators on phones. */
+@utility pt-safe { padding-top: env(safe-area-inset-top); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+@utility pl-safe { padding-left: env(safe-area-inset-left); }
+@utility pr-safe { padding-right: env(safe-area-inset-right); }
+@utility pb-safe-4 { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+@utility pb-safe-2 { padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
 
 @layer base {
     html {
@@ -79,6 +158,24 @@
 @import "./components/menu.css";
 
 @layer components {
+    /*
+     * Form grid: one column below a container width of 28rem, two from there. The grid reads the width
+     * of its nearest query container (the dialog body is one; a page form wraps itself in "@container"),
+     * so a form in a narrow dialog stacks even on a wide screen. Spans should use container variants
+     * such as "@sm:col-span-2".
+     */
+    .form-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    @container (width >= 28rem) {
+        .form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
     /*
      * Floating pill scrollbar.
      *
@@ -150,8 +247,28 @@
     view-transition-name: course-content;
 }
 
-::view-transition-old(root),
+/* Cross-fade every same-origin page navigation (opacity only: no stacking-context trap). */
+@view-transition {
+    navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @view-transition {
+        navigation: none;
+    }
+}
+
+::view-transition-old(root) {
+    animation: spa-fade-out var(--motion-fast) var(--ease-exit) both;
+}
+
 ::view-transition-new(root) {
+    animation: page-fade-in var(--motion-base) var(--ease-spring) both;
+}
+
+/* A course SPA swap fades only its content card, not the whole page. */
+html:has(.spa-transitioning)::view-transition-old(root),
+html:has(.spa-transitioning)::view-transition-new(root) {
     animation: none;
 }
 
@@ -173,6 +290,48 @@
     from {
         opacity: 0;
         transform: translateY(6px);
+    }
+}
+
+@keyframes page-fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+/* Header dropdowns pop in from the corner they open under. `scale`, not `transform`, so it composes with
+   the `translate` clampToViewport sets. shortcut: close is instant (`hidden`); add an exit animation if the
+   product owner wants one. */
+[data-header-panel]:not(.hidden) {
+    transform-origin: top right;
+    animation: header-panel-in var(--motion-base) var(--ease-spring) both;
+}
+
+@keyframes header-panel-in {
+    from {
+        opacity: 0;
+        scale: .9;
+    }
+}
+
+/* The module outline (modules/partials/learning-item-panel.php): below lg the panel of the "Contents"
+   dropdown, popping in like a header panel; from lg up the sidebar, shown whether or not its <details> is
+   open, on the aside's tint in both themes. */
+@media (width < 64rem) {
+    [data-contents][open] [data-contents-panel] {
+        transform-origin: top;
+        animation: header-panel-in var(--motion-base) var(--ease-spring) both;
+    }
+}
+
+@media (width >= 64rem) {
+    [data-contents]::details-content {
+        display: block;
+        content-visibility: visible;
+    }
+
+    html[data-theme="dark"] [data-contents-panel].bg-white {
+        background-color: transparent;
     }
 }
 
@@ -215,8 +374,9 @@
      * The negative margin and the matching padding cancel out, so the bar sits where it always did
      * and has room above it once it sticks.
      */
+    /* Without the lock the window scrolls, so the bar parks under the sticky header; locked, it parks at the card's top. */
     .sticky-bar-top {
-        @apply bg-white lg:sticky lg:top-0 lg:z-20 lg:-mt-6 lg:pt-6;
+        @apply bg-white lg:sticky lg:top-[var(--app-header-h,0px)] lg:z-20 lg:-mt-6 lg:pt-6 lock:top-0;
     }
 
     /* The bottom margin cancels the page's whole 2.5rem bottom padding, so scrolled to the very end the
@@ -248,6 +408,12 @@
         /* Starts off the left edge and travels to the right. */
         background-position: 105% 0;
         animation: skeleton-shimmer 1.1s linear infinite;
+    }
+
+    /* A fixed-width placeholder bar (w-72 and the like) never runs past a narrow phone screen's content. */
+    .animate-pulse [class~="bg-gray-200"],
+    [data-skeleton] [class~="bg-gray-200"] {
+        max-width: 100%;
     }
 
     .animate-pulse [class~="bg-gray-100"] {
@@ -376,6 +542,7 @@ html[data-theme="dark"] .bg-white,
 html[data-theme="dark"] .sticky-bar-top,
 html[data-theme="dark"] .sticky-bar-bottom,
 html[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--dk-surface); }
+html[data-theme="dark"] [data-messages-dot] { --tw-ring-color: var(--dk-surface); }
 html[data-theme="dark"] .bg-white\/90 { background-color: rgb(23 27 36 / 0.9); }
 html[data-theme="dark"] .bg-white\/80 { background-color: rgb(23 27 36 / 0.8); }
 html[data-theme="dark"] .bg-white\/75 { background-color: rgb(23 27 36 / 0.75); }
@@ -384,7 +551,12 @@ html[data-theme="dark"] .bg-white\/40 { background-color: rgb(23 27 36 / 0.45); 
 html[data-theme="dark"] .bg-white\/20 { background-color: rgb(23 27 36 / 0.35); }
 html[data-theme="dark"] .bg-gray-50,
 html[data-theme="dark"] .bg-gray-50\/70,
+html[data-theme="dark"] .bg-gray-50\/60,
 html[data-theme="dark"] .bg-\[\#F9F9FC\],
+html[data-theme="dark"] .bg-\[\#F9FBFF\],
+html[data-theme="dark"] .bg-\[\#F4F8FF\],
+html[data-theme="dark"] .bg-\[\#F5F8FD\],
+html[data-theme="dark"] .bg-\[\#F6F7FA\],
 html[data-theme="dark"] .hover\:bg-gray-50:hover { background-color: var(--dk-raised); }
 html[data-theme="dark"] .bg-gray-100 { background-color: var(--dk-sunken); }
 html[data-theme="dark"] .bg-gray-200 { background-color: var(--dk-line-strong); }
@@ -412,23 +584,39 @@ html[data-theme="dark"] .border-brand\/20 { border-color: rgb(138 180 255 / 0.35
 
 /* Text */
 html[data-theme="dark"] .text-\[\#1A1C1E\],
+html[data-theme="dark"] .text-\[\#1B2433\],
 html[data-theme="dark"] .text-\[\#2F2F2F\],
 html[data-theme="dark"] .text-gray-900,
 html[data-theme="dark"] .text-gray-800 { color: var(--dk-text); }
 html[data-theme="dark"] .text-\[\#3D3D3D\],
 html[data-theme="dark"] .text-gray-700 { color: var(--dk-text-soft); }
 html[data-theme="dark"] .text-\[\#646464\],
+html[data-theme="dark"] .text-\[\#5E5E5E\],
 html[data-theme="dark"] .text-\[\#767676\],
 html[data-theme="dark"] .text-\[\#878787\],
+html[data-theme="dark"] .text-\[\#5B6577\],
 html[data-theme="dark"] .text-gray-600,
 html[data-theme="dark"] .text-gray-500 { color: var(--dk-text-muted); }
 html[data-theme="dark"] .text-gray-400,
 html[data-theme="dark"] .text-gray-300 { color: #8e97aa; }
 html[data-theme="dark"] .text-brand,
 html[data-theme="dark"] .hover\:text-brand:hover { color: var(--dk-brand); }
+/* A row title's brand hover, which the mapped greys above would otherwise outrank (hover devices only, as Tailwind's own). */
+@media (hover: hover) {
+    html[data-theme="dark"] .group:hover .group-hover\:text-brand { color: var(--dk-brand); }
+    /* The offering copy list's pinned tick cell follows its row's hover (group-hover:bg-brand-tint has no global mapping: app-tile uses it too). */
+    html[data-theme="dark"] [data-copy-form] tr.group:hover > td.sticky { background-color: var(--dk-brand-tint); }
+}
+/* A student's Mark as Completed (modules/partials/navigations.php): its colours are data-[completed] variants, which the plain-class mappings miss. */
+html[data-theme="dark"] [data-mark-complete][data-completed="0"]:not(:disabled) { color: var(--dk-brand); border-color: var(--dk-brand); }
+html[data-theme="dark"] [data-mark-complete][data-completed="1"] { background-color: #16301f; border-color: #2b5a3a; color: #7dd3a0; }
 html[data-theme="dark"] .text-brand-dark,
 html[data-theme="dark"] .hover\:text-brand-dark:hover { color: var(--dk-brand-strong); }
 html[data-theme="dark"] .placeholder\:text-gray-400::placeholder { color: #8e97aa; }
+/* A reading (components/reading.css: #565656 text, #1A1C1E headings), in the editor and in the student's view. */
+html[data-theme="dark"] .reading-content,
+html[data-theme="dark"] .reading-content :is(p, ul, ol) { color: var(--dk-text-soft); }
+html[data-theme="dark"] .reading-content :is(h1, h2, strong) { color: var(--dk-text); }
 
 /* Buttons that are brand-coloured keep the blue and the white word; on hover they deepen. */
 html[data-theme="dark"] .bg-brand { background-color: #1a56c9; }
@@ -454,6 +642,36 @@ html[data-theme="dark"] .text-\[\#C33939\],
 html[data-theme="dark"] .text-\[\#8E2424\] { color: #ff9a9a; }
 html[data-theme="dark"] .bg-\[\#E0E5F2\],
 html[data-theme="dark"] .bg-\[\#EEF1F8\] { background-color: #1f2a44; }
+
+/* The chairperson's and the dean's flat dashboard cards (dashboard/partials/{chairperson,dean}/): their own greys and tints. */
+html[data-theme="dark"] .text-\[\#0A0F1E\] { color: var(--dk-text); }
+html[data-theme="dark"] .text-\[\#2A3142\] { color: var(--dk-text-soft); }
+html[data-theme="dark"] .text-\[\#4A5468\],
+html[data-theme="dark"] .text-\[\#6B7488\],
+html[data-theme="dark"] .text-\[\#9AA3B8\] { color: var(--dk-text-muted); }
+html[data-theme="dark"] .text-\[\#A63A18\] { color: #ff9a9a; }
+html[data-theme="dark"] .bg-\[\#FBE8E2\] { background-color: #3a1c1c; }
+html[data-theme="dark"] .bg-\[\#E8EEFC\] { background-color: var(--dk-brand-tint); }
+html[data-theme="dark"] .bg-\[\#F8FAFF\],
+html[data-theme="dark"] .bg-\[\#FFFBF2\],
+html[data-theme="dark"] .hover\:bg-\[\#F8FAFF\]:hover { background-color: var(--dk-raised); }
+html[data-theme="dark"] .bg-\[\#F1F3F8\],
+html[data-theme="dark"] .bg-\[\#F1F3F7\] { background-color: var(--dk-sunken); }
+/* Global grades' program table (grades/partials/chairperson/program.php): its lines, its row hover and its selected
+   row. Scoped to the partial's own hooks: the same grey on other pages carries state borders this would outrank. */
+html[data-theme="dark"] :is([data-tracker], [data-strip], [data-program-actions], [data-scroll-x]:has(> [data-program-table])).border-\[\#E3E6EE\],
+html[data-theme="dark"] [data-program-table] .divide-\[\#E3E6EE\] > :not(:last-child) { border-color: var(--dk-line); }
+@media (hover: hover) {
+    html[data-theme="dark"] [data-program-table] .group:hover .group-hover\:bg-\[\#FAFBFD\] { background-color: var(--dk-raised); }
+}
+html[data-theme="dark"] [data-program-table] .bg-\[\#F5F8FD\] { background-color: var(--dk-brand-tint); }
+/* Monitor Program's snapshot tiles (courses/monitor-program.php), whose numbers are text-[#0A0F1E]. */
+html[data-theme="dark"] .bg-\[\#EEF3FD\] { background-color: var(--dk-brand-tint); }
+html[data-theme="dark"] .bg-\[\#EEF8F2\] { background-color: #16301f; }
+html[data-theme="dark"] .bg-\[\#FFF7E6\] { background-color: #3a2d12; }
+html[data-theme="dark"] .border-\[\#E1E5EF\],
+html[data-theme="dark"] .border-\[\#F1F3F8\],
+html[data-theme="dark"] .border-\[\#F6F7FA\] { border-color: var(--dk-line); }
 
 /* The logo is dark on transparent: give it a light plate so it keeps its colours. */
 html[data-theme="dark"] [data-brand-logo] {
@@ -751,5 +969,499 @@ input[type="search"]::-webkit-search-cancel-button:hover {
     .admin-flat main[data-pinned-panel]:has(> div > [data-page-panel]) {
         padding-bottom: 0.75rem;
         padding-top: 0.75rem;
+    }
+}
+
+/*
+ * Dialog motion and variants (components/dialog.php, shared/dialog.js).
+ *
+ * shared/dialog.js sets data-state="open" while a dialog shows and
+ * data-state="closing" while it leaves, and hides it once the exit animation
+ * ends. Centered dialogs fade in from .9 scale; a sheet and a full-screen form
+ * rise from the bottom on a phone, the menu slides in from the left below lg.
+ * The enter fill is backwards only, so nothing is left on the panel
+ * afterwards: a sheet being dragged moves by its inline transform.
+ * The exit keyframes have no "from", so a swiped sheet leaves from where the
+ * finger let go.
+ */
+@layer components {
+    @keyframes dialog-backdrop-in { from { opacity: 0; } }
+    @keyframes dialog-backdrop-out { to { opacity: 0; } }
+    @keyframes dialog-pop-in { from { opacity: 0; transform: scale(.9); } }
+    @keyframes dialog-pop-out { to { opacity: 0; transform: scale(.9); } }
+    @keyframes dialog-rise-in { from { transform: translateY(100%); } }
+    @keyframes dialog-rise-out { to { transform: translateY(100%); } }
+    @keyframes dialog-slide-in { from { transform: translateX(-100%); } }
+    @keyframes dialog-slide-out { to { transform: translateX(-100%); } }
+
+    [data-dialog][data-state="open"] {
+        animation: dialog-backdrop-in var(--motion-fast) ease-out backwards;
+    }
+
+    [data-dialog][data-state="closing"] {
+        animation: dialog-backdrop-out var(--motion-fast) var(--ease-exit) forwards;
+    }
+
+    [data-dialog][data-state="open"] > [data-dialog-panel] {
+        animation: dialog-pop-in var(--motion-base) var(--ease-spring) backwards;
+    }
+
+    [data-dialog][data-state="closing"] > [data-dialog-panel] {
+        animation: dialog-pop-out var(--motion-fast) var(--ease-exit) forwards;
+    }
+
+    @media (width < 40rem) {
+        [data-dialog]:is([data-dialog-variant="sheet"], [data-dialog-variant="fullscreen"])[data-state="open"] > [data-dialog-panel] {
+            animation-name: dialog-rise-in;
+        }
+
+        [data-dialog]:is([data-dialog-variant="sheet"], [data-dialog-variant="fullscreen"])[data-state="closing"] > [data-dialog-panel] {
+            animation-name: dialog-rise-out;
+        }
+
+        /* A drag let go short of closing springs back. */
+        [data-dialog-variant="sheet"] > [data-dialog-panel] {
+            transition: transform var(--motion-base) var(--ease-spring);
+        }
+
+        /* The handle and header take the drag instead of scrolling the page. */
+        [data-dialog-variant="sheet"] :is([data-dialog-handle], [data-dialog-header]) {
+            touch-action: none;
+        }
+    }
+
+    @media (width < 64rem) {
+        [data-dialog-variant="menu"][data-state="open"] > [data-dialog-panel] {
+            animation-name: dialog-slide-in;
+        }
+
+        [data-dialog-variant="menu"][data-state="closing"] > [data-dialog-panel] {
+            animation-name: dialog-slide-out;
+        }
+    }
+
+    [data-dialog-handle] > span {
+        background-color: #d1d5db;
+    }
+}
+
+/* The calendar's own modal shell (pages/calendar/index.php, shown by calendar.js) is a bottom sheet below sm:
+   it rises like a sheet dialog. It has no exit animation (calendar.js hides it at once). */
+@layer components {
+    @media (width < 40rem) {
+        #calendar-modal:not(.hidden) {
+            animation: dialog-backdrop-in var(--motion-fast) ease-out backwards;
+        }
+
+        #calendar-modal:not(.hidden) > [data-calendar-modal-panel] {
+            animation: dialog-rise-in var(--motion-base) var(--ease-spring) backwards;
+        }
+    }
+}
+
+html[data-theme="dark"] [data-dialog-handle] > span { background-color: var(--dk-line-strong); }
+html[data-theme="dark"] [data-dialog-variant="fullscreen"] [data-dialog-header] { border-color: var(--dk-line); }
+html[data-theme="dark"] [data-dialog-panel] { background-color: var(--dk-surface); }
+
+/* Full-screen form dialogs on a phone (components/dialog.php marks the body data-dialog-pin-actions when its one form
+   holds its own buttons). The row holding the submit button becomes the sticky bottom bar, full-bleed over the panel's
+   p-6, carrying the bottom safe area in place of the panel. Cancel buttons below the top bar hide: it has Cancel.
+   Unlayered, so it wins over the pages' utility classes. Without :has() the form simply ends with its buttons. */
+@media (width < 40rem) {
+    [data-dialog-pin-actions],
+    [data-dialog-pin-actions] > form {
+        flex: 1 0 auto;
+    }
+
+    [data-dialog-pin-actions] > form > :has(> button[type="submit"]) {
+        position: sticky;
+        bottom: 0;
+        margin: auto -1.5rem 0;
+        padding: 1rem 1.5rem 0;
+        background-color: #fff;
+        border-top: 1px solid rgb(0 0 0 / 0.1);
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+
+    /* :has() cannot nest, so this spells out "a row with a submit button". */
+    [data-dialog-panel]:has(> [data-dialog-pin-actions] > form > * > button[type="submit"]) {
+        padding-bottom: 0;
+    }
+
+    /* A bare submit button keeps its own look and floats pinned above the home indicator. */
+    [data-dialog-pin-actions] > form > button[type="submit"] {
+        position: sticky;
+        bottom: max(1rem, env(safe-area-inset-bottom));
+        margin-top: auto;
+    }
+
+    [data-dialog-variant="fullscreen"] [data-dialog-body] [data-dialog-close] {
+        display: none;
+    }
+
+    /* A dialog of several forms (dean/approvals.php) ends its body with one phone bar of their submits (form="…"), pinned the same way. */
+    [data-dialog-body]:has(> [data-dialog-actions]) {
+        flex: 1 0 auto;
+    }
+
+    [data-dialog-body] > [data-dialog-actions] {
+        position: sticky;
+        bottom: 0;
+        margin: auto -1.5rem 0;
+        padding: 1rem 1.5rem max(1rem, env(safe-area-inset-bottom));
+        background-color: #fff;
+        border-top: 1px solid rgb(0 0 0 / 0.1);
+    }
+
+    [data-dialog-panel]:has(> [data-dialog-body] > [data-dialog-actions]) {
+        padding-bottom: 0;
+    }
+}
+
+/* A landscape phone (sm and up, but short): a centred form dialog scrolls, so the row ending its form with the submit stays in view. */
+@media (width >= 40rem) and (height <= 30rem) {
+    [data-dialog-body] > form > :last-child:has(> button[type="submit"]) {
+        position: sticky;
+        bottom: 0;
+        padding-block: 0.75rem;
+        background-color: #fff;
+    }
+
+    html[data-theme="dark"] [data-dialog-body] > form > :last-child:has(> button[type="submit"]) { background-color: var(--dk-surface); }
+}
+
+html[data-theme="dark"] [data-dialog-pin-actions] > form > :has(> button[type="submit"]) { background-color: var(--dk-surface); border-color: var(--dk-line); }
+html[data-theme="dark"] [data-dialog-body] > [data-dialog-actions] { background-color: var(--dk-surface); border-color: var(--dk-line); }
+
+/* Side menus at lg to xl: the <nav> is a sticky 72px slot, and its panel is 256px over the page when peeked
+   and 72px as the rail (the same selectors as the rail: variant above), so <main> never moves.
+   Enter springs, exit is quick. */
+@layer components {
+    @media (width >= 64rem) and (width < 80rem) {
+        [data-side-menu-panel] {
+            position: absolute;
+            inset-block: 0;
+            left: 0;
+            width: 16rem;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / .15), 0 8px 10px -6px rgb(0 0 0 / .1);
+            transition: width var(--motion-base) var(--ease-spring), box-shadow var(--motion-base) var(--ease-spring);
+        }
+    }
+
+    @media (width >= 64rem) and (width < 80rem) and (hover: hover) {
+        :is([data-institution-menu], [data-admin-menu]):is([data-peek="false"], :not(:hover, :has(:focus-visible), [data-peek="true"])) > [data-side-menu-panel] {
+            width: 4.5rem;
+            box-shadow: none;
+            transition: width var(--motion-fast) var(--ease-exit), box-shadow var(--motion-fast) var(--ease-exit);
+        }
+    }
+
+    @media (width >= 64rem) and (width < 80rem) and (not (hover: hover)) {
+        :is([data-institution-menu], [data-admin-menu]):is([data-peek="false"], :not(:has(:focus-visible), [data-peek="true"])) > [data-side-menu-panel] {
+            width: 4.5rem;
+            box-shadow: none;
+            transition: width var(--motion-fast) var(--ease-exit), box-shadow var(--motion-fast) var(--ease-exit);
+        }
+    }
+}
+
+html[data-theme="dark"] [data-menu-tile]:not([aria-current], :hover) { background-color: var(--dk-raised); }
+
+/* Expandable action bar (shared/action-bar.js): the panel grows upward from the bar. In the components
+   layer, so utilities on the bar (sm:hidden, bg-*, pb-0) win. */
+@layer components {
+    [data-action-bar] {
+        display: flex;
+        flex-direction: column;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        background: #fff;
+        border-top: 1px solid rgb(229 231 235);
+    }
+    html[data-theme="dark"] [data-action-bar] { background: var(--dk-surface); border-color: var(--dk-line); }
+    [data-action-bar-panel] {
+        display: grid;
+        grid-template-rows: 0fr;
+        transition: grid-template-rows var(--motion-base) var(--ease-spring);
+    }
+    [data-action-bar][data-open] > [data-action-bar-panel] { grid-template-rows: 1fr; }
+    [data-action-bar-panel] > * {
+        min-height: 0;
+        overflow: hidden;
+    }
+    [data-action-bar][data-open] > [data-action-bar-panel] > * {
+        max-height: min(60dvh, 28rem);
+        overflow-y: auto;
+    }
+    /* Grade Work's score bar and the Quiz Builder's "Add question" bar below md: the open controls lie over
+       the page above the bar's row instead of taking room in the column, so the row stays on the bottom edge
+       however far the page is scrolled (a sticky bar cannot rise above its own column). */
+    @media (width < 48rem) {
+        :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar]) > [data-action-bar-panel] {
+            position: absolute;
+            inset-inline: 0;
+            bottom: 100%;
+            background: #fff;
+        }
+        :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar])[data-open] > [data-action-bar-panel] {
+            border-top: 1px solid rgb(229 231 235);
+            box-shadow: 0 -8px 16px rgb(0 0 0 / 0.08);
+        }
+        html[data-theme="dark"] :is([data-expandable-grade-work-actions-panel], [data-quiz-builder-bar]) > [data-action-bar-panel] {
+            background: var(--dk-surface);
+            border-color: var(--dk-line);
+        }
+    }
+    /* Grade Work's score bar is a static block from md up: Submit Grade shows only while the grading
+       controls are open, as it did when it sat inside them. */
+    @media (width >= 48rem) {
+        [data-expandable-grade-work-actions-panel]:has([data-expanded-grade-work-actions].hidden) [data-grade-work-submit-grade] {
+            display: none;
+        }
+    }
+}
+
+/* Phone list rows of components/data-table.php (below md). A row is a two-line grid: the tick box and
+   the avatar, the primary text over the status and the secondary text, then the actions. The cells say
+   where they go with data-role; a cell without one is max-md:hidden in the markup. Each <tbody> is a
+   white panel (its classes); the wrapper's own card is dropped below. */
+@layer components {
+    @media (width < 48rem) {
+        [data-phone-rows] [data-row] {
+            display: grid;
+            grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+            grid-template-areas:
+                "select avatar primary primary actions"
+                "select avatar status secondary actions";
+            align-items: center;
+            padding: 0.625rem 1rem;
+        }
+
+        [data-phone-rows] [data-row] > [data-role="select"] { grid-area: select; }
+        [data-phone-rows] [data-row] > [data-role="avatar"] { grid-area: avatar; margin-right: 0.75rem; }
+        [data-phone-rows] [data-row] > [data-role="primary"] { grid-area: primary; }
+        [data-phone-rows] [data-row] > [data-role="status"] { grid-area: status; margin-top: 0.125rem; margin-right: 0.5rem; }
+        [data-phone-rows] [data-row] > [data-role="secondary"] { grid-area: secondary; margin-top: 0.125rem; }
+        [data-phone-rows] [data-row] > [data-role="actions"] { grid-area: actions; }
+        [data-phone-rows] [data-row] > [data-role="more"] { grid-area: actions; }
+    }
+}
+
+/* The row-actions sheet (components/data-table.php, shared/row-actions.js). The row's own action links
+   and buttons are moved in as they are, so this is unlayered to undo their table spacing: no side
+   margins, finger-sized on touch, and the destructive one under a divider (it keeps its red text). */
+[data-row-actions-slot] > * { margin-inline: 0; }
+
+/* Every control, however deep in the caller's spans and forms (tick boxes and radios keep their size).
+   Layered, so a control's own display utility (hidden, sm:hidden, block) still wins. */
+@layer components {
+    @media (pointer: coarse) {
+        :is([data-row-actions-slot], [data-row-actions-fields]) :is(a, button, summary, [role="button"], input:not([type="hidden"], [type="checkbox"], [type="radio"]), select) {
+            min-height: 2.75rem;
+            min-width: 2.75rem;
+            display: inline-flex;
+            align-items: center;
+        }
+    }
+}
+
+[data-row-actions-slot] :is([data-destructive], :is(a, button).text-\[\#C33939\]) {
+    width: 100%;
+    margin-top: 0.5rem;
+    border-top: 1px solid var(--color-gray-100, #f3f4f6);
+    padding-top: 0.75rem;
+    text-align: left;
+}
+
+html[data-theme="dark"] [data-row-actions-slot] :is([data-destructive], :is(a, button).text-\[\#C33939\]) { border-top-color: var(--dk-line); }
+
+/* Outside the layers and after the dark surfaces: on a phone the panels are the cards, so the wrapper
+   (a plain .bg-white card from md up) has no surface of its own, in either theme. The selector (0,4,2)
+   outranks the admin-flat outline and min-height and the page panel's card outline (up to 0,4,1). */
+@media (width < 48rem) {
+    html body [data-table][data-phone-rows].bg-white.shadow-sm {
+        min-height: 0;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background-color: transparent;
+        box-shadow: none;
+    }
+
+    html[data-theme="dark"] [data-phone-rows] [data-row] > [data-role="secondary"] { color: var(--dk-text-muted); }
+}
+
+/* Grid-table scroller (shared/scroll-x.js). The edge fades are a mask on the scroller, so they work on any
+   surface in both themes; with a pinned first column the start edge is the column's own shadow instead. */
+@layer components {
+    [data-scroll-x] {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        --fade-start: 0px;
+        --fade-end: 0px;
+    }
+
+    [data-scroll-x][data-fade-start]:not([data-sticky-first]) { --fade-start: 1.5rem; }
+    [data-scroll-x][data-fade-end] { --fade-end: 1.5rem; }
+
+    [data-scroll-x]:is([data-fade-start]:not([data-sticky-first]), [data-fade-end]) {
+        mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+    }
+
+    [data-scroll-x][data-sticky-first][data-fade-start] :is(tr:not([data-roles-section-head]) > :first-child, [data-sticky-col]) {
+        box-shadow: 6px 0 8px -6px rgb(0 0 0 / 0.25);
+    }
+
+    @media (pointer: coarse) {
+        [data-scroll-x] :is(button, a, select, input:not([type="hidden"], [type="checkbox"], [type="radio"])) {
+            min-height: 2.75rem;
+            min-width: 2.75rem;
+        }
+    }
+}
+
+html[data-theme="dark"] [data-scroll-x][data-sticky-first][data-fade-start] :is(tr:not([data-roles-section-head]) > :first-child, [data-sticky-col]) {
+    box-shadow: 6px 0 8px -6px rgb(0 0 0 / 0.6);
+}
+
+/* The program table's selected row (grades/partials/chairperson/program.php) keeps its brand bar on the pinned cell,
+   and the edge shadow too while the table is scrolled (one box-shadow would otherwise win over the other). */
+[data-scroll-x][data-sticky-first][data-fade-start] [data-program-table] tr:has([aria-current="true"]) > th:first-child {
+    box-shadow: inset 3px 0 0 #0040A6, 6px 0 8px -6px rgb(0 0 0 / 0.25);
+}
+html[data-theme="dark"] [data-scroll-x][data-sticky-first][data-fade-start] [data-program-table] tr:has([aria-current="true"]) > th:first-child {
+    box-shadow: inset 3px 0 0 var(--dk-brand), 6px 0 8px -6px rgb(0 0 0 / 0.6);
+}
+
+/* Phone tabs (components/phone-tabs, shared/phone-tabs.js): below lg only the active tab's panels show;
+   from lg up nothing is hidden. The first tab's panels carry data-phone-active, so it works without script. */
+@media (max-width: 63.999rem) {
+    [data-phone-panel]:not([data-phone-active]) { display: none; }
+}
+
+/* The dark text mapping of the tab's text-[#646464] outranks aria-selected:text-white; the selected tab keeps the
+   white word on the dark theme's brand blue (as .bg-brand does). */
+html[data-theme="dark"] [data-phone-tab][aria-selected="true"] { color: #fff; background-color: #1a56c9; }
+
+/* The same for the calendar's chosen view (calendar.js toggles bg-brand and text-white on it). */
+html[data-theme="dark"] [data-calendar-view].bg-brand { color: #fff; }
+
+/* Messages below md (pages/messages/index.php, pages/messages/phone-nav.js): the list and the thread share one
+   cell of the frame, and data-view pushes the thread in from the right while the list shifts left and dims
+   behind it. visibility flips at once when a pane arrives and only after the slide when it leaves, so the
+   hidden pane is out of sight and out of the tab order; reduced motion makes it instant. */
+@media (width < 48rem) {
+    #messages-app [data-pane] {
+        grid-area: 1 / 1;
+        transition: translate var(--motion-slow) var(--ease-exit), opacity var(--motion-slow) var(--ease-exit), visibility var(--motion-slow);
+    }
+
+    #messages-app[data-view="list"] [data-pane="thread"] { translate: 100% 0; visibility: hidden; }
+    #messages-app[data-view="thread"] [data-pane="list"] { translate: -25% 0; opacity: .4; visibility: hidden; }
+
+    /* A deep-linked thread arrives in place (phone-nav.js sets this for two frames). */
+    #messages-app[data-instant] [data-pane] { transition: none; }
+}
+
+/* Side panel (shared/side-panel.js): below lg the aside is a slide-over from the start (or, with
+   data-side-panel="end", the end) edge, opaque, over a backdrop; from lg up it is an ordinary pane and
+   neither transform nor backdrop apply. Out is quick, in springs. In the components layer so utilities win. */
+@layer components {
+    [data-side-panel-backdrop] { display: none; }
+    @media (width < 64rem) {
+        [data-side-panel] {
+            position: fixed;
+            inset-block: 0;
+            inset-inline-start: 0;
+            z-index: 50;
+            width: min(22rem, 90vw);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            background: #fff;
+            box-shadow: 0 0 2rem rgb(0 0 0 / 0.2);
+            padding-bottom: env(safe-area-inset-bottom);
+            transform: translateX(-100%);
+            visibility: hidden;
+            transition: transform var(--motion-fast) var(--ease-exit), visibility 0s linear var(--motion-fast);
+        }
+        [data-side-panel="end"] {
+            inset-inline-start: auto;
+            inset-inline-end: 0;
+            transform: translateX(100%);
+        }
+        [data-side-panel][data-open] {
+            transform: none;
+            visibility: visible;
+            transition: transform var(--motion-base) var(--ease-spring), visibility 0s;
+        }
+        html[data-theme="dark"] [data-side-panel] { background: var(--dk-surface); }
+        [data-side-panel-backdrop] {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 40;
+            background: rgb(0 0 0 / 0.4);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--motion-fast) var(--ease-exit);
+        }
+        [data-side-panel-backdrop][data-open] {
+            opacity: 1;
+            pointer-events: auto;
+            transition-duration: var(--motion-base);
+        }
+    }
+    /* data-side-panel-stack: below md the aside is back in the flow (side-panel.js keeps it open and not inert).
+       html raises it over the dark-theme background rule above. */
+    @media (width < 48rem) {
+        html [data-side-panel][data-side-panel-stack] {
+            position: static;
+            width: auto;
+            overflow: visible;
+            background: transparent;
+            box-shadow: none;
+            padding-bottom: 0;
+            transform: none;
+            visibility: visible;
+            transition: none;
+        }
+        [data-side-panel-backdrop]:has(+ [data-side-panel-stack]) { display: none; }
+    }
+}
+
+/* Split divider (shared/split-divider.js): from lg up the start pane is --split-start wide, the handle sits
+   between the panes; below lg the handle is hidden and the panes stack as their own markup says. */
+@layer components {
+    [data-split-handle] { display: none; }
+    @media (width >= 64rem) {
+        [data-split] {
+            display: grid;
+            grid-template-columns: var(--split-start, 22rem) 0.5rem minmax(0, 1fr);
+        }
+        [data-split] > [data-split-start],
+        [data-split] > [data-split-end] { min-width: 0; }
+        [data-split-handle] {
+            display: block;
+            position: relative;
+            cursor: col-resize;
+            touch-action: none;
+            border-radius: 0.25rem;
+        }
+        [data-split-handle]::after {
+            content: "";
+            position: absolute;
+            inset-block: 0;
+            inset-inline: calc(50% - 1px);
+            background: rgb(209 213 219);
+            border-radius: 1px;
+            transition: background-color var(--motion-fast) var(--ease-exit);
+        }
+        [data-split-handle]:focus-visible { outline: 2px solid var(--color-brand); outline-offset: -2px; }
+        @media (hover: hover) { [data-split-handle]:hover::after { background: var(--color-brand); } }
+        @media (pointer: coarse) {
+            [data-split] { grid-template-columns: var(--split-start, 22rem) 2.75rem minmax(0, 1fr); }
+        }
+        html[data-theme="dark"] [data-split-handle]::after { background: var(--dk-line); }
     }
 }

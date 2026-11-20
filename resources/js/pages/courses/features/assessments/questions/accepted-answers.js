@@ -24,14 +24,14 @@ export function renderAcceptedAnswersEditor(answers = [], caseSensitive = false)
     return `
         <div class="flex flex-col gap-2" data-accepted-answers>
 
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="text-[11px] font-bold uppercase tracking-wide text-emerald-700">Accepted answers</span>
                 <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600 ${caseSensitive ? "" : "hidden"}" data-case-sensitive-badge>Case sensitive</span>
             </div>
 
             <div class="flex flex-col gap-1.5" data-accepted-answers-list>${rows}</div>
 
-            <button type="button" data-add-accepted-answer class="self-start text-xs font-semibold text-brand transition hover:underline">+ Add alternative</button>
+            <button type="button" data-add-accepted-answer class="self-start text-xs font-semibold text-brand transition hover:underline pointer-coarse:min-h-11">+ Add alternative</button>
 
             <p class="rounded-lg border border-[#FFE3A3] bg-[#FFF8E6] px-3 py-2 text-xs text-[#946200] ${answers.length ? "hidden" : ""}" data-accepted-answers-empty>
                 Add the correct answer so this question can be auto-graded.
@@ -45,8 +45,8 @@ function renderRow(answer, index) {
 
     return `
         <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/60 px-2.5 py-1.5" data-accepted-answer-row>
-            <input type="text" data-accepted-answer value="${escapeAttribute(answer)}" placeholder="${index === 0 ? "Correct answer" : "Alternative answer"}" class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-emerald-700 outline-none placeholder:font-normal placeholder:text-emerald-700/40">
-            <button type="button" data-remove-accepted-answer title="Remove" class="shrink-0 rounded-lg p-1 text-emerald-700/40 transition hover:bg-red-50 hover:text-red-500">
+            <input type="text" data-accepted-answer value="${escapeAttribute(answer)}" placeholder="${index === 0 ? "Correct answer" : "Alternative answer"}" class="min-w-0 flex-1 border-0 bg-transparent px-1 py-0.5 text-base font-semibold sm:text-sm pointer-coarse:min-h-11 text-emerald-700 outline-none placeholder:font-normal placeholder:text-emerald-700/40">
+            <button type="button" data-remove-accepted-answer title="Remove" aria-label="Remove" class="flex shrink-0 items-center justify-center rounded-lg p-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-emerald-700/40 transition hover:bg-red-50 hover:text-red-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
         </div>`;

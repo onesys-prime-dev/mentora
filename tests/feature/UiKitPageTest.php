@@ -44,6 +44,17 @@ final class UiKitPageTest extends RouteTestCase
         }
     }
 
+    public function testTheResponsiveSectionShowsEveryDialogVariantAndTheActionBar(): void
+    {
+        $this->signIn();
+
+        $body = $this->step('GET', 'ui-kit')->response()->getBody();
+
+        foreach (['data-responsive-kit', 'data-action-bar', 'data-dialog-variant="fullscreen"', 'data-dialog-variant="sheet"', 'data-dialog-variant="menu"', 'id="kit-resp-confirm"'] as $marker) {
+            $this->assertStringContainsString($marker, $body, "{$marker} is missing");
+        }
+    }
+
     public function testTheGalleryTitleIsAWordNotAKey(): void
     {
         $this->signIn();
@@ -71,10 +82,10 @@ final class UiKitPageTest extends RouteTestCase
 
         $body = $this->step('GET', 'ui-kit')->response()->getBody();
 
-        $this->assertStringContainsString('px-4 sm:px-8 lg:px-16 xl:px-40', $body);
+        $this->assertStringContainsString('px-gutter xl:px-40', $body);
 
         // And it is what the layout uses when a page says nothing.
-        $this->assertStringContainsString("\$mainGutter ?? 'px-4 sm:px-8 lg:px-16 xl:px-40'", (string) file_get_contents(APPPATH . 'Views/layouts/app.php'));
+        $this->assertStringContainsString("'px-gutter xl:px-40')", (string) file_get_contents(APPPATH . 'Views/layouts/app.php'));
     }
 
     public function testASortLinkIsMarkedAsTheCurrentSort(): void

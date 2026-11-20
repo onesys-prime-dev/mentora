@@ -1,3 +1,5 @@
+import { clampToViewport } from "./clamp-panel.js";
+
 const button = document.getElementById("app-menu-button");
 const panel = document.getElementById("app-menu-panel");
 
@@ -5,6 +7,7 @@ if (button && panel) {
     const openMenu = () => {
         panel.classList.remove("hidden");
         button.setAttribute("aria-expanded", "true");
+        clampToViewport(panel);
     };
 
     const closeMenu = () => {

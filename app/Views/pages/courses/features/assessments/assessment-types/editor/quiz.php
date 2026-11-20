@@ -11,7 +11,7 @@
             </span>
         </div>
 
-        <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-10 py-12 text-center">
+        <div class="flex w-full min-h-100 flex-col items-center justify-center gap-5 rounded-2xl border border-[#DBDBDB] bg-linear-to-b from-[#F4F8FF] to-white px-5 py-10 text-center sm:px-10 sm:py-12">
 
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10">
                 <?= icon('quiz', 'h-8 w-8') ?>
@@ -29,7 +29,7 @@
 
             </div>
 
-            <div class="flex items-center gap-6 text-sm text-[#646464]">
+            <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[#646464]">
 
                 <div class="flex items-center gap-1.5">
                     <?= icon('quiz', 'h-4 w-4 opacity-60') ?>
@@ -47,7 +47,7 @@
                 type="button"
                 data-enter-quiz-builder
                 data-assessment-id="<?= esc($currentAssessment['id']) ?>"
-                class="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark">
+                class="mt-2 inline-flex items-center gap-2 rounded-xl bg-brand px-8 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-dark pointer-coarse:min-h-11">
 
                 Enter Quiz Builder
 
@@ -65,11 +65,11 @@
 
                 <?php foreach ($currentQuestions as $index => $question): ?>
 
-                    <div class="flex items-center justify-between gap-4 px-5 py-3.5">
+                    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3.5">
 
                         <div class="flex min-w-0 items-center gap-3">
 
-                            <span class="shrink-0 text-sm font-bold text-[#8A8A8A]">
+                            <span class="shrink-0 text-sm font-bold text-[#646464]">
                                 Q<?= esc($index + 1) ?>
                             </span>
 
@@ -82,7 +82,7 @@
                         <div class="flex shrink-0 items-center gap-2">
 
                             <?php if (!empty($question['is_required'])): ?>
-                                <span class="text-xs font-semibold text-red-500">
+                                <span class="text-xs font-semibold text-red-700">
                                     Required
                                 </span>
                             <?php endif; ?>

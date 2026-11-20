@@ -2,7 +2,7 @@
 /**
  * The plan and period fields shared by "start a subscription", "record a renewal"
  * and the onboarding step. Echoes grid cells; the caller supplies the <form> and
- * a `sm:grid-cols-2` grid around them. What was typed before a refusal comes back
+ * a `md:grid-cols-2` grid around them. What was typed before a refusal comes back
  * through old(); `tfValues` fills the fields otherwise.
  *
  * @var string                       $tfCurrency default currency code
@@ -26,4 +26,4 @@ $tfField = static fn (array $spec): string => view('components/form-field', $spe
 <?= $tfField(['name' => 'amount', 'label' => 'Amount (reference only, optional)', 'value' => $tfValue('amount'), 'placeholder' => '0.00', 'attrs' => 'inputmode="decimal"']) ?>
 <?= $tfField(['name' => 'currency', 'label' => 'Currency', 'value' => $tfValue('currency', $tfCurrency), 'maxlength' => 3, 'attrs' => 'autocapitalize="characters"']) ?>
 <?= $tfField(['name' => 'reference', 'label' => 'Reference (invoice, transfer…)', 'value' => $tfValue('reference'), 'maxlength' => 100]) ?>
-<?= $tfField(['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'value' => $tfValue('notes'), 'maxlength' => 1000, 'span' => 'sm:col-span-2']) ?>
+<?= $tfField(['name' => 'notes', 'label' => 'Notes', 'type' => 'textarea', 'value' => $tfValue('notes'), 'maxlength' => 1000, 'span' => 'md:col-span-2']) ?>

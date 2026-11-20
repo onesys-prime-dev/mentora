@@ -16,7 +16,7 @@ $labels   = $labels ?? [];
     <?php $names = implode(', ', array_map(static fn (array $p) => '“' . $p['title'] . '”', $lockedBy)); ?>
     <span
         title="Complete <?= esc($names) ?> to unlock this."
-        class="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FFF1D6] px-2 py-0.5 text-[10px] font-medium text-[#946200]"
+        class="inline-flex shrink-0 max-sm:shrink items-center gap-1 rounded-full bg-[#FFF1D6] px-2 py-0.5 text-[10px] font-medium text-[#946200]"
         data-dependency-chip="locked">
         <?= icon('lock', 'h-3 w-3 text-current') ?>
         Locked · after <?= esc(implode(', ', array_column($lockedBy, 'title'))) ?>
@@ -24,7 +24,7 @@ $labels   = $labels ?? [];
 <?php elseif ($labels !== []): ?>
     <span
         title="Students must complete: <?= esc(implode(', ', $labels)) ?>"
-        class="inline-flex shrink-0 items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500"
+        class="inline-flex shrink-0 max-sm:shrink items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600"
         data-dependency-chip="waits">
         <?= icon('lock', 'h-3 w-3 text-current') ?>
         After <?= esc(implode(', ', $labels)) ?>

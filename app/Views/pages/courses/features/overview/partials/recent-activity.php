@@ -13,7 +13,7 @@
 $emphasis = ['grade', 'submission'];
 ?>
 
-<div class="flex flex-col gap-6 p-6 pb-8 border border-[#A9A9A9]/50 rounded-2xl">
+<div class="flex flex-col gap-6 p-4 pb-6 max-lg:@xs:p-6 max-lg:@xs:pb-8 lg:p-6 lg:pb-8 border border-[#A9A9A9]/50 rounded-2xl">
 
     <span class="text-2xl font-bold text-brand">
         Recent Activity
@@ -55,15 +55,15 @@ $emphasis = ['grade', 'submission'];
 
                     <div class="flex min-w-0 flex-col <?= $isLast ? '' : 'mb-5' ?>">
 
-                        <span class="text-md text-black/70 font-bold">
+                        <span class="text-md text-[#3D3D3D] font-bold">
                             <?= esc($event['title']) ?>
                         </span>
 
-                        <span class="text-sm text-black/50 wrap-break-word">
+                        <span class="text-sm text-[#646464] wrap-break-word">
                             <?= esc($event['detail']) ?>
                         </span>
 
-                        <span class="uppercase text-xs text-black/50 mt-2">
+                        <span class="uppercase text-xs text-[#646464] mt-2">
                             <?= esc($event['when']) ?>
                         </span>
 

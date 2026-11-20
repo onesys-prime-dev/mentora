@@ -10,12 +10,12 @@ $reminders = $data['reminders'] ?? [];
 <!-- reminders -->
 <div class="h-full min-h-0 flex flex-col bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl overflow-clip">
 
-    <div class="shrink-0 flex items-center justify-between px-6 py-3 bg-black/10">
+    <div class="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 bg-black/10">
         <span class="text-xl font-display">Reminders</span>
 
         <button
             type="button"
-            class="w-7 h-7 flex justify-center items-center rounded-full bg-white/40 border border-black/5 shadow-sm cursor-pointer transition hover:bg-white/70"
+            class="w-7 h-7 pointer-coarse:min-h-11 pointer-coarse:min-w-11 flex justify-center items-center rounded-full bg-white/40 border border-black/5 shadow-sm cursor-pointer transition hover:bg-white/70"
             aria-label="Add a reminder">
             <svg class="w-4 h-4 text-gray-700" viewBox="0 0 24 24" fill="none"
                  stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -24,7 +24,7 @@ $reminders = $data['reminders'] ?? [];
         </button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-6 py-4">
+    <div class="flex-1 min-h-0 overflow-y-auto scroll-area px-4 sm:px-6 py-4">
 
         <?php if ($reminders === []): ?>
 

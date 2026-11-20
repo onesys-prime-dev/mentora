@@ -17,11 +17,11 @@
  */
 $base    = 'institution/people';
 $f       = $peopleFilters;
-$primary = 'rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$second  = 'rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$link    = 'text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
-$menuBtn = 'block w-full rounded-lg px-3 py-2 text-left text-sm text-[#1A1C1E] hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$menuBad = 'block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#C33939] hover:bg-[#FDEDEC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
+$primary = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$second  = 'inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-brand bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$link    = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
+$menuBtn = 'flex w-full items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm text-[#1A1C1E] hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$menuBad = 'flex w-full items-center pointer-coarse:min-h-11 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#C33939] hover:bg-[#FDEDEC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50';
 
 $json = static fn (array $values): string => esc(json_encode($values, JSON_UNESCAPED_UNICODE));
 $url  = static fn (string $path): string => esc(site_url('institution/people' . $path));
@@ -51,15 +51,19 @@ foreach ($peopleRows as $p) {
 
     $actions = '';
     $label   = esc($p['name']);
-    $items   = '';
+    $built   = [];
+
+    // Built twice: flat for a phone's row sheet, and for the dropdown, whose entries hand focus back to its summary.
+    foreach (['', ' data-return-focus="person-menu-' . (int) $p['id'] . '"'] as $rf) {
+    $items = '';
 
     if ($peopleCanViewAs && $p['viewable']) {
-        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-view-as"'
+        $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-view-as"'
             . ' data-dialog-title="View as ' . $label . '" data-dialog-label="Start viewing" data-dialog-action="' . esc(site_url('institution/view-as/' . $p['id'])) . '" data-view-as>View as this person</button>';
     }
 
     if ($peopleCanEdit) {
-        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-edit"'
+        $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-edit"'
             . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
             . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email']]) . '"'
             . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
@@ -70,39 +74,47 @@ foreach ($peopleRows as $p) {
             $values['role_' . $role] = in_array($role, $p['roles'], true);
         }
 
-        $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-roles"'
+        $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-roles"'
             . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
             . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
 
         if ($p['active']) {
-            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
                 . ' data-dialog-title="Send ' . $label . ' a password link?"'
                 . ' data-dialog-text="They get an email with a link to choose a new password. Their current password keeps working until they do."'
                 . ' data-dialog-label="Send link" data-dialog-action="' . $url('/' . $p['id'] . '/reset-password') . '">Send password link</button>';
 
-            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
                 . ' data-dialog-title="Sign ' . $label . ' out everywhere?"'
                 . ' data-dialog-text="Every device they are signed in on is signed out. They can sign in again straight away."'
                 . ' data-dialog-label="Sign out" data-dialog-action="' . $url('/' . $p['id'] . '/sign-out') . '">Sign out everywhere</button>';
         }
 
         if ($p['active'] && ! $p['self'] && ! $p['last_admin']) {
-            $items .= '<button type="button" class="' . $menuBad . '" data-dialog-open="person-confirm"'
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBad . '" data-dialog-open="person-confirm"'
                 . ' data-dialog-title="Deactivate ' . $label . '?"'
                 . ' data-dialog-text="They are signed out and cannot sign in. Their work, grades and history are kept. If they are a chairperson, that assignment ends. You can reactivate them later."'
                 . ' data-dialog-label="Deactivate" data-dialog-action="' . $url('/' . $p['id'] . '/deactivate') . '">Deactivate</button>';
         } elseif (! $p['active']) {
-            $items .= '<button type="button" class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
                 . ' data-dialog-title="Reactivate ' . $label . '?"'
                 . ' data-dialog-text="They can sign in again. A student takes a seat of your plan."'
                 . ' data-dialog-label="Reactivate" data-dialog-action="' . $url('/' . $p['id'] . '/reactivate') . '">Reactivate</button>';
         }
     }
 
-    if ($items !== '') {
-        $actions = '<details class="relative inline-block text-left" data-person-menu>'
-            . '<summary class="' . $link . ' cursor-pointer list-none px-2 py-1" aria-label="Actions for ' . $label . '">Actions</summary>'
-            . '<div class="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-gray-200 bg-white p-1 shadow-lg max-md:static max-md:w-full max-md:shadow-none">' . $items . '</div>'
+    $built[] = $items;
+    }
+
+    [$flat, $drop] = $built;
+
+    if ($flat !== '') {
+        // A phone's row sheet moves this cell's children in, and a closed <details> would hide the entries (its summary would also close the sheet), so a phone gets them flat (first in the cell); md and up get the dropdown.
+        // The dropdown closes when an entry is chosen (data-menu-pick), so a dialog gives focus back to its summary.
+        $actions = '<div class="flex w-full flex-col md:hidden" data-person-actions>' . $flat . '</div>'
+            . '<details class="relative inline-block text-left max-md:hidden" data-menu data-menu-pick data-person-menu>'
+            . '<summary id="person-menu-' . (int) $p['id'] . '" class="' . $link . ' cursor-pointer list-none px-2 py-1" aria-label="Actions for ' . $label . '">Actions</summary>'
+            . '<div class="absolute right-0 z-20 mt-1 w-64 rounded-xl border border-gray-200 bg-white p-1 shadow-lg">' . $drop . '</div>'
             . '</details>';
     }
 
@@ -131,7 +143,7 @@ foreach ($peopleInvitations as $i) {
             . '<button type="submit" class="' . $link . '">Send again</button></form>';
 
         if (! $expired) {
-            $actions .= ' <button type="button" class="ml-3 text-sm font-semibold text-[#C33939] hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
+            $actions .= ' <button type="button" class="ml-3 inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-[#C33939] hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C33939]/50"'
                 . ' data-dialog-open="person-confirm" data-dialog-title="Cancel the invitation for ' . $name . '?"'
                 . ' data-dialog-text="The link in their email stops working. You can invite them again later."'
                 . ' data-dialog-label="Cancel invitation" data-dialog-action="' . $url('/invitations/' . $i['id'] . '/revoke') . '">Cancel</button>';
@@ -220,7 +232,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         $bulk = $peopleCanEdit
             ? '<form method="post" action="' . $url('/export') . '" data-bulk-form class="inline">' . csrf_field() . '<button type="submit" class="' . $second . '">Export</button></form>'
                 . '<form method="post" action="' . $url('/bulk/reactivate') . '" data-bulk-form class="inline">' . csrf_field() . '<button type="submit" class="' . $second . '">Reactivate</button></form>'
-                . '<form method="post" action="' . $url('/bulk/deactivate') . '" data-bulk-form class="inline">' . csrf_field() . '<button type="submit" class="rounded-full border border-[#C33939] bg-white px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Deactivate</button></form>'
+                . '<form method="post" action="' . $url('/bulk/deactivate') . '" data-bulk-form class="inline">' . csrf_field() . '<button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-[#C33939] bg-white px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Deactivate</button></form>'
             : '';
         ?>
 
@@ -230,7 +242,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
                 ['key' => 'name', 'label' => 'Name', 'sortable' => true],
                 ['key' => 'roles', 'label' => 'Role'],
                 ['key' => 'status', 'label' => 'Status'],
-                ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true],
+                ['key' => 'last_active', 'label' => 'Last active', 'sortable' => true, 'priority' => 2],
             ],
             'rows'       => $rows,
             'sort'       => $f->sort,
@@ -284,8 +296,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
     $field = static fn (array $spec): string => view('components/form-field', $spec, ['saveData' => false]);
 
     $buttons = static fn (string $text): string => '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($text) . '</button></div>';
+        . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($text) . '</button></div>';
 
     $form = static fn (string $inside, string $text): string => '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . $inside . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>' . $buttons($text) . '</form>';
@@ -304,7 +316,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
     $roleBoxes = '<fieldset class="flex flex-col gap-2" data-field="roles"><legend class="text-xs font-medium text-gray-600">Roles</legend>';
 
     foreach ($peopleRoles as $role) {
-        $roleBoxes .= '<label class="flex items-center gap-2 text-sm text-[#1A1C1E]"><input type="checkbox" name="role_' . esc($role) . '" value="1" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40">'
+        $roleBoxes .= '<label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11"><input type="checkbox" name="role_' . esc($role) . '" value="1" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 rounded border-gray-300 text-brand focus:ring-brand/40">'
             . esc($peopleRoleLabels[$role] ?? $role) . '</label>';
     }
 
@@ -335,14 +347,14 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
 <?php endif; ?>
 
 <?php if ($peopleCanViewAs): ?>
-    <?= view('components/dialog', ['id' => 'person-view-as', 'title' => 'View as this person', 'body' =>
+    <?= view('components/dialog', ['id' => 'person-view-as', 'title' => 'View as this person', 'variant' => 'default', 'body' =>
         '<form method="post" action="" data-dialog-form class="flex flex-col gap-4">' . csrf_field()
         . '<p class="text-sm text-[#3D3D3D]">You will see the site as they see it. It is view only: nothing you do is saved, and it ends by itself after a short time. Your reason and the time you spent are kept in the audit log.</p>'
         . view('components/form-field', ['name' => 'reason', 'label' => 'Why are you viewing as them?', 'type' => 'textarea', 'required' => true, 'maxlength' => 500, 'help' => 'For example: a student says the grades page is empty.'], ['saveData' => false])
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
         . '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Start viewing</button></div></form>',
+        . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Start viewing</button></div></form>',
     ], ['saveData' => false]) ?>
 <?php endif; ?>
 

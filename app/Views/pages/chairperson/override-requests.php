@@ -42,8 +42,8 @@ foreach ($requests as $r) {
     $actions = '';
 
     if ($waitsForMe($r)) {
-        $actions = '<button type="button" data-dialog-open="send-back-' . (int) $r['id'] . '" class="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Send back…</button> '
-            . '<button type="button" data-dialog-open="endorse-' . (int) $r['id'] . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark">Endorse</button>';
+        $actions = '<button type="button" data-dialog-open="send-back-' . (int) $r['id'] . '" class="rounded-full border border-gray-300 px-4 py-1.5 text-xs font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Send back…</button> '
+            . '<button type="button" data-dialog-open="endorse-' . (int) $r['id'] . '" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">Endorse</button>';
     }
 
     $rows[] = [
@@ -78,11 +78,11 @@ foreach ($requests as $r) {
         'description' => 'Requests to change a final grade in the departments you chair. Endorse one to send it on to the dean, or send it back with what needs to change.',
     ], ['saveData' => false]) ?>
 
-    <div class="flex items-center gap-1 text-xs" role="group" aria-label="Show">
+    <div class="flex flex-wrap items-center gap-1 text-xs" role="group" aria-label="Show">
         <?php foreach (['pending' => 'Waiting for you', 'all' => 'All requests'] as $mode => $label): ?>
             <a href="<?= esc($mode === 'pending' ? $base : $base . '?view=all') ?>"
                <?= $view === $mode ? 'aria-current="true"' : '' ?>
-               class="rounded-full px-3 py-1.5 font-semibold <?= $view === $mode ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
+               class="inline-flex items-center rounded-full px-3 py-1.5 font-semibold pointer-coarse:min-h-11 <?= $view === $mode ? 'bg-brand text-white' : 'bg-gray-100 text-[#3D3D3D] hover:bg-gray-200' ?>">
                 <?= esc($label) ?>
             </a>
         <?php endforeach; ?>
@@ -106,8 +106,8 @@ foreach ($requests as $r) {
 
     <?php
     $buttons = static fn (string $label): string => '<div class="flex flex-wrap items-center justify-end gap-3">'
-        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">' . esc($label) . '</button></div>';
+        . '<button type="button" data-dialog-close class="rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50 pointer-coarse:min-h-11">Cancel</button>'
+        . '<button type="submit" data-dialog-label class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">' . esc($label) . '</button></div>';
 
     $field = static fn (array $f): string => view('components/form-field', $f, ['saveData' => false]);
     ?>

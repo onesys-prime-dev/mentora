@@ -6,8 +6,8 @@
  * @var list<array<string, mixed>> $deletedRows each with purge_on, days_left and contents
  * @var int                        $retentionDays
  */
-$btn   = 'rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
-$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
+$btn   = 'inline-flex list-none [&::-webkit-details-marker]:hidden items-center justify-center pointer-coarse:min-h-11 rounded-full border px-3 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50';
+$input = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus:border-brand/60 focus:outline-none focus:ring-2 focus:ring-brand/40';
 
 $pastTable = [];
 

@@ -28,8 +28,8 @@ $printable = [
     ['test-rtf', 'Rich Text (.rtf)'],
 ];
 
-$choice = 'flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 has-[:checked]:border-brand has-[:checked]:bg-brand-tint';
-$format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50';
+$choice = 'flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 transition hover:bg-gray-50 has-[:checked]:border-brand has-[:checked]:bg-brand/5';
+$format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 pointer-coarse:min-h-11';
 ?>
 <div
     id="export-questions-modal"
@@ -40,13 +40,13 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
     <div class="flex max-h-[88vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl">
 
-        <div class="flex items-center justify-between border-b border-gray-200 px-8 py-6">
+        <div class="flex items-center justify-between border-b border-gray-200 px-5 sm:px-8 py-5 sm:py-6 shrink-0">
 
             <h2 id="export-questions-title" class="text-xl font-bold text-brand">Export</h2>
 
             <button
                 type="button"
-                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                class="flex shrink-0 items-center justify-center rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 pointer-coarse:min-h-11 pointer-coarse:min-w-11"
                 aria-label="Close"
                 data-close-export-questions-modal>
 
@@ -58,7 +58,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-8">
+        <div class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 sm:p-8">
 
             <fieldset class="flex flex-col gap-3">
 
@@ -68,7 +68,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
                     <input type="radio" name="export-kind" value="editable" data-export-kind class="mt-0.5 h-4 w-4 accent-brand">
                     <span class="flex flex-col gap-0.5">
                         <span class="text-sm font-semibold text-gray-800">Editable file</span>
-                        <span class="text-xs text-gray-500">Edit the questions and import the file back into this quiz.</span>
+                        <span class="text-xs text-[#646464]">Edit the questions and import the file back into this quiz.</span>
                     </span>
                 </label>
 
@@ -76,7 +76,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
                     <input type="radio" name="export-kind" value="printable" data-export-kind checked class="mt-0.5 h-4 w-4 accent-brand">
                     <span class="flex flex-col gap-0.5">
                         <span class="text-sm font-semibold text-gray-800">Printable test</span>
-                        <span class="text-xs text-gray-500">The questions to hand out, with the answer key on the last pages.</span>
+                        <span class="text-xs text-[#646464]">The questions to hand out, with the answer key on the last pages.</span>
                     </span>
                 </label>
 
@@ -123,7 +123,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
                         <label class="flex flex-col gap-1 font-medium">
                             <span>Versions</span>
-                            <select data-print-versions class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                            <select data-print-versions class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal text-base sm:text-sm pointer-coarse:min-h-11">
                                 <option value="1">1 (A only)</option>
                                 <option value="2">2 (A, B)</option>
                                 <option value="3">3 (A to C)</option>
@@ -133,7 +133,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
                         <label class="flex flex-col gap-1 font-medium">
                             <span>Paper</span>
-                            <select data-print-paper class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal">
+                            <select data-print-paper class="rounded-md border border-gray-300 bg-white px-2 py-1.5 font-normal text-base sm:text-sm pointer-coarse:min-h-11">
                                 <option value="A4">A4</option>
                                 <option value="Letter">Letter</option>
                                 <option value="Legal">Legal</option>
@@ -142,17 +142,17 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
                     </div>
 
-                    <label class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 pointer-coarse:min-h-11">
                         <input type="checkbox" data-print-shuffle-questions class="h-4 w-4 accent-brand">
                         Shuffle the order of questions
                     </label>
 
-                    <label class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 pointer-coarse:min-h-11">
                         <input type="checkbox" data-print-shuffle-choices class="h-4 w-4 accent-brand">
                         Shuffle the choices
                     </label>
 
-                    <label class="flex items-center gap-2">
+                    <label class="flex items-center gap-2 pointer-coarse:min-h-11">
                         <input type="checkbox" data-print-key-only class="h-4 w-4 accent-brand">
                         Answer key only
                     </label>
@@ -167,12 +167,12 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
 
         </div>
 
-        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-8 py-5">
+        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-5 sm:px-8 py-5 flex-wrap shrink-0">
 
             <button
                 type="button"
                 data-close-export-questions-modal
-                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                class="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 pointer-coarse:min-h-11">
                 Cancel
             </button>
 
@@ -180,7 +180,7 @@ $format = 'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm
                 type="button"
                 data-export-questions
                 data-assessment-id="<?= esc((string) $currentAssessment['id'], 'attr') ?>"
-                class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">
+                class="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark pointer-coarse:min-h-11">
                 Export
             </button>
 

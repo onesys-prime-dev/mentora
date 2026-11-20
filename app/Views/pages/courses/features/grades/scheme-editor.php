@@ -67,11 +67,11 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
         <span class="rounded-full px-2 py-0.5 text-[10px] font-bold <?= $badgeClass ?>"><?= $label ?></span>
 
         <?php if ($item['is_manual']): ?>
-            <input type="text" value="<?= esc($item['name'], 'attr') ?>" data-grade-item-name
-                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-sm font-semibold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand">
+            <input type="text" value="<?= esc($item['name'], 'attr') ?>" data-grade-item-name aria-label="Item name"
+                class="min-w-44 flex-1 rounded-lg border border-transparent px-2 py-1 font-semibold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand max-sm:basis-full text-base sm:text-sm pointer-coarse:min-h-11">
             <label class="flex items-center gap-1 text-xs text-gray-500">
-                <input type="number" min="0.01" step="0.01" value="<?= $points($item['max_points']) ?>" data-grade-item-max
-                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
+                <input type="number" inputmode="decimal" min="0.01" step="0.01" value="<?= $points($item['max_points']) ?>" data-grade-item-max aria-label="Points"
+                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 outline-none focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
                 pts
             </label>
         <?php else: ?>
@@ -80,26 +80,26 @@ $renderItem = static function (array $item) use ($typeBadge, $points, $categoryO
             <?php if ($item['is_out_of_sync']): ?>
                 <span class="inline-flex items-center gap-2 rounded-full bg-[#FFF1D6] px-3 py-1 text-[11px] font-semibold text-[#946200]" data-out-of-sync>
                     Out of sync — now <?= $points($item['current_points']) ?> pts
-                    <button type="button" data-resync-grade-item class="underline">Resync</button>
+                    <button type="button" data-resync-grade-item class="underline pointer-coarse:min-h-11">Resync</button>
                 </span>
             <?php endif; ?>
         <?php endif; ?>
 
-        <select data-grade-item-category class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand" title="Category">
+        <select data-grade-item-category class="min-w-0 max-w-full rounded-lg border border-gray-300 px-2 py-1 text-base outline-none focus:border-brand sm:text-xs pointer-coarse:min-h-11" title="Category" aria-label="Category">
             <?= $categoryOptions($item['category_id'] !== null ? (int) $item['category_id'] : null) ?>
         </select>
 
-        <span class="flex shrink-0 flex-col">
-            <button type="button" data-move-grade-item="up" title="Move up" aria-label="Move up" class="rounded p-0.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+        <span class="flex shrink-0 flex-col pointer-coarse:flex-row">
+            <button type="button" data-move-grade-item="up" title="Move up" aria-label="Move up" class="rounded p-0.5 text-[#646464] transition hover:bg-gray-100 hover:text-brand inline-flex min-h-6 min-w-6 items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
             </button>
-            <button type="button" data-move-grade-item="down" title="Move down" aria-label="Move down" class="rounded p-0.5 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+            <button type="button" data-move-grade-item="down" title="Move down" aria-label="Move down" class="rounded p-0.5 text-[#646464] transition hover:bg-gray-100 hover:text-brand inline-flex min-h-6 min-w-6 items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
             </button>
         </span>
 
-        <button type="button" data-remove-grade-item title="<?= $item['is_manual'] ? 'Remove item' : 'Don\'t count this in the grade' ?>"
-            class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500">
+        <button type="button" data-remove-grade-item title="<?= $item['is_manual'] ? 'Remove item' : 'Don\'t count this in the grade' ?>" aria-label="<?= $item['is_manual'] ? 'Remove item' : 'Don\'t count this in the grade' ?>"
+            class="rounded-lg p-1.5 text-[#646464] transition hover:bg-red-50 hover:text-red-500 inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -118,32 +118,32 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <div class="flex flex-wrap items-center gap-3">
 
             <input type="text" value="<?= esc($category['name'], 'attr') ?>" data-grade-category-name
-                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand">
+                class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 font-bold text-[#646464] outline-none transition hover:border-gray-200 focus:border-brand max-sm:basis-full text-base sm:text-sm pointer-coarse:min-h-11" aria-label="Category name">
 
             <label class="flex items-center gap-1 text-sm text-gray-500">
                 Weight
-                <input type="number" min="0" max="100" step="0.5" value="<?= $points($category['weight_percentage']) ?>" data-grade-category-weight
-                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
+                <input type="number" inputmode="decimal" min="0" max="100" step="0.5" value="<?= $points($category['weight_percentage']) ?>" data-grade-category-weight
+                    class="w-20 rounded-lg border border-gray-300 px-2 py-1 outline-none focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
                 %
             </label>
 
             <?php if ($usesPeriods): ?>
-                <select data-grade-category-period class="rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none focus:border-brand" title="Period">
+                <select data-grade-category-period class="min-w-0 max-w-full rounded-lg border border-gray-300 px-2 py-1 text-base outline-none focus:border-brand sm:text-xs pointer-coarse:min-h-11" title="Period" aria-label="Period">
                     <?= $periodOptions($category['period_id'] !== null ? (int) $category['period_id'] : null) ?>
                 </select>
             <?php endif; ?>
 
             <span class="flex shrink-0 items-center">
-                <button type="button" data-move-grade-category="up" title="Move up" aria-label="Move category up" class="rounded p-1 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                <button type="button" data-move-grade-category="up" title="Move up" aria-label="Move category up" class="rounded p-1 text-[#646464] transition hover:bg-gray-100 hover:text-brand inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
                 </button>
-                <button type="button" data-move-grade-category="down" title="Move down" aria-label="Move category down" class="rounded p-1 text-[#767676] transition hover:bg-gray-100 hover:text-brand">
+                <button type="button" data-move-grade-category="down" title="Move down" aria-label="Move category down" class="rounded p-1 text-[#646464] transition hover:bg-gray-100 hover:text-brand inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
                 </button>
             </span>
 
             <button type="button" data-delete-grade-category title="Remove category"
-                class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500" aria-label="Remove category">
+                class="rounded-lg p-1.5 text-[#646464] transition hover:bg-red-50 hover:text-red-500 inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" aria-label="Remove category">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
 
@@ -159,7 +159,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         </div>
 
         <button type="button" data-add-grade-item data-category-id="<?= (int) $category['id'] ?>"
-            class="self-start text-xs font-semibold text-brand transition hover:underline">
+            class="self-start text-xs font-semibold text-brand transition hover:underline pointer-coarse:min-h-11">
             + Add manual item (Attendance, Participation…)
         </button>
 
@@ -168,14 +168,14 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 };
 ?>
 
-<div class="p-10 flex flex-col gap-8" data-grading-scheme-editor data-scheme-status="<?= esc($scheme['status'], 'attr') ?>" data-uses-periods="<?= $usesPeriods ? '1' : '0' ?>">
+<div class="p-5 sm:p-8 lg:p-10 flex flex-col gap-8" data-grading-scheme-editor data-scheme-status="<?= esc($scheme['status'], 'attr') ?>" data-uses-periods="<?= $usesPeriods ? '1' : '0' ?>">
 
     <!-- Header -->
     <div class="sticky-bar-top flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4">
 
-        <div class="flex items-center gap-3">
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
 
-            <button type="button" data-grading-scheme-back class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100" title="Back to Grades" aria-label="Back to Grades">
+            <button type="button" data-grading-scheme-back class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" title="Back to Grades" aria-label="Back to Grades">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </button>
 
@@ -183,13 +183,13 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
             <span class="text-xl font-bold text-brand">Grading Scheme</span>
 
-            <span class="rounded-full px-3 py-1 text-xs font-bold <?= $isPublished ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-gray-100 text-gray-500' ?>" data-scheme-status-chip>
+            <span class="rounded-full px-3 py-1 text-xs font-bold <?= $isPublished ? 'bg-[#E8F5EC] text-[#2B7549]' : 'bg-gray-100 text-gray-500' ?>" data-scheme-status-chip>
                 <?= $isPublished ? 'Published' : 'Draft' ?>
             </span>
 
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex flex-wrap items-center gap-4">
 
             <span class="flex items-center gap-2 text-sm text-gray-500" data-scheme-save-status>
                 <span class="h-2 w-2 rounded-full bg-emerald-500" data-scheme-save-dot></span>
@@ -198,7 +198,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
             <button type="button" data-scheme-toggle-publish
                 data-target-status="<?= $isPublished ? 'Draft' : 'Published' ?>"
-                class="rounded-xl px-5 py-2.5 text-sm font-semibold transition <?= $isPublished
+                class="rounded-xl px-5 py-2.5 text-sm font-semibold transition pointer-coarse:min-h-11 <?= $isPublished
                     ? 'border border-gray-300 text-gray-600 hover:bg-gray-100'
                     : 'bg-brand text-white hover:bg-brand-dark' ?>">
                 <?= $isPublished ? 'Unpublish' : 'Publish' ?>
@@ -211,10 +211,10 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
     <div data-scheme-error class="hidden rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600"></div>
 
     <?php if (!empty($scheme['needs_recalculation'])): ?>
-        <div class="flex items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]">
+        <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#FFE3A3] bg-[#FFF8E6] px-5 py-3 text-sm text-[#946200]">
             <span><strong>Grades may be out of date.</strong> Changes here don't affect anyone's grade until you recalculate.</span>
             <button type="button" data-recalculate-grades <?= $weightOk ? '' : 'disabled' ?>
-                class="shrink-0 rounded-lg bg-[#946200] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#7a5100] disabled:cursor-not-allowed disabled:opacity-50">
+                class="shrink-0 rounded-lg bg-[#946200] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#7a5100] disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:min-h-11">
                 Recalculate
             </button>
         </div>
@@ -226,18 +226,18 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Scheme name</span>
             <input type="text" value="<?= esc($scheme['name'], 'attr') ?>" data-scheme-name
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+                class="rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
         </label>
 
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Passing mark (%)</span>
-            <input type="number" min="0" max="100" step="0.5" value="<?= $points($scheme['passing_percentage']) ?>" data-scheme-passing
-                class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+            <input type="number" inputmode="decimal" min="0" max="100" step="0.5" value="<?= $points($scheme['passing_percentage']) ?>" data-scheme-passing
+                class="rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
         </label>
 
         <label class="flex flex-col gap-1.5">
             <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Grade scale</span>
-            <select data-scheme-scale class="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-brand">
+            <select data-scheme-scale class="rounded-lg border border-gray-300 px-3 py-2 outline-none transition focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
                 <option value="">None (percentage only)</option>
                 <?php foreach ($scales as $scale): ?>
                     <option value="<?= (int) $scale['id'] ?>" <?= (int) $scale['id'] === (int) ($scheme['grade_scale_id'] ?? 0) ? 'selected' : '' ?>><?= esc($scale['name']) ?></option>
@@ -248,7 +248,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
     </div>
 
     <?php if ($scale_items !== []): ?>
-        <div class="flex flex-wrap gap-2 text-[11px] text-gray-500">
+        <div class="flex flex-wrap gap-2 text-[11px] text-gray-600">
             <?php foreach ($scale_items as $band): ?>
                 <span class="rounded-full bg-gray-100 px-2 py-0.5">
                     <strong><?= esc($band['name']) ?></strong> <?= $points($band['minimum_percentage']) ?>–<?= $points($band['maximum_percentage']) ?>%
@@ -257,17 +257,17 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
         </div>
     <?php endif; ?>
 
-    <div class="flex items-center justify-between rounded-xl border border-gray-200 px-5 py-4">
+    <div class="flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-5 py-4">
 
         <div class="flex flex-col gap-0.5">
             <span class="text-sm font-medium text-gray-700">Use grading periods</span>
             <span class="text-xs text-[#767676]">Split the term into Prelim / Midterm / Finals (or your own), each with its own weight and categories.</span>
         </div>
 
-        <label class="relative inline-flex shrink-0 cursor-pointer items-center">
-            <input type="checkbox" class="peer sr-only" data-scheme-uses-periods <?= $usesPeriods ? 'checked' : '' ?>>
+        <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
+            <input type="checkbox" class="peer sr-only" aria-label="Use grading periods" data-scheme-uses-periods <?= $usesPeriods ? 'checked' : '' ?>>
             <div class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand"></div>
-            <div class="absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
+            <div class="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-transform peer-checked:translate-x-5"></div>
         </label>
 
     </div>
@@ -279,7 +279,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
             <div class="flex items-center justify-between">
                 <span class="text-lg font-bold text-brand">Grading Periods</span>
-                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
+                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2B7549]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
                     Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
                 </span>
             </div>
@@ -293,21 +293,21 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                     <div class="flex flex-wrap items-center gap-3">
 
                         <input type="text" value="<?= esc($period['name'], 'attr') ?>" data-grading-period-name
-                            class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-lg font-bold text-brand outline-none transition hover:border-gray-200 focus:border-brand">
+                            class="min-w-0 flex-1 rounded-lg border border-transparent px-2 py-1 text-lg font-bold text-brand outline-none transition hover:border-gray-200 focus:border-brand max-sm:basis-full pointer-coarse:min-h-11" aria-label="Period name">
 
                         <label class="flex items-center gap-1 text-sm text-gray-500">
                             Weight
-                            <input type="number" min="0" max="100" step="0.5" value="<?= $points($period['weight_percentage']) ?>" data-grading-period-weight
-                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 text-sm outline-none focus:border-brand">
+                            <input type="number" inputmode="decimal" min="0" max="100" step="0.5" value="<?= $points($period['weight_percentage']) ?>" data-grading-period-weight
+                                class="w-20 rounded-lg border border-gray-300 px-2 py-1 outline-none focus:border-brand text-base sm:text-sm pointer-coarse:min-h-11">
                             %
                         </label>
 
                         <button type="button" data-delete-grading-period title="Remove period"
-                            class="rounded-lg p-1.5 text-[#767676] transition hover:bg-red-50 hover:text-red-500" aria-label="Remove period">
+                            class="rounded-lg p-1.5 text-[#646464] transition hover:bg-red-50 hover:text-red-500 inline-flex items-center justify-center pointer-coarse:min-h-11 pointer-coarse:min-w-11" aria-label="Remove period">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
 
-                        <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold <?= $periodWeightOk ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-grading-period-weight-total>
+                        <span class="ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold <?= $periodWeightOk ? 'bg-[#E8F5EC] text-[#2B7549]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-grading-period-weight-total>
                             Categories: <?= esc($points($period['weight_total'])) ?>%<?= $periodWeightOk ? '' : ' — must be 100%' ?>
                         </span>
 
@@ -323,7 +323,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                     </div>
 
                     <button type="button" data-add-grade-category data-period-id="<?= (int) $period['id'] ?>"
-                        class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                        class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                         + Add category
                     </button>
 
@@ -332,7 +332,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
             <?php endforeach; ?>
 
             <button type="button" data-add-grading-period
-                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 + Add grading period
             </button>
 
@@ -355,7 +355,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
 
             <div class="flex items-center justify-between">
                 <span class="text-lg font-bold text-brand">Categories</span>
-                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2E7D4F]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
+                <span class="rounded-full px-3 py-1 text-xs font-bold <?= $weightOk ? 'bg-[#E8F5EC] text-[#2B7549]' : 'bg-[#FDEDEC] text-[#C33939]' ?>" data-scheme-weight-total>
                     Total: <?= esc($points($total_weight)) ?>%<?= $weightOk ? '' : ' — must be 100%' ?>
                 </span>
             </div>
@@ -365,7 +365,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
             <?php endforeach; ?>
 
             <button type="button" data-add-grade-category
-                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5">
+                class="self-start rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand/5 pointer-coarse:min-h-11">
                 + Add category
             </button>
 
@@ -376,7 +376,7 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
     <?php $removedCategories = $removed['categories'] ?? []; $removedItems = $removed['items'] ?? []; ?>
     <?php if ($removedCategories !== [] || $removedItems !== []): ?>
         <details class="rounded-2xl border border-gray-200 p-5" data-removed-grading>
-            <summary class="cursor-pointer text-sm font-bold text-[#646464]">
+            <summary class="cursor-pointer text-sm font-bold text-[#646464] pointer-coarse:py-3">
                 Removed (<?= count($removedCategories) + count($removedItems) ?>)
                 <span class="font-normal text-[#767676]">: their scores are kept, and restoring brings them back</span>
             </summary>
@@ -384,13 +384,13 @@ $renderCategory = static function (array $category) use ($renderItem, $points, $
                 <?php foreach ($removedCategories as $category): ?>
                     <li class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span><span class="mr-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">Category</span><?= esc($category['name']) ?></span>
-                        <button type="button" data-restore-grade-category="<?= (int) $category['id'] ?>" class="font-semibold text-brand hover:underline">Restore</button>
+                        <button type="button" data-restore-grade-category="<?= (int) $category['id'] ?>" class="font-semibold text-brand hover:underline pointer-coarse:min-h-11">Restore</button>
                     </li>
                 <?php endforeach; ?>
                 <?php foreach ($removedItems as $item): ?>
                     <li class="flex items-center justify-between gap-3 py-2 text-sm">
                         <span><span class="mr-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-600">Item</span><?= esc($item['name']) ?></span>
-                        <button type="button" data-restore-grade-item="<?= (int) $item['id'] ?>" class="font-semibold text-brand hover:underline">Restore</button>
+                        <button type="button" data-restore-grade-item="<?= (int) $item['id'] ?>" class="font-semibold text-brand hover:underline pointer-coarse:min-h-11">Restore</button>
                     </li>
                 <?php endforeach; ?>
             </ul>
