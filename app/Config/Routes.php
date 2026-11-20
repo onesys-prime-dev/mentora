@@ -170,6 +170,19 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
     $routes->get('schedule', 'Schedule\ScheduleController::index');
 
     $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:instructor', 'assessmentscope', 'closedoffering', 'coursepermission']], function ($routes) {
+        // Group sets: reusable groupings of a course's students (instructor and chairperson change them, the dean only reads).
+        $routes->get('(:num)/groups', 'Courses\Groups\GroupsTabController::show/$1');
+        $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
+        $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
+        $routes->post('(:num)/group-sets', 'Courses\Groups\GroupSetsController::create/$1');
+        $routes->put('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::update/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/archive', 'Courses\Groups\GroupSetsController::archive/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/groups', 'Courses\Groups\GroupSetsController::addGroup/$1/$2');
+        $routes->put('(:num)/group-sets/(:num)/groups/(:num)', 'Courses\Groups\GroupSetsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/group-sets/(:num)/groups/(:num)', 'Courses\Groups\GroupSetsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/groups/(:num)/members', 'Courses\Groups\GroupSetsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/members/move', 'Courses\Groups\GroupSetsController::moveMember/$1/$2');
+        $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -416,6 +429,10 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view@dean', 'deancourse']]);
 
     $routes->group('api/courses', ['filter' => ['permission:courses.view@dean', 'deancourse', 'assessmentscope']], function ($routes) {
+        // Group sets: reusable groupings of a course's students (instructor and chairperson change them, the dean only reads).
+        $routes->get('(:num)/groups', 'Courses\Groups\GroupsTabController::show/$1');
+        $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
+        $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');
@@ -609,6 +626,19 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
     $routes->get('courses/(:num)/(:segment)/(:segment)', 'Courses\CourseController::view/$1/$2/$3', ['filter' => ['permission:courses.view', 'coursemember:chairperson']]);
 
     $routes->group('api/courses', ['filter' => ['permission:courses.view', 'coursemember:chairperson', 'assessmentscope', 'closedoffering', 'chairpersoncourseaudit', 'coursepermission']], function ($routes) {
+        // Group sets: reusable groupings of a course's students (instructor and chairperson change them, the dean only reads).
+        $routes->get('(:num)/groups', 'Courses\Groups\GroupsTabController::show/$1');
+        $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
+        $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
+        $routes->post('(:num)/group-sets', 'Courses\Groups\GroupSetsController::create/$1');
+        $routes->put('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::update/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/archive', 'Courses\Groups\GroupSetsController::archive/$1/$2');
+        $routes->post('(:num)/group-sets/(:num)/groups', 'Courses\Groups\GroupSetsController::addGroup/$1/$2');
+        $routes->put('(:num)/group-sets/(:num)/groups/(:num)', 'Courses\Groups\GroupSetsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/group-sets/(:num)/groups/(:num)', 'Courses\Groups\GroupSetsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/groups/(:num)/members', 'Courses\Groups\GroupSetsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/group-sets/(:num)/members/move', 'Courses\Groups\GroupSetsController::moveMember/$1/$2');
+        $routes->delete('(:num)/group-sets/(:num)/members/(:num)', 'Courses\Groups\GroupSetsController::removeMember/$1/$2/$3');
         $routes->get('(:num)/overview', 'Courses\OverviewController::show/$1');
         $routes->get('(:num)/announcements', 'Courses\AnnouncementController::show/$1');
         $routes->get('(:num)/announcements/more', 'Courses\AnnouncementController::loadMore/$1');

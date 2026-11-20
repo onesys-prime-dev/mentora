@@ -1,0 +1,41 @@
+// Importing the CSRF helper puts the token on every change this module sends.
+import "../../../shared/csrf.js";
+
+const base = () => window.coursesConfig.apiBaseUrl;
+
+const HEADERS = { "X-Requested-With": "XMLHttpRequest", Accept: "application/json" };
+
+async function getJson(url, what) {
+
+    const response = await fetch(url, { headers: HEADERS, credentials: "same-origin" });
+
+    if (!response.ok) {
+        throw new Error(`Unable to load ${what}.`);
+    }
+
+    return response.json();
+
+}
+
+/** The tab's HTML: the set list and the dialogs. */
+export const fetchGroupsTab = () => getJson(`${base()}/groups`, "Groups");
+
+/** One set: { set, groups: [{ id, name, members }], ungrouped, limits }. */
+export const fetchGroupSet = (setId) => getJson(`${base()}/group-sets/${setId}`, "the group set");
+
+/**
+ * A change. Resolves { ok, status, body } and never throws for an answer the server gave
+ * (a 422 carries { message, errors }); a network failure rejects.
+ */
+export async function sendChange(method, path, body = {}) {
+
+    const response = await fetch(`${base()}/group-sets${path}`, {
+        method,
+        headers: { ...HEADERS, "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+    });
+
+    return { ok: response.ok, status: response.status, body: await response.json().catch(() => ({})) };
+
+}

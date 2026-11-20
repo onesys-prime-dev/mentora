@@ -38,6 +38,7 @@ class CoursePermissionFilter implements FilterInterface
         ['#^discussions/\d+/(pin|lock)$#', 'discussions.manage'],
         ['#^announcements(/|$)#', 'announcements.manage'],
         ['#^(grades|submissions)(/|$)#', 'grading.manage'],
+        ['#^group-sets(/|$)#', 'courses.manage'], // groups reuse course-content editing; no new permission
     ];
 
     /** The permission a change at this path needs, or null when none. */
