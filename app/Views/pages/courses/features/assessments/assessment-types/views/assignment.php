@@ -61,6 +61,27 @@
         <?= $this->include('pages/courses/features/assessments/partials/student-group-card') ?>
     <?php endif; ?>
 
+    <?php if (!empty($deanGroupView)): ?>
+
+        <!-- Groups: the dean's read-only view of every group and grade (4E); grading.js fills it -->
+        <section class="flex flex-col gap-3" aria-label="Groups" data-dean-groups>
+
+            <div class="flex items-center gap-3">
+                <?= icon('users', 'h-5 w-5') ?>
+
+                <span class="font-bold text-lg text-brand">
+                    Groups
+                </span>
+            </div>
+
+            <div class="flex flex-col gap-4" data-group-grading data-assessment-id="<?= esc((string) $currentAssessment['id']) ?>">
+                <?= view('pages/courses/features/assessments/partials/group-grading-frame', [], ['saveData' => false]) ?>
+            </div>
+
+        </section>
+
+    <?php endif; ?>
+
     <?= $this->include('pages/courses/features/assessments/partials/assignment-work') ?>
 
 </div>

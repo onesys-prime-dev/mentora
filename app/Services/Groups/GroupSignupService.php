@@ -37,6 +37,7 @@ class GroupSignupService
 
         (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_joined', $studentId, $groupId, 'student_group', ['new' => ['group_id' => $groupId, 'student_user_id' => $studentId, 'config_id' => $configId]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->memberChanged($groupId, $studentId, 'joined', $studentId));
     }
 
     public function leave(int $groupId, int $studentId): void
@@ -66,6 +67,7 @@ class GroupSignupService
 
         (new GroupLeaderService())->membershipChanged($groupId);
         GroupSetService::audit('groups.member_left', $studentId, $groupId, 'student_group', ['old' => ['group_id' => $groupId, 'student_user_id' => $studentId, 'config_id' => (int) $config['id']]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->memberChanged($groupId, $studentId, 'left', $studentId));
     }
 
     public function switchTo(int $configId, int $toGroupId, int $studentId): void
@@ -106,6 +108,7 @@ class GroupSignupService
         (new GroupLeaderService())->membershipChanged($from);
         (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_switched', $studentId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => $configId]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->moved($from, $toGroupId, $studentId, $studentId));
     }
 
     /** @return list<array{id:int,name:string,members_count:int,max:int,member_names:list<string>,full:bool}> */

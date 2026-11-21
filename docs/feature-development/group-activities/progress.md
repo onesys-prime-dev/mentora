@@ -1,12 +1,12 @@
 # Progress
 
-- Stage: 4 — Implementation, Phase 8 (learning items) in progress; Phases 1-7 committed (63b150cc, c918376b, bcfa5852, e556d79c, deab3c46, 404f5645, b9d5355a)
+- Stage: 4 — Implementation, Phase 9 (notifications, read-only roles, exports, offering copy) in progress; Phases 1-8 committed (63b150cc, c918376b, bcfa5852, e556d79c, deab3c46, 404f5645, b9d5355a, c06e655d)
 - Phase: n/a
-- Active branch: feat/group-activities-p8-learning-items (from p7)
+- Active branch: feat/group-activities-p9-notifications (from p8)
 - Last verified checkpoint: Stage 2 approved by user ("approved, proceed to Stage 3"); implementation-plan.md + test-strategy.md written
 - Completed: workspace scaffold
 - Pending: interview (one question per message)
-- Exact next action: Phase 8: 8.1+8.2 backend (attachLearningItem, completeForGroup, onGroupMemberAdded), 8.3 UI (editor section for learning items + student roster/completion). Then Phase 9 (notifications, dean/parent views incl. ParentNotifier missing-work fix and dean Grade Work page, exports, offering copy) and Phase 10 hardening. One phpunit at a time. Commit at phase end.
+- Exact next action: Phase 10 hardening on feat/group-activities-p10-hardening: (a) review the open risks (drop hook inside enrolment transaction, parent tab consistency note, ungrouped-solo grading page), (b) security review of every new route (foreign ids, wrong role, readonly, finalized) via a sample test sweep, (c) a11y/keyboard review of markup, (d) write docs/group-activities.md and docs/test-cases/ manual cases (incl. the Playwright/browser checks nobody could run), (e) final full regression, phpstan on all new PHP, eslint, (f) commit, then write the final implementation summary for the user. Scratch DB must be running on :3307 (one phpunit at a time).
 ## Phase 1 ledger
 - Task 1.1: DONE, reviewed by controller, GroupSchemaTest 4 tests OK (uncommitted)
 - Task 1.2: DONE; controller reviewed + mutation-checked (2 mutations caught); 22 tests OK. Note: implementer skipped TDD red phase
@@ -54,3 +54,10 @@
 - Tasks 8.1+8.2: DONE (red 14 errors; 678 group tests OK per implementer; my rerun OK)
 - Task 8.3: DONE_WITH_CONCERNS (red phases shown; Playwright not run; resumed after usage limit). Full phpunit 10105 OK, vitest 1241 OK
 - PHASE 8 COMPLETE and committed on feat/group-activities-p8-learning-items
+
+## Phase 9 ledger
+- Task 9.1: DONE_WITH_CONCERNS (red 21 errors; GroupNotifierTest 21 OK; Assessment|Grade 1887 OK). Session restarted mid-task, resumed. Open: ParentProfilePageTest order-dependent failure seen in a broad run (check in full regression); drop hook can run inside the enrolment transaction (notifier DB error would still mark it failed: review in Phase 10); scheduled triggers run from exports:run every minute; removed-by-instructor student not notified
+- Task 9.2: DONE_WITH_CONCERNS (PHP red 4 failures, Vitest red 1 failed; 1775 Dean|Parent|Group OK; vitest 1243 OK). Dean uses the existing read-only assessment view page (no new route). Parent sees child's final, parts, own adjustment+reason (not private note); plain assignments still show no score on that tab (inconsistent, kept per D14). Removed-after-grading child shows no group line to parent
+- Task 9.3+9.4: DONE_WITH_CONCERNS (9.4 red 1 failure then green; 9.3 characterization tests only: no per-assessment export exists, Group column NOT added = D20a flagged for user; 1452 wide OK per implementer)
+
+- Phase 9 COMPLETE (full phpunit 10139 OK, vitest 1243 OK) and committed on feat/group-activities-p9-notifications

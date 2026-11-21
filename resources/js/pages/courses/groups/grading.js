@@ -100,7 +100,7 @@ async function loadList(view) {
             status.innerHTML = `
                 <div class="flex flex-col items-center gap-2 rounded-2xl border border-gray-200 bg-white px-6 py-12 text-center shadow-sm" data-gg-empty>
                     <b class="text-sm font-semibold text-[#1A1C1E]">No groups yet</b>
-                    <span class="max-w-md text-xs text-[#646464]">Add groups to this assignment in its editor (Group activity). Each group is then graded here once for all its members.</span>
+                    <span class="max-w-md text-xs text-[#646464]">${list.flags.canWrite ? "Add groups to this assignment in its editor (Group activity). Each group is then graded here once for all its members." : "This assignment has no groups yet. They appear here once the instructor adds them."}</span>
                 </div>`;
 
             return;

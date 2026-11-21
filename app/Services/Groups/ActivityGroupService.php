@@ -140,6 +140,7 @@ class ActivityGroupService
         }
 
         GroupSetService::audit('groups.activity_attached', $userId, $configId, 'activity_group_config', ['new' => $row]);
+        $setId === null || GroupNotifier::hook(static fn (GroupNotifier $n) => $n->groupsSaved('config_id', $configId, $userId));
 
         return $configId;
     }
@@ -294,6 +295,7 @@ class ActivityGroupService
         }
 
         GroupSetService::audit($action, $userId, $configId, 'activity_group_config', ['new' => $details]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->groupsSaved('config_id', $configId, $userId));
     }
 
     /** Copies the groups of a set or of another activity, keeping only students still eligible. Overridable so a test can fail it. */

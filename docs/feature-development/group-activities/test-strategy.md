@@ -69,3 +69,10 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - Red phases shown: LearningItemGroup service (14 errors), routes (16 failures), learning-item Vitest (10 failed). The Task 8.3 implementer hit the 5-hour usage limit mid-task and was resumed from its saved state.
 - NOT run: Playwright learning-item-groups.spec.js (e2e DB :3306 broken); no browser/dark-mode/360 px check.
 - Known limits: proposed mode is not offered for learning items (refused at attach); the generate-groups dialog is not on the item card (it lives on the Groups tab for sets); completions made before the change show "Completed for the group" without a name (audit row groups.completed_for_group added going forward); the dean has no editor page, so only the dean GET endpoint exists.
+
+### Phase 9 (2026-11-21)
+- `phpunit` full suite: Tests 10139, Assertions 40397, OK (ParentProfilePageTest order failure seen once in a broad run did not recur). `npx vitest run`: 121 files, 1243 tests passed. eslint clean; phpstan on changed PHP (implementers): no errors.
+- Red phases shown: GroupNotifier (21 errors), read-only views (4 failures; Vitest 1 failed), offering copy (1 failure). Export/import tests are characterization tests (green from the start, no per-assessment export exists).
+- Incident: the session restarted mid-phase and Claude Code killed the scratch DB and one full run when the machine ran low on memory; both were restarted on the user's request and the full suite was re-run to completion.
+- NOT run: all Playwright specs (e2e DB :3306 broken); no browser/dark-mode/360 px check.
+- Known limits: D20a (no Group column in exports, flagged for the user); drop hook can run inside the enrolment transaction (notifier error would still mark it failed, to review in Phase 10); parent Assessments tab shows a grade for group activities but none for plain assignments; removed-after-grading child shows no group line to the parent; email rows are written one at a time; a student removed by an instructor is not notified.

@@ -200,6 +200,15 @@ class NotificationTriggers
     }
 
     /**
+     * Group sign-up windows (D19): closing within a day (to students still without a group) and just closed with work
+     * left (to the instructors). Each once per activity, so exports:run can run it every minute.
+     */
+    public function groupWindows(DateTimeImmutable $now): int
+    {
+        return (new \App\Services\Groups\GroupNotifier())->windows($now);
+    }
+
+    /**
      * A real SIS import or grade export failed (urgent: also by email). One
      * notification per failed run, so a retry that fails again is a new one.
      * The institution's own administrators are told as well as ours.

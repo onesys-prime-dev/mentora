@@ -52,6 +52,7 @@ class GroupExtensionService
             'old' => ['until_at' => $old['until_at'] ?? null, 'reason' => $old['reason'] ?? null],
             'new' => ['until_at' => $until, 'reason' => $reason],
         ]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->extended($groupId, $assessmentId, $userId));
     }
 
     /** @return array<string, mixed>|null */

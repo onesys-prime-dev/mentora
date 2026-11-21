@@ -250,8 +250,16 @@ class ParentNotifier
             ->get()->getResultArray();
 
         $byStudent = [];
+        $resolver  = new \App\Services\Groups\GroupSubmissionResolver();
 
         foreach ($items as $item) {
+            // A shared group hand-in is one row under a teammate's name: it counts for every member.
+            $shared = $resolver->sharedGroup((int) $item['assessment_id'], (int) $item['student_id']) === null ? null : $resolver->submissionFor((int) $item['assessment_id'], (int) $item['student_id']);
+
+            if ($shared !== null && !in_array($shared['status'], ['In Progress', 'Cancelled'], true)) {
+                continue;
+            }
+
             $byStudent[(int) $item['student_id']][] = $item;
         }
 

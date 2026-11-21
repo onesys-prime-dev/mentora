@@ -423,4 +423,38 @@ describe("read only", () => {
         expect(detailEl().querySelector("[data-gg-total=\"103\"]").textContent).toContain("12");
     });
 
+    it("fills the dean's frame, which has no dialogs, with notes, excused and pending badges (4E)", async () => {
+        window.coursesConfig = { apiBaseUrl: "/dean/api/courses/9", role: "dean", offeringId: 9 };
+        document.body.innerHTML = `<section data-dean-groups>${pageHtml()}</section>`;
+        document.querySelectorAll("[data-dialog]").forEach((el) => el.remove());
+
+        const fetch = vi.fn((url) => String(url).endsWith("/group-grading")
+            ? json(list({ flags: { canWrite: false, finalized: false }, lockReason: "View only. You can see the groups and their grades but not change them." }))
+            : json(detail({ canWrite: false, status: "graded", graded: true, members: [member(101, "Ana Cruz", { final: 16 }), member(103, "Cai Ortiz", { final: 12, adjustment: -4, reason: "Missed meetings", note: "Talk after class" }), member(104, "Dee Park", { final: 0, excused: true }), member(105, "Eli Sy", { pending: true })] })));
+        vi.stubGlobal("fetch", fetch);
+
+        await initializeGroupGrading(root());
+        await flush();
+
+        expect(String(fetch.mock.calls[0][0])).toBe("/dean/api/courses/9/assessments/7/group-grading");
+        expect(fetch.mock.calls.every(([, init = {}]) => (init.method ?? "GET") === "GET")).toBe(true);
+        expect(root().querySelectorAll("input, textarea, select, button[type=submit], [data-gg-action]")).toHaveLength(0);
+        expect(root().querySelector("[data-gg-lock]").textContent).toContain("View only.");
+        expect(document.querySelector("[data-gg-list]").textContent).toContain("Graded");
+        expect(detailEl().textContent).toContain("Private note: Talk after class");
+        expect(detailEl().querySelector("[data-gg-member=\"104\"]").textContent).toContain("Excused");
+        expect(detailEl().querySelector("[data-gg-member=\"105\"]").textContent).toContain("Joined after grading");
+        expect(detailEl().querySelector("[data-gg-total=\"101\"]").textContent).toContain("Total 16 / 20");
+    });
+
+    it("does not tell a read-only viewer to add groups", async () => {
+        server({ "GET /": () => json(list({ groups: [], ungrouped: [], blockers: [], flags: { canWrite: false, finalized: false }, lockReason: "View only." })) });
+
+        await initializeGroupGrading(root());
+        await flush();
+
+        expect(root().querySelector("[data-gg-empty]").textContent).toContain("No groups yet");
+        expect(root().querySelector("[data-gg-empty]").textContent).not.toContain("in its editor");
+    });
+
 });

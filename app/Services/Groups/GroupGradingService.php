@@ -175,6 +175,8 @@ class GroupGradingService
 
             $this->sync($assessmentId, $studentId);
         }
+
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->graded($groupId, $assessmentId, array_keys($rows), $graderId));
     }
 
     /** A member added after the group was graded starts pending, with no final score (D10). Per-member work has no shared row to hang it on. */
@@ -223,6 +225,7 @@ class GroupGradingService
 
         if ($decision === 'inherit') {
             $this->sync($assessmentId, $studentId);
+            GroupNotifier::hook(static fn (GroupNotifier $n) => $n->graded($groupId, $assessmentId, [$studentId], $userId));
         }
     }
 

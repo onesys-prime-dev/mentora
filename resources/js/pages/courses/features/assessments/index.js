@@ -779,6 +779,11 @@ export async function loadAssessmentView(
                 }
             );
 
+        // The dean's read-only groups of a group activity (4E); the server draws the frame only for them.
+        initializeGroupGrading(
+            document.querySelector("[data-dean-groups] [data-group-grading]")
+        );
+
         // Students only, assignments only: the card removes itself when this is not a group activity.
         initializeStudentGroupCard(
             document.querySelector("[data-student-group]")

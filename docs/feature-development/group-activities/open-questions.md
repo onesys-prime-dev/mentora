@@ -10,3 +10,4 @@
 - Deferred to later stages (not decided): release staging of modes/styles (D3, D6); voting details (D15); permission names; "apply change to other activities" action (D2); parent notification coverage; GradeSheet import/export check.
 
 ## Stage 2 inconsistencies found (to resolve with user)
+- D20a: Group column in exports was NOT added (no per-assessment export exists; the course grade sheet round-trips through import). Does the user want a Group column anywhere else? (Decision register D20a)

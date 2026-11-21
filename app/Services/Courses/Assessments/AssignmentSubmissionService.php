@@ -16,6 +16,7 @@ use App\Services\Courses\LearningProgressService;
 use App\Services\Groups\ActivityGroupMembershipService;
 use App\Services\Groups\ActivityGroupService;
 use App\Services\Groups\GroupExtensionService;
+use App\Services\Groups\GroupNotifier;
 use App\Services\Groups\GroupSubmissionResolver;
 use App\Services\Storage\StorageService;
 
@@ -267,6 +268,8 @@ class AssignmentSubmissionService
         if ($group = $this->resolver->groupFor($assessmentId, (int) $user->id)) {
             (new ActivityGroupMembershipService())->freezeGroup((int) $group['id']);
         }
+
+        $shared && GroupNotifier::hook(static fn (GroupNotifier $n) => $n->submitted((int) $shared['id'], $assessmentId, (int) $user->id));
 
         // Handing the work in completes its item in the module, for every member when the group submits as one.
         $members = $shared

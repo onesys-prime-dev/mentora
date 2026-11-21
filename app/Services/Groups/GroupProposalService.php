@@ -66,6 +66,7 @@ class GroupProposalService
         }, 'Your proposal could not be saved. Try again.');
 
         GroupSetService::audit('groups.proposed', $studentId, $groupId, 'student_group', ['new' => ['config_id' => $configId, 'name' => $name, 'invitee_ids' => $invited]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->proposalReady($groupId, $studentId));
 
         return $groupId;
     }
@@ -117,6 +118,7 @@ class GroupProposalService
         }
 
         GroupSetService::audit($accept ? 'groups.invite_accepted' : 'groups.invite_declined', $studentId, $groupId, 'student_group', ['new' => ['group_id' => $groupId, 'student_user_id' => $studentId]]);
+        $accept && GroupNotifier::hook(static fn (GroupNotifier $n) => $n->accepted($groupId, $studentId));
     }
 
     public function approve(int $groupId, int $userId): void
@@ -140,6 +142,7 @@ class GroupProposalService
         }, 'The proposal could not be approved. Try again.');
 
         GroupSetService::audit('groups.proposal_approved', $userId, $groupId, 'student_group', ['old' => ['status' => 'proposed'], 'new' => ['status' => 'active']]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->groupApproved($groupId, $userId));
     }
 
     public function decline(int $groupId, int $userId, string $reason): void

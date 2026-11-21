@@ -82,19 +82,7 @@ $dropForm = '<form class="flex flex-col gap-4" novalidate data-gg-drop-form>'
 
     <div class="flex flex-col gap-4 py-6" data-group-grading data-assessment-id="<?= esc((string) $currentAssessment['id']) ?>">
 
-        <div data-gg-lock hidden><?= view('components/lock-note', ['kind' => 'closed'], ['saveData' => false]) ?></div>
-
-        <div data-gg-status></div>
-
-        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]" data-gg-layout hidden>
-
-            <aside class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm lg:sticky lg:top-24" aria-label="Groups" data-gg-list></aside>
-
-            <section class="flex min-w-0 flex-col gap-5 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-live="polite" data-gg-detail></section>
-
-        </div>
-
-        <p class="sr-only" aria-live="polite" data-gg-live></p>
+        <?= view('pages/courses/features/assessments/partials/group-grading-frame', [], ['saveData' => false]) ?>
 
         <?= view('components/dialog', ['id' => 'gg-late-dialog', 'title' => 'A student joined after grading', 'body' => $lateForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
         <?= view('components/dialog', ['id' => 'gg-drop-dialog', 'title' => 'A graded student left the group', 'body' => $dropForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>

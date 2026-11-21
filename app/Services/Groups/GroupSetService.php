@@ -157,6 +157,7 @@ class GroupSetService
         }
 
         self::audit('groups.generated', $userId, $setId, 'group_set', ['new' => ['groups' => count($groups), 'students' => count($all)], 'replaced' => $old !== [], 'old_group_count' => count($old)]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->groupsSaved('set_id', $setId, $userId));
     }
 
     public function renameGroup(int $groupId, string $name, int $userId): void

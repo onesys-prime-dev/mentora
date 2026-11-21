@@ -54,6 +54,7 @@ class GroupLeaderService
         }, 'Your vote could not be saved. Try again.');
 
         GroupSetService::audit('groups.leader_voted', $voterId, $groupId, 'student_group', ['old' => ['candidate_user_id' => $old === null ? null : (int) $old['candidate_user_id']], 'new' => ['candidate_user_id' => $candidateId]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->leaderVote($groupId, $voterId));
         $this->emit($audits, $voterId, $groupId);
     }
 
@@ -75,6 +76,7 @@ class GroupLeaderService
         }, 'The leader could not be set. Try again.');
 
         GroupSetService::audit('groups.leader_set', $userId, $groupId, 'student_group', ['old' => ['leader_user_id' => $old], 'new' => ['leader_user_id' => $studentId]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->memberChanged($groupId, $studentId, 'leader', $userId));
     }
 
     public function rename(int $groupId, string $name, int $byUserId, bool $asInstructor = false): void
@@ -206,6 +208,7 @@ class GroupLeaderService
     {
         foreach ($audits as [$action, $details]) {
             GroupSetService::audit($action, $userId, $groupId, 'student_group', $details);
+            $details['new']['leader_user_id'] === null || GroupNotifier::hook(static fn (GroupNotifier $n) => $n->memberChanged($groupId, (int) $details['new']['leader_user_id'], 'leader', $userId));
         }
     }
 

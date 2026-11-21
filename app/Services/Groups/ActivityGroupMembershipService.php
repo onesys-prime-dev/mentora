@@ -82,6 +82,7 @@ class ActivityGroupMembershipService
         (new GroupLeaderService())->membershipChanged($from);
         (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded((int) $to['config_id'], $studentId);
         GroupSetService::audit('groups.member_moved', $actorId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => (int) $to['config_id']]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->moved($from, $toGroupId, $studentId, $actorId));
     }
 
     public function removeMember(int $studentId, int $configId, int $actorId): void
@@ -101,6 +102,7 @@ class ActivityGroupMembershipService
 
         (new GroupLeaderService())->membershipChanged($from);
         GroupSetService::audit('groups.member_removed', $actorId, $from, 'student_group', ['old' => ['group_id' => $from, 'student_user_id' => $studentId, 'config_id' => $configId]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->memberChanged($from, $studentId, 'left', $actorId));
     }
 
     /** Idempotent. Called by the submission code (Phase 6) at a group's first submission. */
@@ -130,6 +132,7 @@ class ActivityGroupMembershipService
 
         db_connect()->table('student_groups')->where('id', $groupId)->update(['frozen_at' => null]);
         GroupSetService::audit('groups.unlocked', $userId, $groupId, 'student_group', ['old' => ['frozen_at' => $group['frozen_at']], 'new' => ['reason' => $reason]]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $n->changedAfterSubmission($groupId, 'unlocked', $userId, (string) $group['frozen_at']));
     }
 
     /** @param array<string, mixed> $changes */
@@ -235,6 +238,7 @@ class ActivityGroupMembershipService
 
             if ($row['config_id'] !== null) {
                 (new GroupLeaderService())->membershipChanged((int) $row['group_id']);
+                GroupNotifier::hook(static fn (GroupNotifier $n) => $n->dropped((int) $row['group_id'], $studentId));
             }
         }
     }
@@ -266,6 +270,7 @@ class ActivityGroupMembershipService
 
         (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_added', $actorId, $groupId, 'student_group', ['new' => ['student_user_id' => $studentId, 'group_id' => $groupId, 'config_id' => $configId] + ($late ? ['late_enrollee' => true, 'reason' => $reason] : [])]);
+        GroupNotifier::hook(static fn (GroupNotifier $n) => $late && $group['frozen_at'] !== null ? $n->changedAfterSubmission($groupId, 'late', $actorId, (string) $studentId, $studentId) : $n->added($groupId, $studentId, $actorId));
     }
 
     /** Runs the writes in one transaction; rule refusals pass through, anything else becomes the plain message. */

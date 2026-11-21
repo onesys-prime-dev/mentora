@@ -192,6 +192,9 @@ class AssessmentService
                         ? $this->quizState($user, $data['assessment'])
                         : null,
                     'assessmentLock' => $lock,
+                    // The dean has no Grade Work; a group activity's groups and grades are shown on this page, read-only (4E).
+                    'deanGroupView' => $isAssignment && \App\Services\Courses\CourseViewer::isDeanViewer($user)
+                        && (new \App\Services\Groups\ActivityGroupService())->findByAssessment($assessmentId) !== null,
                 ]
             ),
         ];
