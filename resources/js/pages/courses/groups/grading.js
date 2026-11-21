@@ -346,7 +346,7 @@ function memberRow(view, m, write) {
 
     const d = view.detail;
     const sid = m.student_user_id;
-    const name = `<b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${m.isLeader ? " <span aria-label=\"leader\">★</span>" : ""}`;
+    const name = `<b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${m.isLeader ? " <span aria-hidden=\"true\">★</span><span class=\"sr-only\">(leader)</span>" : ""}`;
     const flags = [m.pending && !view.decided.has(sid) ? badge("Joined after grading", "warning") : "", m.excused ? badge("Excused", "neutral") : ""].join("");
     const own = m.submission ? `<details class="text-sm"><summary class="cursor-pointer text-brand pointer-coarse:min-h-11">Their work, ${escapeHtml(formatDateTime(m.submission.submittedAt))}${m.submission.isLate ? " · late" : ""}</summary><div class="pt-2">${m.submission.workHtml}</div></details>` : "";
     let body;
@@ -374,20 +374,22 @@ function memberInputs(view, m, write) {
     const sid = m.student_user_id;
     const { config } = d;
     const parts = [];
+    // Every member row repeats these labels; the hidden name tells a screen reader whose field it is.
+    const who = `<span class="sr-only">, ${escapeHtml(m.name)}</span>`;
 
     if (config.isRubric) {
         for (const c of criteriaOf(d, "individual")) {
-            parts.push(points(`ind-${sid}-${c.id}`, `ind_${sid}_${c.id}`, escapeHtml(c.title), m.individualScores[c.id] ?? null, c.max_points, write));
+            parts.push(points(`ind-${sid}-${c.id}`, `ind_${sid}_${c.id}`, escapeHtml(c.title) + who, m.individualScores[c.id] ?? null, c.max_points, write));
         }
     } else if (config.usesAverage || config.gradingMode === "individual") {
-        parts.push(points(`score-${sid}`, `score_${sid}`, "Score", m.individualScore, d.totalPoints, write));
+        parts.push(points(`score-${sid}`, `score_${sid}`, "Score" + who, m.individualScore, d.totalPoints, write));
     }
 
     if (config.allowsAdjustment) {
         if (write) {
-            parts.push(points(`adj-${sid}`, `adj_${sid}`, "Adjustment (+ or −)", m.adjustment, null, true));
-            parts.push(field(`reason-${sid}`, "Reason for the adjustment", `<input type="text" id="gg-reason-${sid}" name="reason_${sid}" maxlength="500" value="${escapeHtml(m.reason ?? "")}" class="${INPUT}">`));
-            parts.push(field(`note-${sid}`, "Private note (optional)", `<textarea id="gg-note-${sid}" name="note_${sid}" rows="2" maxlength="2000" class="${INPUT}">${escapeHtml(m.note ?? "")}</textarea>`));
+            parts.push(points(`adj-${sid}`, `adj_${sid}`, "Adjustment (+ or −)" + who, m.adjustment, null, true));
+            parts.push(field(`reason-${sid}`, "Reason for the adjustment" + who, `<input type="text" id="gg-reason-${sid}" name="reason_${sid}" maxlength="500" value="${escapeHtml(m.reason ?? "")}" class="${INPUT}">`));
+            parts.push(field(`note-${sid}`, "Private note (optional)" + who, `<textarea id="gg-note-${sid}" name="note_${sid}" rows="2" maxlength="2000" class="${INPUT}">${escapeHtml(m.note ?? "")}</textarea>`));
         } else {
             parts.push(`<span class="text-sm text-[#3D3D3D]">Adjustment ${m.adjustment > 0 ? "+" : ""}${fmt(m.adjustment)}${m.reason ? ` · “${escapeHtml(m.reason)}”` : ""}</span>`);
             parts.push(m.note ? `<span class="text-xs text-[#646464]">Private note: ${escapeHtml(m.note)}</span>` : "");

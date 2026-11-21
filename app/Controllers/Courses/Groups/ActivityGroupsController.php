@@ -234,6 +234,10 @@ class ActivityGroupsController extends BaseController
     {
         $configId = $this->configId($offeringId, $assessmentId);
 
+        if (db_connect()->table('student_group_members')->where('config_id', $configId)->where('student_user_id', $studentId)->countAllResults() === 0) {
+            throw PageNotFoundException::forPageNotFound('Student not found in this activity\'s groups.');
+        }
+
         return $this->run(fn () => (new ActivityGroupMembershipService())->removeMember($studentId, $configId, $this->actor()));
     }
 

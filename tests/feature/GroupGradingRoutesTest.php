@@ -504,6 +504,48 @@ final class GroupGradingRoutesTest extends RouteTestCase
         $this->assertStringContainsString('Missed three meetings', $body);
     }
 
+    /** Phase 10: rare numbers, so a teammate's individual score, adjustment or final would show up in any page body. */
+    public function testAStudentSeesOnlyTheirOwnNumbersAndNoOtherGroupsWork(): void
+    {
+        [$groupCriterion, $ownCriterion] = $this->rubric();
+        $own = static fn (float $points, float $adjustment = 0, ?string $reason = null, ?string $note = null): array => ['individual' => [$ownCriterion => $points], 'adjustment' => $adjustment, 'reason' => $reason, 'note' => $note];
+
+        [$status, $json] = $this->api($this->teacher, 'instructor', 'POST', "/{$this->team1}", [
+            'group_scores' => [$groupCriterion => 8],
+            'feedback'     => 'Clear structure.',
+            'members'      => [$this->id(0) => $own(2.11), $this->id(1) => $own(2.5), $this->id(2) => $own(3.37, -1.13, 'Missed three meetings', 'Talk to me after class'), $this->id(3) => $own(2)],
+        ]);
+        $this->assertSame(200, $status, (string) json_encode($json));
+        $this->assertSame(10.24, round((float) db_connect()->table('group_member_scores')->where('student_user_id', $this->id(2))->get()->getRow()->final_score, 2));
+
+        $pages = static fn (int $o, int $a): array => ["student/api/courses/{$o}/assessments/{$a}/view", "student/api/courses/{$o}/assessments/{$a}/my-group", "student/api/courses/{$o}/grades", "student/api/courses/{$o}/assessments"];
+
+        foreach ($pages($this->offering, $this->assignment) as $uri) {
+            [$status, $body] = $this->raw($this->u[0], 'GET', $uri);
+            $this->assertSame(200, $status, $uri);
+
+            foreach (['10.24', '51.2', '3.37', '1.13', 'Missed three meetings', 'Talk to me after class'] as $theirs) {
+                $this->assertStringNotContainsString($theirs, $body, "{$uri} shows u2's {$theirs}");
+            }
+        }
+
+        // The control: the page does show this member's own part and percentage.
+        $view = $this->raw($this->u[0], 'GET', "student/api/courses/{$this->offering}/assessments/{$this->assignment}/view")[1];
+        $this->assertStringContainsString('2.11', $view);
+        $this->assertStringContainsString('50.55%', $view);
+
+        // Team 2 and the ungrouped student see nothing of Team 1: no work, feedback, members or scores.
+        foreach ([4, 5] as $i) {
+            foreach ($pages($this->offering, $this->assignment) as $uri) {
+                [, $body] = $this->raw($this->u[$i], 'GET', $uri);
+
+                foreach (['Our final report', 'Clear structure.', '2.11', '50.55', '10.24', $this->u[0]->username, $this->u[2]->username] as $theirs) {
+                    $this->assertStringNotContainsString($theirs, $body, "u{$i}: {$uri} shows {$theirs}");
+                }
+            }
+        }
+    }
+
     public function testAnyMemberCanReplyOnTheGroupsFeedbackThread(): void
     {
         $this->grade();

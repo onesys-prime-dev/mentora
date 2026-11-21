@@ -1,12 +1,12 @@
 # Progress
 
-- Stage: 4 — Implementation, Phase 9 (notifications, read-only roles, exports, offering copy) in progress; Phases 1-8 committed (63b150cc, c918376b, bcfa5852, e556d79c, deab3c46, 404f5645, b9d5355a, c06e655d)
+- Stage: 4 — Implementation COMPLETE (all 10 phases committed). Awaiting user: open the PR to main, run the never-run checks, answer D20a
 - Phase: n/a
-- Active branch: feat/group-activities-p9-notifications (from p8)
+- Active branch: feat/group-activities-p10-hardening (stacked on p1..p9 from feat/group-activities)
 - Last verified checkpoint: Stage 2 approved by user ("approved, proceed to Stage 3"); implementation-plan.md + test-strategy.md written
 - Completed: workspace scaffold
 - Pending: interview (one question per message)
-- Exact next action: Phase 10 hardening on feat/group-activities-p10-hardening: (a) review the open risks (drop hook inside enrolment transaction, parent tab consistency note, ungrouped-solo grading page), (b) security review of every new route (foreign ids, wrong role, readonly, finalized) via a sample test sweep, (c) a11y/keyboard review of markup, (d) write docs/group-activities.md and docs/test-cases/ manual cases (incl. the Playwright/browser checks nobody could run), (e) final full regression, phpstan on all new PHP, eslint, (f) commit, then write the final implementation summary for the user. Scratch DB must be running on :3307 (one phpunit at a time).
+- Exact next action: none for Claude. User creates the final PR to main from feat/group-activities-p10-hardening (branches are stacked: p10 contains everything). Do not push or open the PR. If the user reports problems, resume from test-strategy.md and the reports folder.
 ## Phase 1 ledger
 - Task 1.1: DONE, reviewed by controller, GroupSchemaTest 4 tests OK (uncommitted)
 - Task 1.2: DONE; controller reviewed + mutation-checked (2 mutations caught); 22 tests OK. Note: implementer skipped TDD red phase
@@ -61,3 +61,7 @@
 - Task 9.3+9.4: DONE_WITH_CONCERNS (9.4 red 1 failure then green; 9.3 characterization tests only: no per-assessment export exists, Group column NOT added = D20a flagged for user; 1452 wide OK per implementer)
 
 - Phase 9 COMPLETE (full phpunit 10139 OK, vitest 1243 OK) and committed on feat/group-activities-p9-notifications
+
+## Phase 10 ledger
+- Phase 10 started on feat/group-activities-p10-hardening. Dispatched: (A-D) security sweep + data-leak + a11y static review + static checks (opus, uses DB); docs/group-activities.md + docs/test-cases/p3-group-activities.md (sonnet, no DB). Then: final full regression (one process), commit, final summary for the user.
+- Phase 10 COMPLETE (final phpunit 10148 OK, vitest 1243 OK) and committed on feat/group-activities-p10-hardening

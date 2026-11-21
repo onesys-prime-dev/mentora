@@ -130,6 +130,10 @@ class GroupSetsController extends BaseController
     {
         $this->set($offeringId, $setId);
 
+        if (db_connect()->table('student_group_members')->where('set_id', $setId)->where('student_user_id', $studentId)->countAllResults() === 0) {
+            throw PageNotFoundException::forPageNotFound('Student not found in this set.');
+        }
+
         return $this->run(fn () => (new GroupMembershipService())->removeFromSet($studentId, $setId, $this->actor()));
     }
 

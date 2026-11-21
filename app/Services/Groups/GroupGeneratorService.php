@@ -231,13 +231,21 @@ final class SeededShuffle
         $this->state  = ((($seed ?? 0) & 0xFFFFFFFF) ^ 0x9E3779B9) ?: 1;
     }
 
-    /** @param list<int> $items */
+    /**
+     * @param list<int> $items
+     *
+     * @param-out list<int> $items
+     */
     public function shuffle(array &$items): void
     {
-        for ($i = count($items) - 1; $i > 0; $i--) {
+        $list = $items;
+
+        for ($i = count($list) - 1; $i > 0; $i--) {
             $j = $this->random ? random_int(0, $i) : $this->next() % ($i + 1);
-            [$items[$i], $items[$j]] = [$items[$j], $items[$i]];
+            [$list[$i], $list[$j]] = [$list[$j], $list[$i]];
         }
+
+        $items = array_values($list); // the keys are already 0..n-1; array_values only tells the analyser it is still a list
     }
 
     private function next(): int

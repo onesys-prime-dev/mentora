@@ -129,6 +129,12 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertTrue($json['signup']['isOpen']);
         $this->assertCount(2, $json['candidates']);
         $this->assertArrayNotHasKey('otherGroups', $json);
+
+        // Phase 10: an open group shows its members' names only, never their ids or anything else.
+        $team1 = array_column($json['candidates'], null, 'id')[$this->a];
+        $this->assertSame(['id', 'name', 'members_count', 'max', 'member_names', 'full'], array_keys($team1));
+        $this->assertSame(1, $team1['members_count']);
+        $this->assertContainsOnly('string', $team1['member_names']);
     }
 
     public function testStudentSeesOnlyTheirOwnGroupAndMembersCarryOnlyIdAndName(): void

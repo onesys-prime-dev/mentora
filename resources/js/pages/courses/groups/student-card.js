@@ -313,7 +313,7 @@ function memberChip(member) {
         return name;
     }
 
-    return `${name} · ${member.completed ? "<span class=\"font-semibold text-[#5C9F72]\">Done</span>" : "<span class=\"text-[#646464]\">Not done yet</span>"}`;
+    return `${name} · ${member.completed ? "<span class=\"font-semibold text-[#2B7549]\">Done</span>" : "<span class=\"text-[#646464]\">Not done yet</span>"}`;
 
 }
 

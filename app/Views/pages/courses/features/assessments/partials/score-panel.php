@@ -163,7 +163,7 @@ if ($isGraded && $scoreResult !== null) {
 
                         <?php foreach ($groupRubric as $line): ?>
                             <div class="flex justify-between gap-3 text-xs">
-                                <dt class="min-w-0 wrap-anywhere"><?= esc($line['title']) ?> <span class="text-[#8A8A8A]">· <?= esc($line['scope']) ?></span></dt>
+                                <dt class="min-w-0 wrap-anywhere"><?= esc($line['title']) ?> <span class="text-[#646464]">· <?= esc($line['scope']) ?></span></dt>
                                 <dd><?= esc($points($line['points'])) ?>/<?= esc($points($line['max'])) ?></dd>
                             </div>
                         <?php endforeach; ?>
