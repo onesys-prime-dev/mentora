@@ -110,6 +110,7 @@ class GradeReportService
             'finalization' => $finalization,
             'curves' => (new GradeAdjustmentService())->describe($offeringId)['live'],
             'items' => $items,
+            'groups' => $this->groupNames($context['items']),
             'categories' => $categories,
             'rows' => $rows,
             'summary' => $this->summary($rows, (float) $context['scheme']['passing_percentage']),
@@ -252,6 +253,10 @@ class GradeReportService
         $header = ['Student number', 'Student'];
 
         foreach ($report['items'] as $item) {
+            isset($report['groups'][$item['id']]) && $header[] = 'Group: ' . $item['name'];
+        }
+
+        foreach ($report['items'] as $item) {
             $header[] = $item['name'] . ' (/' . $this->number($item['max']) . ')' . ($item['curved'] ? ' [curved]' : '');
         }
 
@@ -266,6 +271,10 @@ class GradeReportService
         foreach ($report['rows'] as $row) {
 
             $line = [$row['student_number'], $row['student_name']];
+
+            foreach ($report['items'] as $item) {
+                isset($report['groups'][$item['id']]) && $line[] = $report['groups'][$item['id']][$row['student_id']] ?? '';
+            }
 
             foreach ($report['items'] as $item) {
                 $line[] = $row['scores'][$item['id']] ?? '';
@@ -321,6 +330,10 @@ class GradeReportService
         $header = ['student_id', 'student_number', 'student_name'];
 
         foreach ($report['items'] as $item) {
+            isset($report['groups'][$item['id']]) && $header[] = 'group: ' . $item['name'];
+        }
+
+        foreach ($report['items'] as $item) {
             $header[] = 'score: ' . $item['name'] . ' (max ' . $this->number($item['max']) . ')';
         }
 
@@ -339,6 +352,10 @@ class GradeReportService
         foreach ($report['rows'] as $row) {
 
             $line = [$row['student_id'], $row['student_number'], $row['student_name']];
+
+            foreach ($report['items'] as $item) {
+                isset($report['groups'][$item['id']]) && $line[] = $report['groups'][$item['id']][$row['student_id']] ?? '';
+            }
 
             $excused = [];
 
@@ -524,6 +541,54 @@ class GradeReportService
         return $stats + ['tags' => $tags, 'spread' => $spread];
     }
 
+    /**
+     * For each grade item that is a group activity: the group name of each student, by item id then student id.
+     * An activity nobody is placed in yet still gets its (empty) column; plain items are not in the result.
+     *
+     * @param list<array<string, mixed>> $contextItems
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function groupNames(array $contextItems): array
+    {
+        $itemsOf = [];
+
+        foreach ($contextItems as $item) {
+            if (!empty($item['assessment_id'])) {
+                $itemsOf[(int) $item['assessment_id']][] = (int) $item['id'];
+            }
+        }
+
+        if ($itemsOf === []) {
+            return [];
+        }
+
+        $db = db_connect();
+        $names = [];
+
+        foreach ($db->table('activity_group_configs')->select('assessment_id')->whereIn('assessment_id', array_keys($itemsOf))->get()->getResultArray() as $config) {
+            foreach ($itemsOf[(int) $config['assessment_id']] as $itemId) {
+                $names[$itemId] = [];
+            }
+        }
+
+        if ($names === []) {
+            return [];
+        }
+
+        $members = $db->table('student_group_members m')->select('c.assessment_id, m.student_user_id, g.name')
+            ->join('student_groups g', 'g.id = m.group_id')->join('activity_group_configs c', 'c.id = m.config_id')
+            ->whereIn('c.assessment_id', array_keys($itemsOf))->where('g.status', 'active')->get()->getResultArray();
+
+        foreach ($members as $m) {
+            foreach ($itemsOf[(int) $m['assessment_id']] as $itemId) {
+                $names[$itemId][(int) $m['student_user_id']] = (string) $m['name'];
+            }
+        }
+
+        return $names;
+    }
+
     /** @return array{course_code: string, course_title: string, section: string, term: string} */
     private function offeringInfo(int $offeringId): array
     {
@@ -654,7 +719,7 @@ class GradeReportService
         $sheet->freezePane('C2');
 
         $standing = $last - 1;
-        $percentFrom = 2 + count($report['items']) + 1;
+        $percentFrom = 2 + count($report['groups'] ?? []) + count($report['items']) + 1;
         $percentTo = $percentFrom + count($report['categories']);
 
         $colours = ['Passed' => '2E7D4F', 'On track' => '2E7D4F', 'Failed' => 'C33939', 'At risk' => '946200', 'INC' => '946200'];

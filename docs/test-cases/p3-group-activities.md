@@ -367,7 +367,7 @@ a case says otherwise, put the course back as you found it (switch Group activit
 - **Expected:**
   - One score per member: the member's own final. A pending member shows no score, and an excused member is shown as excused.
   - Running and final grades include the group score. A reopened group's cells clear. Regrading does not duplicate rows.
-  - No export gains a Group column.
+  - The class gradebook report (CSV and Excel) has a Group column per group activity, right after the student name, with the student's group and blank for ungrouped. A course with no group activity has no such column. The offline grade sheet has none.
 
 ### TC-GRP-39
 **Student, parent and dean views**

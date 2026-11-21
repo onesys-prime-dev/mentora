@@ -113,7 +113,7 @@ Copying an offering carries the active group sets and their groups, as empty gro
 - No per-member deadline extensions.
 - No grade-balanced group generation. Generation is random, with keep-together and keep-apart pairs.
 - No draft area for non-leader members.
-- No Group column in exports (decision D20a, still open for review). There is no per-assignment export. The course grade sheet round-trips through import and refuses an added column. The import never writes group scores.
+- The Group column is in the gradebook report (the class CSV and Excel files), one column per group activity, right after the student name: the student's group for that activity, blank when ungrouped. The report has no column when no graded item is a group activity. The offline grade sheet has no Group column, because it round-trips through import and refuses an added column. The import never writes group scores.
 - Parent tab: group grades show only for group activities, so a group row shows a grade while a plain assignment row does not.
 - The dean has no Grade Work page. Their view is the read-only Groups section on the assignment view page.
 - "Grade separately" for a late enrollee is recorded in the audit only. The member stays pending, and the dialog is offered again after a reload until they are graded.
