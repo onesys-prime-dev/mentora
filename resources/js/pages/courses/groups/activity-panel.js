@@ -18,10 +18,16 @@ import { renderDetailSkeleton } from "./skeleton.js";
 | saves each setting as it changes. Frozen groups (they have submitted) are
 | unlocked or given a late enrollee only through a dialog with a reason.
 | With flags.canWrite false nothing can be changed.
+|
+| The learning item editor uses the same card (data-learning-item-id instead
+| of data-assessment-id, screen 2A for items): only grouping and the
+| completion setting, no leader, deadline or unlock actions, since an item's
+| groups never freeze (D12, D13, D26). Fields and dialogs the server did not
+| draw are skipped.
 */
 
 const FLAGS = ["nonleader_can_rename", "nonleader_can_vote", "nonleader_can_leave", "groups_visible"];
-const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "formation_mode", "signup_opens_at", "signup_closes_at", "min_size", "max_size", ...FLAGS];
+const FIELDS = ["ungrouped_policy", "submission_style", "grading_mode", "formation_mode", "signup_opens_at", "signup_closes_at", "min_size", "max_size", "completion_mode", ...FLAGS];
 const DIALOGS = ["ga-attach-dialog", "ga-detach-confirm", "ga-policy-confirm", "ga-unlock-dialog", "ga-late-dialog", "ga-name-dialog", "ga-move-dialog", "ga-delete-confirm", "ga-recopy-confirm", "ga-copy-dialog", "ga-decline-dialog", "ga-leader-dialog", "ga-extend-dialog"];
 const REASON = "Give a reason. It is kept with the change.";
 
@@ -33,9 +39,12 @@ export async function initializeActivityGroups(root) {
         return;
     }
 
+    const item = root.dataset.learningItemId !== undefined;
     const panel = {
         root,
-        id: Number(root.dataset.assessmentId),
+        item,
+        kind: item ? "learning-items" : "assessments",
+        id: Number(item ? root.dataset.learningItemId : root.dataset.assessmentId),
         detail: null,
         pending: null,
         dialogs: {},
@@ -55,7 +64,7 @@ export async function initializeActivityGroups(root) {
 
 }
 
-const send = (panel, method, path, body) => sendActivityChange(panel.id, method, path, body);
+const send = (panel, method, path, body) => sendActivityChange(panel.id, method, path, body, panel.kind);
 
 const canWrite = (panel) => panel.detail?.flags.canWrite === true;
 
@@ -72,7 +81,7 @@ async function load(panel) {
     const guard = beginLoad(status, renderDetailSkeleton("Loading the activity's groups…"), 0);
 
     try {
-        const detail = await fetchActivityGroups(panel.id);
+        const detail = await fetchActivityGroups(panel.id, panel.kind);
 
         if (!guard.current()) {
             return;
@@ -122,10 +131,8 @@ function render(panel) {
         return;
     }
 
-    for (const name of FIELDS) {
-        const el = form.elements[name];
-
-        setValue(el, config[name]);
+    for (const name of FIELDS.filter((n) => form.elements[n])) {
+        setValue(form.elements[name], config[name]);
     }
 
     showWindow(panel);
@@ -250,7 +257,8 @@ function renderBoard(panel) {
         set: config,
         canEdit: write,
         emptyText: "No groups have been added to this activity.",
-        decorate: (group) => {
+        // An item's groups have no leader, deadline or freeze: plain cards.
+        decorate: panel.item ? null : (group) => {
             // The instructor can set the leader at any time, frozen or not (D15).
             const setLeader = group.members.length > 0
                 ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-group-action="set-leader" data-group="${group.id}" aria-label="Set the leader of ${escapeHtml(group.name)}">Set leader</button>`
@@ -289,7 +297,12 @@ const stored = (name, value) => (FLAGS.includes(name) ? (value ? 1 : 0) : value)
 
 function putBack(panel, name) {
 
-    setValue(panel.part("[data-ga-settings]").elements[name], panel.detail.config[name]);
+    const el = panel.part("[data-ga-settings]").elements[name];
+
+    if (el) {
+        setValue(el, panel.detail.config[name]);
+    }
+
     showWindow(panel);
 
 }
@@ -379,6 +392,10 @@ function onToggle(panel, toggle) {
 
         form.elements.set_id.replaceChildren(...options);
         form.elements.set_id.value = panel.detail.sets[0] ? String(panel.detail.sets[0].id) : "";
+
+        if (form.elements.completion_mode) {
+            form.elements.completion_mode.value = "each"; // as the item behaves without groups
+        }
         applyFieldErrors(form, {});
         panel.dialogs["ga-attach-dialog"].open(toggle);
     } else {
@@ -582,7 +599,8 @@ function bind(panel) {
             openConfirm(panel, "ga-recopy-confirm", `This activity's groups are replaced by a fresh copy of ${panel.detail.config.source_set_name ?? "the set"}'s groups.`, action);
         } else if (action?.dataset.gaAction === "copy-from") {
             const form = openDialog(panel, "ga-copy-dialog", "Copy groups from another activity", action);
-            form.elements.from_assessment_id.replaceChildren(...panel.detail.activities.map((a) => new Option(a.title, String(a.assessment_id))));
+            const key = panel.item ? "learning_item_id" : "assessment_id";
+            form.elements[`from_${key}`].replaceChildren(...panel.detail.activities.map((a) => new Option(a.title, String(a[key]))));
         } else if (action?.dataset.gaAction === "approve") {
             approve(panel, action);
         } else if (action?.dataset.gaAction === "decline") {
@@ -611,34 +629,37 @@ function bind(panel) {
     });
 
     const form = (id) => panel.part(`#${id} form`);
+    // The learning-item card has no unlock, late, extension, leader, decline or policy dialogs.
+    const on = (id, handler) => form(id) && onSubmit(form(id), handler);
     const reload = async (id, message) => {
         close(panel, id);
         announce(panel, message);
         await load(panel);
     };
 
-    onSubmit(form("ga-attach-dialog"), async (data) => {
+    on("ga-attach-dialog", async (data) => {
         const setId = String(data.get("set_id") ?? "");
-        const result = await send(panel, "POST", "/attach", { set_id: setId === "" ? null : Number(setId), settings: {} });
+        const chosen = { set_id: setId === "" ? null : Number(setId) };
+        const result = await send(panel, "POST", "/attach", panel.item ? { ...chosen, completion_mode: String(data.get("completion_mode") ?? ""), settings: {} } : { ...chosen, settings: {} });
 
         if (result.ok) {
-            await reload("ga-attach-dialog", "This is now a group activity");
+            await reload("ga-attach-dialog", panel.item ? "This item now uses groups" : "This is now a group activity");
         }
 
         return result;
     });
 
-    onSubmit(form("ga-detach-confirm"), async () => {
+    on("ga-detach-confirm", async () => {
         const result = await send(panel, "DELETE", "");
 
         if (result.ok) {
-            await reload("ga-detach-confirm", "This assignment no longer uses groups");
+            await reload("ga-detach-confirm", panel.item ? "This item no longer uses groups" : "This assignment no longer uses groups");
         }
 
         return result;
     });
 
-    onSubmit(form("ga-policy-confirm"), async () => {
+    on("ga-policy-confirm", async () => {
         const { name, value } = panel.pending;
         const result = await saveSetting(panel, name, value, true);
 
@@ -649,7 +670,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-recopy-confirm"), async () => {
+    on("ga-recopy-confirm", async () => {
         const result = await send(panel, "POST", "/recopy");
 
         if (result.ok) {
@@ -659,8 +680,9 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-copy-dialog"), async (data) => {
-        const result = await send(panel, "POST", "/copy-from", { from_assessment_id: Number(data.get("from_assessment_id")) });
+    on("ga-copy-dialog", async (data) => {
+        const key = panel.item ? "from_learning_item_id" : "from_assessment_id";
+        const result = await send(panel, "POST", "/copy-from", { [key]: Number(data.get(key)) });
 
         if (result.ok) {
             await reload("ga-copy-dialog", "The groups were copied from the other activity");
@@ -669,7 +691,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-name-dialog"), async (data) => {
+    on("ga-name-dialog", async (data) => {
         const name = String(data.get("name") ?? "").trim();
         const { kind, groupId } = panel.pending;
         const result = kind === "add"
@@ -691,7 +713,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-delete-confirm"), async () => {
+    on("ga-delete-confirm", async () => {
         const { groupId } = panel.pending;
         const group = panel.detail.groups.find((g) => g.id === groupId);
         const result = await send(panel, "DELETE", `/groups/${groupId}`);
@@ -707,7 +729,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-move-dialog"), async (data) => {
+    on("ga-move-dialog", async (data) => {
         const value = String(data.get("to_group") ?? "");
         const { studentId } = panel.pending;
         const result = await moveStudent(panel, studentId, value === "" ? null : Number(value));
@@ -720,7 +742,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-unlock-dialog"), async (data) => {
+    on("ga-unlock-dialog", async (data) => {
         const reason = requireReason(form("ga-unlock-dialog"), data);
 
         if (reason === "") {
@@ -742,7 +764,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-late-dialog"), async (data) => {
+    on("ga-late-dialog", async (data) => {
         const reason = requireReason(form("ga-late-dialog"), data);
 
         if (reason === "") {
@@ -766,7 +788,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-extend-dialog"), async (data) => {
+    on("ga-extend-dialog", async (data) => {
         const until = String(data.get("until") ?? "");
         const reason = requireReason(form("ga-extend-dialog"), data);
 
@@ -790,7 +812,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-decline-dialog"), async (data) => {
+    on("ga-decline-dialog", async (data) => {
         const reason = requireReason(form("ga-decline-dialog"), data);
 
         if (reason === "") {
@@ -807,7 +829,7 @@ function bind(panel) {
         return result;
     });
 
-    onSubmit(form("ga-leader-dialog"), async (data) => {
+    on("ga-leader-dialog", async (data) => {
         const studentId = Number(data.get("student_user_id"));
         const { groupId } = panel.pending;
         const group = panel.detail.groups.find((g) => g.id === groupId);

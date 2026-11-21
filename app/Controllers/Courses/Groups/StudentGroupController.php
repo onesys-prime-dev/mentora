@@ -194,7 +194,7 @@ class StudentGroupController extends BaseController
     }
 
     /** @return list<array{id:int,name:string,status:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string}>}> */
-    private function groups(int $configId): array
+    protected function groups(int $configId): array
     {
         $members = db_connect()->table('student_group_members m')
             ->select('m.group_id, m.student_user_id, ' . self::NAME . ' AS name', false)
@@ -278,10 +278,17 @@ class StudentGroupController extends BaseController
         }
     }
 
-    private function configId(int $offeringId, int $assessmentId): int
+    /** @return array<string, mixed>|null the activity's group settings; 404 when the activity is not of this offering (the item subclass overrides it) */
+    protected function findConfig(int $offeringId, int $assessmentId): ?array
     {
         $this->assessment($offeringId, $assessmentId);
-        $config = (new ActivityGroupService())->findByAssessment($assessmentId);
+
+        return (new ActivityGroupService())->findByAssessment($assessmentId);
+    }
+
+    protected function configId(int $offeringId, int $assessmentId): int
+    {
+        $config = $this->findConfig($offeringId, $assessmentId);
 
         if ($config === null) {
             throw PageNotFoundException::forPageNotFound('This assignment does not use groups.');
@@ -290,7 +297,7 @@ class StudentGroupController extends BaseController
         return (int) $config['id'];
     }
 
-    private function groupId(int $configId): int
+    protected function groupId(int $configId): int
     {
         $id = (int) (($this->request->getJSON(true) ?? [])['group_id'] ?? 0);
 
@@ -302,7 +309,7 @@ class StudentGroupController extends BaseController
     }
 
     /** Runs a change: 200 {success}, or 422 {message, errors} for a broken rule. */
-    private function run(callable $change): ResponseInterface
+    protected function run(callable $change): ResponseInterface
     {
         try {
             $result = $change();
@@ -313,7 +320,7 @@ class StudentGroupController extends BaseController
         return $this->response->setJSON(['success' => true] + (is_array($result) ? $result : []));
     }
 
-    private function actor(): int
+    protected function actor(): int
     {
         return (int) auth()->id();
     }

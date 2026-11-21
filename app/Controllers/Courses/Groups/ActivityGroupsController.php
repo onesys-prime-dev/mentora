@@ -27,9 +27,8 @@ class ActivityGroupsController extends BaseController
 
     public function show(int $offeringId, int $assessmentId): ResponseInterface
     {
-        $this->assessment($offeringId, $assessmentId);
         $service = new ActivityGroupService();
-        $config  = $service->findByAssessment($assessmentId);
+        $config  = $this->findConfig($offeringId, $assessmentId);
         $groups  = [];
         $free    = [];
 
@@ -46,11 +45,7 @@ class ActivityGroupsController extends BaseController
                 $byGroup[(int) $m['group_id']][] = ['student_user_id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
             }
 
-            $extensions = [];
-
-            foreach (db_connect()->table('group_extensions')->where('assessment_id', $assessmentId)->get()->getResultArray() as $x) {
-                $extensions[(int) $x['group_id']] = ['until' => $x['until_at'], 'reason' => $x['reason']];
-            }
+            $extensions = $this->extensions($assessmentId);
 
             // Proposed groups wait in the proposals queue (GET groups/proposals); declined ones are history.
             $groups = array_map(static fn (array $g) => [
@@ -81,21 +76,16 @@ class ActivityGroupsController extends BaseController
             [$offeringId, 'active'],
         )->getResultArray();
 
-        // Other group activities of this course, to copy groups from.
-        $activities = db_connect()->table('activity_group_configs c')->select('c.assessment_id, a.title')
-            ->join('assessments a', 'a.id = c.assessment_id')
-            ->where('c.offering_id', $offeringId)->where('c.assessment_id !=', $assessmentId)->orderBy('a.title', 'ASC')->get()->getResultArray();
-
         $access = GroupsTabController::access($offeringId);
 
         return $this->response->setJSON([
             'success'    => true,
             'config'     => $config,
-            'dueDate'    => db_connect()->table('assessments')->select('due_date')->where('id', $assessmentId)->get()->getRow()?->due_date,
+            'dueDate'    => $this->dueDate($assessmentId),
             'groups'     => $groups,
             'ungrouped'  => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name']], $ungrouped),
             'sets'       => array_map(static fn (array $s) => ['id' => (int) $s['id'], 'name' => $s['name'], 'group_count' => (int) $s['group_count']], $sets),
-            'activities' => array_map(static fn (array $a) => ['assessment_id' => (int) $a['assessment_id'], 'title' => $a['title']], $activities),
+            'activities' => $this->activities($offeringId, $assessmentId),
             'flags'      => [
                 'frozenGroups'      => in_array(true, array_column($groups, 'frozen'), true),
                 'canWrite'          => $access['canEdit'],
@@ -262,8 +252,47 @@ class ActivityGroupsController extends BaseController
         return $this->run(fn () => (new ActivityGroupMembershipService())->addLateEnrollee($groupId, (int) ($body['student_user_id'] ?? 0), (string) ($body['reason'] ?? ''), $this->actor()));
     }
 
+    /*
+     * What differs between an assignment's groups and a learning item's (LearningItemGroupsController overrides these).
+     */
+
+    /** @return array<string, mixed>|null the activity's group settings; 404 when the activity is not of this offering */
+    protected function findConfig(int $offeringId, int $assessmentId): ?array
+    {
+        $this->assessment($offeringId, $assessmentId);
+
+        return (new ActivityGroupService())->findByAssessment($assessmentId);
+    }
+
+    /** @return array<int, array{until:string,reason:string}> by group id */
+    protected function extensions(int $assessmentId): array
+    {
+        $out = [];
+
+        foreach (db_connect()->table('group_extensions')->where('assessment_id', $assessmentId)->get()->getResultArray() as $x) {
+            $out[(int) $x['group_id']] = ['until' => $x['until_at'], 'reason' => $x['reason']];
+        }
+
+        return $out;
+    }
+
+    protected function dueDate(int $assessmentId): ?string
+    {
+        return db_connect()->table('assessments')->select('due_date')->where('id', $assessmentId)->get()->getRow()?->due_date;
+    }
+
+    /** @return list<array<string, mixed>> the other group activities of this course, to copy groups from */
+    protected function activities(int $offeringId, int $assessmentId): array
+    {
+        $rows = db_connect()->table('activity_group_configs c')->select('c.assessment_id, a.title')
+            ->join('assessments a', 'a.id = c.assessment_id')
+            ->where('c.offering_id', $offeringId)->where('c.assessment_id !=', $assessmentId)->orderBy('a.title', 'ASC')->get()->getResultArray();
+
+        return array_map(static fn (array $a) => ['assessment_id' => (int) $a['assessment_id'], 'title' => $a['title']], $rows);
+    }
+
     /** Runs a change: success (with what it returned), or 422 with the rule that was broken. */
-    private function run(callable $change): ResponseInterface
+    protected function run(callable $change): ResponseInterface
     {
         try {
             $result = $change();
@@ -282,10 +311,9 @@ class ActivityGroupsController extends BaseController
         }
     }
 
-    private function configId(int $offeringId, int $assessmentId): int
+    protected function configId(int $offeringId, int $assessmentId): int
     {
-        $this->assessment($offeringId, $assessmentId);
-        $config = (new ActivityGroupService())->findByAssessment($assessmentId);
+        $config = $this->findConfig($offeringId, $assessmentId);
 
         if ($config === null) {
             throw PageNotFoundException::forPageNotFound('This assignment does not use groups.');
@@ -294,7 +322,7 @@ class ActivityGroupsController extends BaseController
         return (int) $config['id'];
     }
 
-    private function group(int $offeringId, int $assessmentId, int $groupId): void
+    protected function group(int $offeringId, int $assessmentId, int $groupId): void
     {
         if ((new StudentGroupModel())->where('id', $groupId)->where('config_id', $this->configId($offeringId, $assessmentId))->countAllResults() === 0) {
             throw PageNotFoundException::forPageNotFound('Group not found.');
@@ -302,12 +330,12 @@ class ActivityGroupsController extends BaseController
     }
 
     /** @return array<string, mixed> */
-    private function body(): array
+    protected function body(): array
     {
         return $this->request->getJSON(true) ?? [];
     }
 
-    private function actor(): int
+    protected function actor(): int
     {
         return (int) auth()->id();
     }

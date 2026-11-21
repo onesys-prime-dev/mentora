@@ -35,6 +35,7 @@ class GroupSignupService
             $this->insert($groupId, $configId, $studentId);
         }, 'You could not join the group. Try again.');
 
+        (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_joined', $studentId, $groupId, 'student_group', ['new' => ['group_id' => $groupId, 'student_user_id' => $studentId, 'config_id' => $configId]]);
     }
 
@@ -103,6 +104,7 @@ class GroupSignupService
         }, 'You could not switch groups. You stay in your group.');
 
         (new GroupLeaderService())->membershipChanged($from);
+        (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_switched', $studentId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => $configId]]);
     }
 

@@ -136,6 +136,11 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
         $routes->post('(:num)/assessments/(:num)/my-group/propose', 'Courses\Groups\StudentGroupController::propose/$1/$2');
         $routes->post('(:num)/assessments/(:num)/my-group/invitations/(:num)/accept', 'Courses\Groups\StudentGroupController::accept/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/my-group/invitations/(:num)/decline', 'Courses\Groups\StudentGroupController::decline/$1/$2/$3');
+        // The student's own group on an ungraded learning item (screen 3D): roster, completion status, join, leave, switch.
+        $routes->get('(:num)/learning-items/(:num)/my-group', 'Courses\Groups\StudentLearningItemGroupController::show/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/my-group/join', 'Courses\Groups\StudentLearningItemGroupController::join/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/my-group/leave', 'Courses\Groups\StudentLearningItemGroupController::leave/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/my-group/switch', 'Courses\Groups\StudentLearningItemGroupController::switch/$1/$2');
 
         $routes->post('(:num)/submissions/(:num)/feedback', 'Courses\Assessments\AssessmentFeedbackController::store/$2');
 
@@ -217,6 +222,19 @@ $routes->group('instructor', ['filter' => ['role:instructor', 'readonly']], func
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
+        // Groups on an ungraded learning item (D12, D13): grouping and completion only, no leader, grading or freeze.
+        $routes->get('(:num)/learning-items/(:num)/groups', 'Courses\Groups\LearningItemGroupsController::show/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/attach', 'Courses\Groups\LearningItemGroupsController::attach/$1/$2');
+        $routes->put('(:num)/learning-items/(:num)/groups/settings', 'Courses\Groups\LearningItemGroupsController::settings/$1/$2');
+        $routes->delete('(:num)/learning-items/(:num)/groups', 'Courses\Groups\LearningItemGroupsController::detach/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/recopy', 'Courses\Groups\LearningItemGroupsController::recopy/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/copy-from', 'Courses\Groups\LearningItemGroupsController::copyFrom/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/groups', 'Courses\Groups\LearningItemGroupsController::addGroup/$1/$2');
+        $routes->put('(:num)/learning-items/(:num)/groups/groups/(:num)', 'Courses\Groups\LearningItemGroupsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/learning-items/(:num)/groups/groups/(:num)', 'Courses\Groups\LearningItemGroupsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/learning-items/(:num)/groups/groups/(:num)/members', 'Courses\Groups\LearningItemGroupsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/learning-items/(:num)/groups/members/move', 'Courses\Groups\LearningItemGroupsController::moveMember/$1/$2');
+        $routes->delete('(:num)/learning-items/(:num)/groups/members/(:num)', 'Courses\Groups\LearningItemGroupsController::removeMember/$1/$2/$3');
         // Grade Work's group view (screen 2B): the activity's groups, one group, the atomic save, reopen and the post-grading decisions (4D).
         $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
         $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');
@@ -475,6 +493,7 @@ $routes->group('dean', ['filter' => ['role:dean', 'readonly']], function ($route
         $routes->get('(:num)/group-sets', 'Courses\Groups\GroupSetsController::index/$1');
         $routes->get('(:num)/group-sets/(:num)', 'Courses\Groups\GroupSetsController::show/$1/$2');
         $routes->get('(:num)/assessments/(:num)/groups', 'Courses\Groups\ActivityGroupsController::show/$1/$2');
+        $routes->get('(:num)/learning-items/(:num)/groups', 'Courses\Groups\LearningItemGroupsController::show/$1/$2');
         $routes->get('(:num)/assessments/(:num)/groups/proposals', 'Courses\Groups\ActivityGroupsController::proposals/$1/$2');
         $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
         $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');
@@ -706,6 +725,19 @@ $routes->group('chairperson', ['filter' => ['role:chairperson', 'readonly']], fu
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/decline', 'Courses\Groups\ActivityGroupsController::decline/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/leader', 'Courses\Groups\ActivityGroupsController::setLeader/$1/$2/$3');
         $routes->post('(:num)/assessments/(:num)/groups/groups/(:num)/extension', 'Courses\Groups\ActivityGroupsController::extend/$1/$2/$3');
+        // Groups on an ungraded learning item (D12, D13): grouping and completion only, no leader, grading or freeze.
+        $routes->get('(:num)/learning-items/(:num)/groups', 'Courses\Groups\LearningItemGroupsController::show/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/attach', 'Courses\Groups\LearningItemGroupsController::attach/$1/$2');
+        $routes->put('(:num)/learning-items/(:num)/groups/settings', 'Courses\Groups\LearningItemGroupsController::settings/$1/$2');
+        $routes->delete('(:num)/learning-items/(:num)/groups', 'Courses\Groups\LearningItemGroupsController::detach/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/recopy', 'Courses\Groups\LearningItemGroupsController::recopy/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/copy-from', 'Courses\Groups\LearningItemGroupsController::copyFrom/$1/$2');
+        $routes->post('(:num)/learning-items/(:num)/groups/groups', 'Courses\Groups\LearningItemGroupsController::addGroup/$1/$2');
+        $routes->put('(:num)/learning-items/(:num)/groups/groups/(:num)', 'Courses\Groups\LearningItemGroupsController::renameGroup/$1/$2/$3');
+        $routes->delete('(:num)/learning-items/(:num)/groups/groups/(:num)', 'Courses\Groups\LearningItemGroupsController::deleteGroup/$1/$2/$3');
+        $routes->post('(:num)/learning-items/(:num)/groups/groups/(:num)/members', 'Courses\Groups\LearningItemGroupsController::addMember/$1/$2/$3');
+        $routes->post('(:num)/learning-items/(:num)/groups/members/move', 'Courses\Groups\LearningItemGroupsController::moveMember/$1/$2');
+        $routes->delete('(:num)/learning-items/(:num)/groups/members/(:num)', 'Courses\Groups\LearningItemGroupsController::removeMember/$1/$2/$3');
         // Grade Work's group view (screen 2B): the activity's groups, one group, the atomic save, reopen and the post-grading decisions (4D).
         $routes->get('(:num)/assessments/(:num)/group-grading', 'Courses\Groups\GroupGradeController::index/$1/$2');
         $routes->get('(:num)/assessments/(:num)/group-grading/(:num)', 'Courses\Groups\GroupGradeController::show/$1/$2/$3');

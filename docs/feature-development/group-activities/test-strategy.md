@@ -63,3 +63,9 @@ Start it with `mysqld.exe --no-defaults --datadir=<scratch>/mysql-data --port=33
 - Red phases shown: rubric scope (2 errors + 4 failures), GroupGradingService (19 errors + 1 failure), GroupGradebook (4 errors + 9 failures), GroupGradingRoutes (16 failures), grading.js Vitest (module missing). `testOverviewAndFeedShowTheMembersOwnFinal` was written after the code.
 - NOT run: Playwright group-grading.spec.js and the other group specs (e2e DB :3306 broken); no browser/dark-mode/360 px check.
 - Known gaps: "Grade separately" for a late enrollee is not persisted beyond the pending row (dialog offered again after reload); per-member style shows group criteria/feedback from the first member who handed in; the dean has no Grade Work page (only GET endpoints; screen in Task 9.2); ParentNotifier still reports a non-submitting teammate as missing (Phase 9); an excused member with a pending grade reads 0% for min-score prerequisites; ordinary Grade Work refuses group submissions (guard) and solo-policy students are graded on the old page.
+
+### Phase 8 (2026-11-21)
+- `phpunit` full suite: Tests 10105, Assertions 39926, OK. `npx vitest run`: 121 files, 1241 tests passed. eslint clean; phpstan on changed PHP (implementer): no errors.
+- Red phases shown: LearningItemGroup service (14 errors), routes (16 failures), learning-item Vitest (10 failed). The Task 8.3 implementer hit the 5-hour usage limit mid-task and was resumed from its saved state.
+- NOT run: Playwright learning-item-groups.spec.js (e2e DB :3306 broken); no browser/dark-mode/360 px check.
+- Known limits: proposed mode is not offered for learning items (refused at attach); the generate-groups dialog is not on the item card (it lives on the Groups tab for sets); completions made before the change show "Completed for the group" without a name (audit row groups.completed_for_group added going forward); the dean has no editor page, so only the dean GET endpoint exists.

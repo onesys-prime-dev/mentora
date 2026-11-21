@@ -374,6 +374,7 @@ class LearningProgressService
                 'completed_at' => date('Y-m-d H:i:s'),
             ]);
 
+            $this->completeForGroup($learningItemId, (int) $user->id);
         }
 
         $after = $this->evaluateUnitFor((int) $user->id, $unitId);
@@ -433,6 +434,57 @@ class LearningProgressService
             'status' => 'completed',
             'completed_at' => date('Y-m-d H:i:s'),
         ]);
+    }
+
+    /**
+     * Groups on a learning item with completion "any" (D13): one member completing it completes it for every
+     * current member of that group. Does nothing for an item without such a group or a student without a group.
+     */
+    public function completeForGroup(int $itemId, int $studentId): void
+    {
+        $db = db_connect();
+        $config = $db->table('activity_group_configs')->select('id')->where('learning_item_id', $itemId)->where('completion_mode', 'any')->get()->getRowArray();
+
+        if ($config === null) {
+            return;
+        }
+
+        $group = $db->table('student_group_members')->select('group_id')->where('config_id', $config['id'])->where('student_user_id', $studentId)->get()->getRowArray();
+
+        if ($group === null) {
+            return;
+        }
+
+        $db->transStart();
+        $members = array_map('intval', array_column($db->table('student_group_members')->select('student_user_id')->where('group_id', $group['group_id'])->get()->getResultArray(), 'student_user_id'));
+
+        foreach ($members as $member) {
+            $this->upsertCompletion($member, $itemId, ['status' => 'completed', 'progress_percent' => 100, 'completed_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $db->transComplete();
+
+        // The group's card names who marked it ("Marked complete by ... for the group"); the actor is that student.
+        \App\Services\Groups\GroupSetService::audit('groups.completed_for_group', $studentId, (int) $group['group_id'], 'student_group', ['new' => ['learning_item_id' => $itemId, 'members' => $members]]);
+    }
+
+    /** A member who joins a group whose item is already completed under "any" gets the completion too (D26). */
+    public function onGroupMemberAdded(int $configId, int $studentId): void
+    {
+        $db = db_connect();
+        $config = $db->table('activity_group_configs')->select('learning_item_id')->where('id', $configId)->where('completion_mode', 'any')->where('learning_item_id IS NOT NULL', null, false)->get()->getRowArray();
+        $group = $config === null ? null : $db->table('student_group_members')->select('group_id')->where('config_id', $configId)->where('student_user_id', $studentId)->get()->getRowArray();
+
+        if ($group === null) {
+            return;
+        }
+
+        $done = $db->table('student_group_members m')->join('learning_completions lc', 'lc.student_user_id = m.student_user_id')
+            ->where('m.group_id', $group['group_id'])->where('m.student_user_id !=', $studentId)->where('lc.learning_item_id', $config['learning_item_id'])->where('lc.status', 'completed')->countAllResults();
+
+        if ($done > 0) {
+            $this->upsertCompletion($studentId, (int) $config['learning_item_id'], ['status' => 'completed', 'progress_percent' => 100, 'completed_at' => date('Y-m-d H:i:s')]);
+        }
     }
 
     /**

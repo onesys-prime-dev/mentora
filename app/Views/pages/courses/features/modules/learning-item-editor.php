@@ -82,6 +82,11 @@
                     <!-- contents -->
                     <?= $this->include('pages/courses/features/modules/learning-items/editor/' . $currentItem['item_type']) ?>
 
+                    <?php // Ungraded items may use groups for grouping and completion (D12); assignments and quizzes have their own. ?>
+                    <?php if (in_array($currentItem['item_type'], ['reading', 'video', 'pdf', 'link', 'discussion'], true)): ?>
+                        <?= view('pages/courses/features/assessments/partials/group-activity-section', ['groupItem' => $currentItem], ['saveData' => false]) ?>
+                    <?php endif; ?>
+
                 </div>
 
             </section>

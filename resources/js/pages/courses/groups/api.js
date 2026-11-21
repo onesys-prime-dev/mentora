@@ -40,14 +40,14 @@ export async function sendChange(method, path, body = {}, root = "/group-sets") 
 
 }
 
-/** An assignment's groups: { config|null, groups, ungrouped, sets, activities, flags, lockReason }. */
-export const fetchActivityGroups = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/groups`, "the activity's groups");
+/** An assignment's (or, with kind "learning-items", an item's) groups: { config|null, groups, ungrouped, sets, activities, flags, lockReason }. */
+export const fetchActivityGroups = (id, kind = "assessments") => getJson(`${base()}/${kind}/${id}/groups`, "the activity's groups");
 
 /** Student proposals waiting for approval and what is left after the window: { proposals, minSize, summary }. */
 export const fetchActivityProposals = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/groups/proposals`, "the proposed groups");
 
-/** A change to an assignment's groups; answers as sendChange. */
-export const sendActivityChange = (assessmentId, method, path, body = {}) => sendChange(method, path, body, `/assessments/${assessmentId}/groups`);
+/** A change to an assignment's (or item's) groups; answers as sendChange. */
+export const sendActivityChange = (id, method, path, body = {}, kind = "assessments") => sendChange(method, path, body, `/${kind}/${id}/groups`);
 
 /** Grade Work's group view: { groups: [{ id, name, status, memberCount }], ungrouped, ungroupedPolicy, blockers, flags, lockReason }. */
 export const fetchGroupGrading = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/group-grading`, "the groups to grade");
@@ -59,7 +59,7 @@ export const fetchGroupGradingDetail = (assessmentId, groupId) => getJson(`${bas
 export const sendGroupGrading = (assessmentId, path, body = {}) => sendChange("POST", path, body, `/assessments/${assessmentId}/group-grading`);
 
 /** The student's own group of an activity: { isGroupActivity, myGroup, candidates, ... }. */
-export const fetchMyGroup = (assessmentId) => getJson(`${base()}/assessments/${assessmentId}/my-group`, "your group");
+export const fetchMyGroup = (id, kind = "assessments") => getJson(`${base()}/${kind}/${id}/my-group`, "your group");
 
 /** join | leave | switch; answers as sendChange. */
-export const sendMyGroup = (assessmentId, action, body = {}) => sendChange("POST", `/${action}`, body, `/assessments/${assessmentId}/my-group`);
+export const sendMyGroup = (id, action, body = {}, kind = "assessments") => sendChange("POST", `/${action}`, body, `/${kind}/${id}/my-group`);

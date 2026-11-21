@@ -112,6 +112,10 @@ class GroupProposalService
             $db->table('student_group_invitations')->where('id', $invite['id'])->update(['status' => $accept ? 'accepted' : 'declined', 'responded_at' => date('Y-m-d H:i:s')]);
         }, 'Your answer could not be saved. Try again.');
 
+        if ($accept) {
+            (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded((int) $config['id'], $studentId);
+        }
+
         GroupSetService::audit($accept ? 'groups.invite_accepted' : 'groups.invite_declined', $studentId, $groupId, 'student_group', ['new' => ['group_id' => $groupId, 'student_user_id' => $studentId]]);
     }
 

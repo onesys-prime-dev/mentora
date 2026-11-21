@@ -1,12 +1,12 @@
 # Progress
 
-- Stage: 4 — Implementation, Phase 7 (group grading) in progress; Phases 1-6 committed (63b150cc, c918376b, bcfa5852, e556d79c, deab3c46, 404f5645)
+- Stage: 4 — Implementation, Phase 8 (learning items) in progress; Phases 1-7 committed (63b150cc, c918376b, bcfa5852, e556d79c, deab3c46, 404f5645, b9d5355a)
 - Phase: n/a
-- Active branch: feat/group-activities-p7-grading (from p6)
+- Active branch: feat/group-activities-p8-learning-items (from p7)
 - Last verified checkpoint: Stage 2 approved by user ("approved, proceed to Stage 3"); implementation-plan.md + test-strategy.md written
 - Completed: workspace scaffold
 - Pending: interview (one question per message)
-- Exact next action: Phase 7: 7.1 rubric scope, 7.2 GroupGradingService + group_member_scores (+ resolveDropped/resolveLateAdd), 7.3 gradebook/result/student-view integration, 7.4 Grade Work group UI + student result + dialogs 4D. Rulings: one group_member_scores row per member (submission_id = shared row, or the member own row for per-member style); gradebook reads final via AssessmentResultService; average = everyone gets average of members own scores; adjustments allowed when mode collective_adjust or rubric has individual criteria. One phpunit at a time. Commit at phase end; then branch p8-learning-items.
+- Exact next action: Phase 8: 8.1+8.2 backend (attachLearningItem, completeForGroup, onGroupMemberAdded), 8.3 UI (editor section for learning items + student roster/completion). Then Phase 9 (notifications, dean/parent views incl. ParentNotifier missing-work fix and dean Grade Work page, exports, offering copy) and Phase 10 hardening. One phpunit at a time. Commit at phase end.
 ## Phase 1 ledger
 - Task 1.1: DONE, reviewed by controller, GroupSchemaTest 4 tests OK (uncommitted)
 - Task 1.2: DONE; controller reviewed + mutation-checked (2 mutations caught); 22 tests OK. Note: implementer skipped TDD red phase
@@ -49,3 +49,8 @@
 - Task 7.3: DONE_WITH_CONCERNS (red 4 errors + 9 failures; 15 new tests OK; Assessment|Grade 1848 OK). Open: teammate cannot reply to group feedback thread (fix in 7.4); ParentNotifier reports teammate as missing (Phase 9); ordinary Grade Work on a group submission leaves members pending until 7.4 blocks it; excused+pending reads 0% for min-score prereq
 - Task 7.4: DONE_WITH_CONCERNS (red phases shown; Playwright not run). Full phpunit 9985 OK, vitest 1231 OK
 - PHASE 7 COMPLETE and committed on feat/group-activities-p7-grading
+
+## Phase 8 ledger
+- Tasks 8.1+8.2: DONE (red 14 errors; 678 group tests OK per implementer; my rerun OK)
+- Task 8.3: DONE_WITH_CONCERNS (red phases shown; Playwright not run; resumed after usage limit). Full phpunit 10105 OK, vitest 1241 OK
+- PHASE 8 COMPLETE and committed on feat/group-activities-p8-learning-items

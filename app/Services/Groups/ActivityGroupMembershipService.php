@@ -80,6 +80,7 @@ class ActivityGroupMembershipService
         }, 'The student could not be moved. They stay in their group.');
 
         (new GroupLeaderService())->membershipChanged($from);
+        (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded((int) $to['config_id'], $studentId);
         GroupSetService::audit('groups.member_moved', $actorId, $toGroupId, 'student_group', ['old' => ['group_id' => $from], 'new' => ['group_id' => $toGroupId, 'student_user_id' => $studentId, 'config_id' => (int) $to['config_id']]]);
     }
 
@@ -105,6 +106,11 @@ class ActivityGroupMembershipService
     /** Idempotent. Called by the submission code (Phase 6) at a group's first submission. */
     public function freezeGroup(int $groupId): void
     {
+        // Groups on learning items never freeze (D26).
+        if (db_connect()->table('student_groups g')->join('activity_group_configs c', 'c.id = g.config_id')->where('g.id', $groupId)->where('c.learning_item_id IS NOT NULL', null, false)->countAllResults() > 0) {
+            return;
+        }
+
         db_connect()->table('student_groups')->where('id', $groupId)->where('config_id IS NOT NULL', null, false)->where('frozen_at IS NULL', null, false)->update(['frozen_at' => date('Y-m-d H:i:s')]);
 
         if (db_connect()->affectedRows() > 0) {
@@ -135,6 +141,18 @@ class ActivityGroupMembershipService
         $allowed = array_merge(array_keys(self::ENUMS), self::FLAGS, self::OTHER);
         $new     = [];
         $old     = [];
+
+        if ($config['learning_item_id'] !== null) {
+            $allowed = ActivityGroupService::ITEM_SETTINGS; // an item's groups have no leader, grading or submission rules (D12)
+
+            if (($changes['formation_mode'] ?? null) === 'proposed') {
+                throw StructureException::field('formation_mode', 'Students cannot propose groups on a learning item. Choose another way to form groups.');
+            }
+
+            if (array_key_exists('completion_mode', $changes) && !in_array($changes['completion_mode'], self::ENUMS['completion_mode'], true)) {
+                throw StructureException::field('completion_mode', 'Choose how the item is completed.');
+            }
+        }
 
         if ($unknown = array_diff(array_keys($changes), $allowed)) {
             throw StructureException::field((string) reset($unknown), 'That setting cannot be changed here.');
@@ -246,6 +264,7 @@ class ActivityGroupMembershipService
             $this->insert($groupId, $configId, $studentId);
         }, 'The student could not be added. Try again.');
 
+        (new \App\Services\Courses\LearningProgressService())->onGroupMemberAdded($configId, $studentId);
         GroupSetService::audit('groups.member_added', $actorId, $groupId, 'student_group', ['new' => ['student_user_id' => $studentId, 'group_id' => $groupId, 'config_id' => $configId] + ($late ? ['late_enrollee' => true, 'reason' => $reason] : [])]);
     }
 

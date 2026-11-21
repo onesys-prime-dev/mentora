@@ -5,8 +5,13 @@
  * loads, fills it from the my-group JSON, and removes it when the assignment is not a group activity.
  * The alert templates are the shared alert component, cloned by the script with its own text.
  *
+ * A learning item that uses groups draws it too (learning-item-view.php passes $groupItem, screen 3D): no leader,
+ * rename or proposals there, so those dialogs are left out.
+ *
  * @var array<string, mixed> $currentAssessment
+ * @var array<string, mixed>|null $groupItem
  */
+$item = $groupItem ?? null;
 $alert = static fn (string $tone): string => '<template data-sg-alert="' . $tone . '">' . view('components/alert', ['tone' => $tone, 'text' => ''], ['saveData' => false]) . '</template>';
 
 $field     = static fn (array $params): string => view('components/form-field', $params, ['saveData' => false]);
@@ -29,7 +34,11 @@ $proposeForm = '<form class="flex flex-col gap-4" novalidate>'
     . $buttons('Send invitations') . '</form>';
 ?>
 
+<?php if ($item): ?>
+<div class="flex flex-col gap-3" id="student-group" data-student-group data-learning-item-id="<?= esc((string) $item['id']) ?>" hidden>
+<?php else: ?>
 <div class="flex flex-col gap-3" id="student-group" data-student-group data-assessment-id="<?= esc((string) $currentAssessment['id']) ?>" hidden>
+<?php endif; ?>
 
     <div class="flex items-center gap-3">
         <?= icon('users', 'h-5 w-5') ?>
@@ -53,7 +62,9 @@ $proposeForm = '<form class="flex flex-col gap-4" novalidate>'
         'ajax'         => true,
     ], ['saveData' => false]) ?>
 
+    <?php if (! $item): ?>
     <?= view('components/dialog', ['id' => 'sg-rename-dialog', 'title' => 'Rename group', 'body' => $renameForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
     <?= view('components/dialog', ['id' => 'sg-propose-dialog', 'title' => 'Propose a new group', 'body' => $proposeForm, 'size' => 'sm', 'variant' => 'default'], ['saveData' => false]) ?>
+    <?php endif; ?>
 
 </div>

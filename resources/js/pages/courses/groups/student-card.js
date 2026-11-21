@@ -16,6 +16,11 @@ import { escapeHtml, formatDateTime } from "./detail.js";
 | from the my-group JSON. A student only gets their own group (and the open
 | groups while they can join), so that is all it can show. Not a group
 | activity: the card removes itself and leaves no trace.
+|
+| On a learning item (data-learning-item-id, screen 3D) the card shows the
+| roster and the completion status: each partner's own status under "each",
+| or the group's one status under "any", where the footer's Mark complete
+| button reads "Mark complete for the group". Being ungrouped never blocks.
 */
 
 const BUTTON = "inline-flex items-center justify-center rounded-full px-5 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:min-h-11 max-sm:w-full";
@@ -29,7 +34,8 @@ export async function initializeStudentGroupCard(root) {
         return;
     }
 
-    const card = { root, id: Number(root.dataset.assessmentId), switching: false, state: null, dialog: null, dialogs: {}, lastMessage: null };
+    const item = root.dataset.learningItemId !== undefined;
+    const card = { root, item, kind: item ? "learning-items" : "assessments", id: Number(item ? root.dataset.learningItemId : root.dataset.assessmentId), switching: false, state: null, dialog: null, dialogs: {}, lastMessage: null };
     const confirm = root.querySelector("#sg-leave-confirm");
 
     bindFormDialog(card, "rename", (data) => ({ name: String(data.get("name") ?? "").trim() }), (body) => `Your group is now called ${body.name}.`);
@@ -51,6 +57,14 @@ export async function initializeStudentGroupCard(root) {
     }
 
     root.addEventListener("click", (event) => onClick(card, event));
+
+    if (item) {
+        // completion.js says when this student marked the item complete; under "any" that changed the whole group.
+        const refresh = () => (root.isConnected ? load(card, { quiet: true }) : document.removeEventListener("learning-item:completed", refresh));
+
+        document.addEventListener("learning-item:completed", refresh);
+    }
+
     await load(card);
 
 }
@@ -82,7 +96,7 @@ async function load(card, { quiet = false } = {}) {
     const guard = beginLoad(body, skeleton, quiet ? 150 : 0);
 
     try {
-        const state = await fetchMyGroup(card.id);
+        const state = await fetchMyGroup(card.id, card.kind);
 
         if (!guard.current()) {
             return;
@@ -155,7 +169,9 @@ function renderNotInGroup(card, state) {
     const when = windowText(state.signup);
     let notice;
 
-    if (!state.inPool) {
+    if (card.item) {
+        notice = alertHtml(card, "info", `You're not in a group yet. You can still complete this item on your own. ${when}`.trim());
+    } else if (!state.inPool) {
         notice = alertHtml(card, "info", "This activity is not assigned to you, so you do not need a group.");
     } else if (state.blocked) {
         notice = alertHtml(card, "warning", `You're not in a group yet. You can't submit until you join one. ${when}`.trim());
@@ -240,7 +256,7 @@ function leaderRow(group) {
 function renderMine(card, state) {
 
     const group = state.myGroup;
-    const chips = group.members.map((m) => `<span class="rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${escapeHtml(m.name)}</span>`).join("");
+    const chips = group.members.map((m) => `<span class="rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${memberChip(m)}</span>`).join("");
     let notice = "";
     let actions = "";
 
@@ -284,7 +300,43 @@ function renderMine(card, state) {
     return `
         <h3 class="font-heading text-base font-semibold text-brand">Your group: ${escapeHtml(group.name)}</h3>
         <div class="flex flex-wrap gap-2" role="list" aria-label="Members of ${escapeHtml(group.name)}">${chips}</div>
-        ${extended}${waiting}${proposed || !group.leader ? "" : leaderRow(group)}${notice}${actions}${switchList}${errorSlot}`;
+        ${card.item ? completionRow(card, state) : ""}${extended}${waiting}${proposed || !group.leader ? "" : leaderRow(group)}${notice}${actions}${switchList}${errorSlot}`;
+
+}
+
+/** "You (Dee Park)" for me; under "each" on an item, each member's own status after a dot. */
+function memberChip(member) {
+
+    const name = member.isMe ? `You (${escapeHtml(member.name)})` : escapeHtml(member.name);
+
+    if (member.completed === undefined) {
+        return name;
+    }
+
+    return `${name} · ${member.completed ? "<span class=\"font-semibold text-[#5C9F72]\">Done</span>" : "<span class=\"text-[#646464]\">Not done yet</span>"}`;
+
+}
+
+/** The item's completion status for the group, and the footer button's words under "any" (D13). */
+function completionRow(card, state) {
+
+    const group = state.myGroup;
+    const any = state.completionMode === "any";
+    const button = document.querySelector(`[data-mark-complete][data-learning-item-id="${card.id}"][data-completed="0"] [data-mark-complete-label]`);
+
+    if (button) {
+        button.textContent = any ? "Mark complete for the group" : "Mark as Completed";
+    }
+
+    if (!any) {
+        return "<p class=\"text-sm text-[#646464]\" data-sg-completion>Each member marks this done on their own.</p>";
+    }
+
+    if (group.completed) {
+        return `<div data-sg-completion>${alertHtml(card, "info", group.completedBy ? `Marked complete by ${group.completedBy} for the group.` : "Completed for the group.")}</div>`;
+    }
+
+    return "<p class=\"text-sm text-[#646464]\" data-sg-completion>Any member can mark this done for the group.</p>";
 
 }
 
@@ -300,7 +352,7 @@ async function change(card, path, body, success) {
     card.lastMessage = null;
 
     try {
-        const result = await sendMyGroup(card.id, path, body);
+        const result = await sendMyGroup(card.id, path, body, card.kind);
 
         if (result.ok) {
             card.switching = false;
@@ -431,7 +483,7 @@ function bindFormDialog(card, key, read, success) {
 
     onSubmit(el.querySelector("form"), async (data) => {
         const body = read(data);
-        const result = await sendMyGroup(card.id, key, body);
+        const result = await sendMyGroup(card.id, key, body, card.kind);
 
         if (result.ok) {
             const message = success(body);
