@@ -93,4 +93,90 @@ class AssessmentResultService
             'latest' => $latest,
         ];
     }
+
+    /**
+     * SQL for "graded work" lists read straight from assessment_submissions (feeds): with the `gms` LEFT JOIN of
+     * memberJoinSql(), a row's score for this student is their own final on a group row, else the row's score.
+     */
+    public const MEMBER_SCORE_SQL = 'CASE WHEN gms.id IS NULL THEN assessment_submissions.score ELSE gms.final_score END AS score';
+
+    public static function memberJoinSql(int $studentId): string
+    {
+        return 'gms.submission_id = assessment_submissions.id AND gms.student_user_id = ' . $studentId;
+    }
+
+    /** The rows that are this student's graded work, by the same rule as memberAttempts() (excused rows show no grade). */
+    public static function memberRowSql(int $studentId): string
+    {
+        return "((gms.id IS NULL AND assessment_submissions.student_id = {$studentId} AND assessment_submissions.group_id IS NULL)"
+            . ' OR (gms.id IS NOT NULL AND gms.pending = 0 AND gms.excused = 0 AND gms.final_score IS NOT NULL))';
+    }
+
+    /** @var array<int, ?array> assessment id => its group config (null: not a group activity) */
+    private array $configs = [];
+
+    /**
+     * The attempts that stand for one student on a group activity (D7, D8, D10): their own rows plus their group's
+     * shared rows, each carrying the student's OWN final from group_member_scores as score/percentage and that row as
+     * `member_score`. A shared row with no member row, a pending one or a reopened one is not graded for them; an
+     * excused one counts, flagged `excused`. Another member's score row is never read. Non-group work: $attempts as is.
+     *
+     * @param list<array> $attempts the student's own rows (student_id = $studentId)
+     *
+     * @return list<array>
+     */
+    public function memberAttempts(int $assessmentId, int $studentId, array $attempts): array
+    {
+        if (!array_key_exists($assessmentId, $this->configs)) {
+            $this->configs[$assessmentId] = (new \App\Services\Groups\ActivityGroupService())->findByAssessment($assessmentId);
+        }
+
+        if ($this->configs[$assessmentId] === null) {
+            return $attempts;
+        }
+
+        $db     = db_connect();
+        $scores = array_column($db->table('group_member_scores gms')->select('gms.*')
+            ->join('assessment_submissions s', 's.id = gms.submission_id')
+            ->where('s.assessment_id', $assessmentId)->where('gms.student_user_id', $studentId)
+            ->get()->getResultArray(), null, 'submission_id');
+
+        $group = (new \App\Services\Groups\GroupSubmissionResolver())->sharedGroup($assessmentId, $studentId);
+        $ids   = array_merge(array_keys($scores), $group === null ? [] : array_column(
+            $db->table('assessment_submissions')->select('id')->where('assessment_id', $assessmentId)->where('group_id', $group['id'])->get()->getResultArray(),
+            'id'
+        ));
+        $known = array_map('intval', array_column($attempts, 'id'));
+        $extra = array_values(array_diff(array_map('intval', $ids), $known));
+
+        if ($extra !== []) {
+            $attempts = array_merge($attempts, $db->table('assessment_submissions')->whereIn('id', $extra)->whereIn('status', self::FINISHED_STATUSES)->get()->getResultArray());
+        }
+
+        foreach ($attempts as &$attempt) {
+            $row = $scores[$attempt['id']] ?? null;
+
+            if ($row === null) {
+                if (!empty($attempt['group_id'])) {
+                    $attempt['is_graded'] = 0;
+                    $attempt['score']     = null;
+                    $attempt['percentage'] = null;
+                }
+
+                continue;
+            }
+
+            $excused = (int) $row['excused'] === 1;
+
+            $attempt['is_graded']    = $excused || (!empty($attempt['is_graded']) && (int) $row['pending'] === 0 && $row['final_score'] !== null) ? 1 : 0;
+            $attempt['score']        = $row['final_score'];
+            $attempt['percentage']   = $row['final_percentage'];
+            $attempt['excused']      = $excused;
+            $attempt['member_score'] = array_intersect_key($row, array_flip(['group_points', 'individual_points', 'adjustment', 'adjustment_reason', 'private_note', 'final_score', 'final_percentage', 'excused', 'pending']))
+                + ['individual_rubric_scores' => $row['individual_rubric_scores'] === null ? [] : (json_decode((string) $row['individual_rubric_scores'], true) ?? [])];
+        }
+        unset($attempt);
+
+        return $attempts;
+    }
 }

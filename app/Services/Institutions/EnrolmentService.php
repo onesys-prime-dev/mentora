@@ -307,6 +307,7 @@ class EnrolmentService
         $this->audit('enrolment.status_changed', $actor, $institutionId, $enrollmentId, ['status' => $row['status']], ['status' => $status, 'offering_id' => (int) $row['offering_id'], 'student_user_id' => (int) $row['student_user_id']]);
 
         \App\Services\Messaging\CourseChatHooks::offeringChanged((int) $row['offering_id']);
+        \App\Services\Groups\ActivityGroupMembershipService::enrolmentChanged((int) $row['offering_id'], (int) $row['student_user_id'], $status);
 
         // A place given back is news to the student; dropping or withdrawing one is not emailed.
         if ($status === 'enrolled') {

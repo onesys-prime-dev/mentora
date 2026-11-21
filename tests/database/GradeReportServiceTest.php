@@ -30,6 +30,8 @@ final class GradeReportServiceTest extends DatabaseTestCase
 
     private int $quiz;
 
+    private string $groupTitle = '';
+
     private User $teacher;
 
     /** @var array<string, User> */
@@ -184,6 +186,62 @@ final class GradeReportServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('student_number', $csv);
         $this->assertStringContainsString("'=HYPERLINK", $csv, 'text that looks like a formula is made plain');
         $this->assertMatchesRegularExpression('/\.csv$/', $file['filename']);
+    }
+
+    /** A group assignment graded in this section, with Ann and Ben in "Team 1" and Cy ungrouped. */
+    private function groupActivity(): void
+    {
+        $module = CourseFactory::module($this->offering);
+        $assessment = CourseFactory::assessment($this->offering, $this->teacher, $module, null, 'Assignment');
+        GradeFactory::item($this->scheme, GradeFactory::category($this->scheme, 'Projects', 0, null, 3), 'Project', 50, 3, $assessment);
+        db_connect()->table('assessments')->where('id', $assessment)->update(['status' => 'Published']);
+        $this->groupTitle = (string) db_connect()->table('assessments')->select('title')->where('id', $assessment)->get()->getRow()->title;
+
+        $config = (new \App\Services\Groups\ActivityGroupService())->attachAssessment($assessment, null, ['formation_mode' => 'manual', 'min_size' => 1, 'max_size' => 4], (int) $this->teacher->id);
+        $group = (new \App\Services\Groups\ActivityGroupService())->addGroup($config, 'Team 1', (int) $this->teacher->id);
+
+        foreach (['Ann', 'Ben'] as $name) {
+            (new \App\Services\Groups\ActivityGroupMembershipService())->addMember($group, (int) $this->students[$name]->id, (int) $this->teacher->id);
+        }
+    }
+
+    public function testAGroupActivityGetsAGroupColumnWithEachStudentsGroup(): void
+    {
+        $this->groupActivity();
+
+        $rows = $this->csvRows($this->service->classReport($this->offering));
+        $column = array_search('group: ' . $this->groupTitle, $rows[0], true);
+        $this->assertIsInt($column, 'a group column named after the item, got: ' . implode(' | ', $rows[0]));
+
+        $byName = [];
+        foreach (array_slice($rows, 1) as $row) {
+            $byName[(int) $row[0]] = $row[$column];
+        }
+
+        $this->assertSame('Team 1', $byName[(int) $this->students['Ann']->id]);
+        $this->assertSame('Team 1', $byName[(int) $this->students['Ben']->id]);
+        $this->assertSame('', $byName[(int) $this->students['Cy']->id], 'ungrouped is blank');
+    }
+
+    public function testTheExcelSheetHasTheGroupColumnToo(): void
+    {
+        $this->groupActivity();
+
+        $report = $this->service->classReport($this->offering);
+        $file = $this->service->classSheet($report, 'xlsx');
+        $sheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['file_path'])->getActiveSheet();
+        @unlink($file['file_path']);
+
+        $header = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1')[0];
+        $this->assertContains('Group: ' . $this->groupTitle, $header);
+        $this->assertSame('Team 1', $sheet->getCell([3, 2])->getValue(), 'the group sits next to the student name');
+    }
+
+    public function testNoGroupColumnWhenNothingIsAGroupActivity(): void
+    {
+        $header = $this->csvRows($this->service->classReport($this->offering))[0];
+
+        $this->assertSame([], array_filter($header, static fn ($h) => str_starts_with((string) $h, 'group:')));
     }
 
     /** @return list<list<string>> */

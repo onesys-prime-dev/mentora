@@ -58,6 +58,9 @@ export function initializeCompletion(refresh) {
 
             showCompleted(button, result);
 
+            // The group card (groups/student-card.js) refreshes: under "any" this completed it for the whole group.
+            document.dispatchEvent(new CustomEvent("learning-item:completed", { detail: { itemId: Number(button.dataset.learningItemId) } }));
+
         }
 
         catch (error) {

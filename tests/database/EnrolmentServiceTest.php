@@ -234,6 +234,23 @@ final class EnrolmentServiceTest extends DatabaseTestCase
         $this->assertSame(1, db_connect()->table('enrollments')->where('offering_id', $this->offering)->countAllResults());
     }
 
+    public function testDroppingAStudentTakesThemOutOfTheirGroups(): void
+    {
+        $ann = $this->student('Ann', '2026-001');
+        $this->service->add($this->institution, $this->offering, '2026-001', false, $this->actor);
+        $db = db_connect();
+        $db->table('activity_group_configs')->insert(['offering_id' => $this->offering]);
+        $config = (int) $db->insertID();
+        $db->table('student_groups')->insert(['config_id' => $config, 'name' => 'G', 'status' => 'active']);
+        $group = (int) $db->insertID();
+        $db->table('student_group_members')->insert(['group_id' => $group, 'set_id' => null, 'config_id' => $config, 'student_user_id' => $ann->id, 'joined_at' => date('Y-m-d H:i:s')]);
+
+        $this->service->setStatus($this->institution, $this->enrollmentId($ann), 'dropped', false, $this->actor);
+
+        $this->assertSame(0, $db->table('student_group_members')->where('student_user_id', $ann->id)->countAllResults());
+        $this->assertSame('dropped', $this->placeOf($ann));
+    }
+
     public function testASameOrUnknownStatusIsRefused(): void
     {
         $ann = $this->student('Ann', '2026-001');

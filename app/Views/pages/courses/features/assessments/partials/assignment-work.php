@@ -51,6 +51,17 @@ $statusMeta = static fn (?string $status) => match ($status) {
 };
 
 $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', strtotime($datetime)) : '';
+
+// A group activity (state.group): why the student cannot hand in, who handed in, and any extension.
+// The server refuses too; the form stays on the page, disabled, so the student sees what they are missing.
+$group       = $isInstructor ? null : ($assignmentState['group'] ?? null);
+$groupNotice = match ($group['blockedCode'] ?? null) {
+    'needs_group' => ['warning', "You're not in a group yet. You can't submit until you join one."],
+    'leader_only' => ['warning', 'Only ' . ($group['leaderName'] ?: 'your group leader') . ' can submit for your group.'],
+    'not_in_pool' => ['info', 'This activity was not assigned to you.'],
+    default       => null,
+};
+$groupLocked = $groupNotice !== null && $enabledTypes !== [];
 ?>
 
 <!-- Your Work -->
@@ -88,6 +99,16 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
     </div>
 
+    <?php if ($group && !empty($group['submittedBy']) && $latestAttempt): ?>
+        <p class="text-sm text-[#646464]" data-group-submitted-by>Submitted by <?= esc($group['submittedBy']) ?> on <?= esc($formatDate($latestAttempt['submitted_at'])) ?>.</p>
+    <?php endif; ?>
+
+    <?php if ($group && !empty($group['extensionUntil'])): ?>
+        <div data-group-extension>
+            <?= view('components/alert', ['tone' => 'info', 'text' => 'Deadline extended for your group to ' . $formatDate($group['extensionUntil']) . '. Reason: ' . ($group['extensionReason'] ?? '')], ['saveData' => false]) ?>
+        </div>
+    <?php endif; ?>
+
     <?php if ($isInstructor): ?>
 
         <div class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#DBDBDB] bg-[#F9F9FC] p-10 text-center">
@@ -120,7 +141,7 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
         </div>
 
-    <?php elseif (!$canSubmit): ?>
+    <?php elseif (!$canSubmit && !$groupLocked): ?>
 
         <div class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#DBDBDB] bg-[#F9F9FC] p-8 text-center">
 
@@ -138,12 +159,23 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
 
     <?php else: ?>
 
+        <?php if ($groupNotice): ?>
+            <div class="flex flex-col gap-1" data-group-notice="<?= esc($group['blockedCode']) ?>">
+                <?= view('components/alert', ['tone' => $groupNotice[0], 'text' => $groupNotice[1]], ['saveData' => false]) ?>
+                <?php if ($group['blockedCode'] === 'needs_group'): ?>
+                    <a href="#student-group" data-sg-jump class="w-fit rounded-lg px-1 py-1 text-sm font-semibold text-brand underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Go to the group card</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <form
             data-assignment-submission-form
             data-assessment-id="<?= esc($currentAssessment['id']) ?>"
             enctype="multipart/form-data"
             class="group/work-tabs flex flex-col"
             novalidate>
+
+            <fieldset class="flex min-w-0 flex-col" <?= $canSubmit ? '' : 'disabled' ?>>
 
             <div class="flex w-fit max-w-full overflow-hidden rounded-t-xl border-x border-t border-[#DBDBDB]">
 
@@ -263,6 +295,8 @@ $formatDate = static fn (?string $datetime) => $datetime ? date('M j, Y g:i A', 
                 </div>
 
             </div>
+
+            </fieldset>
 
         </form>
 

@@ -10,6 +10,8 @@ use App\Models\Assessments\AssessmentRubricCriteriaModel;
 
 class RubricService
 {
+    private const SCOPE_REFUSAL = ['success' => false, 'message' => 'Scope must be group or individual.'];
+
     protected AssessmentModel $assessmentModel;
     protected AssessmentRubricModel $rubricModel;
     protected AssessmentRubricCriteriaModel $criteriaModel;
@@ -83,9 +85,15 @@ class RubricService
             ];
         }
 
-        $this->replaceAssessmentRubric($assessmentId);
-
         $criteria = $data['criteria'] ?? [];
+
+        foreach ($criteria as $criterion) {
+            if (!$this->validScope($criterion['scope'] ?? null)) {
+                return self::SCOPE_REFUSAL;
+            }
+        }
+
+        $this->replaceAssessmentRubric($assessmentId);
 
         $totalPoints = array_sum(
             array_map(
@@ -118,6 +126,7 @@ class RubricService
                 'criteria_title' => $criterion['title'] ?? '',
                 'description' => $criterion['description'] ?? null,
                 'max_points' => $criterion['max_points'] ?? 0,
+                'scope' => $criterion['scope'] ?? 'individual',
                 'order_index' => $order++,
                 'created_at' => $now,
             ]);
@@ -177,6 +186,7 @@ class RubricService
                 'criteria_title' => $criterion['criteria_title'],
                 'description' => $criterion['description'],
                 'max_points' => $criterion['max_points'],
+                'scope' => $criterion['scope'],
                 'order_index' => $criterion['order_index'],
                 'created_at' => $now,
             ]);
@@ -253,6 +263,10 @@ class RubricService
             ];
         }
 
+        if (!$this->validScope($data['scope'] ?? null)) {
+            return self::SCOPE_REFUSAL;
+        }
+
         $order = $this->criteriaModel
             ->where('rubric_id', $rubricId)
             ->countAllResults();
@@ -262,6 +276,7 @@ class RubricService
             'criteria_title' => $data['title'] ?? '',
             'description' => $data['description'] ?? null,
             'max_points' => $data['max_points'] ?? 0,
+            'scope' => $data['scope'] ?? 'individual',
             'order_index' => $order + 1,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
@@ -289,10 +304,15 @@ class RubricService
             ];
         }
 
+        if (!$this->validScope($data['scope'] ?? null)) {
+            return self::SCOPE_REFUSAL;
+        }
+
         $this->criteriaModel->update($criterionId, [
             'criteria_title' => $data['title'] ?? $criterion['criteria_title'],
             'description' => $data['description'] ?? $criterion['description'],
             'max_points' => $data['max_points'] ?? $criterion['max_points'],
+            'scope' => $data['scope'] ?? $criterion['scope'],
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
@@ -335,6 +355,11 @@ class RubricService
     | Helpers
     |--------------------------------------------------------------------------
     */
+
+    private function validScope(mixed $scope): bool
+    {
+        return $scope === null || in_array($scope, ['group', 'individual'], true);
+    }
 
     private function replaceAssessmentRubric(int $assessmentId): void
     {

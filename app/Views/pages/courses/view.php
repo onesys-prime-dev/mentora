@@ -11,6 +11,11 @@ $features = $courseFeatures ?? [
     'assessments' => 'Assessments',
     'grades' => 'Grades',
 ];
+
+// Group sets: the course's staff and the dean (CourseController decides); a parent's own tab list is left alone.
+if (! empty($groupsTab) && ! isset($courseFeatures)) {
+    $features['groups'] = 'Groups';
+}
 ?>
 
 <?= $this->extend('layouts/app') ?>

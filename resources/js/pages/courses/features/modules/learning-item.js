@@ -52,6 +52,8 @@ import {
     initializeAssignmentSubmission,
 } from "../../../../shared/assignment/submission.js";
 
+import { initializeStudentGroupCard } from "../../groups/student-card.js";
+import { initializeActivityGroups } from "../../groups/activity-panel.js";
 import { bindThread } from "../discussions/thread.js";
 import { syncContents } from "../../../../shared/contents-menu.js";
 import {
@@ -270,6 +272,11 @@ export async function loadLearningItem(
 
         initializeVideoProgress();
 
+        // Students only: an assignment's card removes itself when it is not a group activity; an item's is drawn only when it uses groups.
+        initializeStudentGroupCard(
+            document.querySelector("[data-student-group]")
+        );
+
         initializeAssignmentSubmission({
 
             onSubmitted: () =>
@@ -422,6 +429,11 @@ export async function loadLearningItemEditor(
         initializeLinkEditor();
 
         initializeDiscussionEditor();
+
+        // Reading, video, PDF, link and discussion items: the "Group activity" card (absent for other types).
+        initializeActivityGroups(
+            document.querySelector("[data-group-activity]")
+        );
 
         bindAssessmentHandoffs();
 

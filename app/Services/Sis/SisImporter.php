@@ -621,6 +621,10 @@ class SisImporter
                 $becameEnrolled = true;
             }
 
+            if ($existing === null || $existing['status'] !== $m['status']) {
+                \App\Services\Groups\ActivityGroupMembershipService::enrolmentChanged($offeringId, $studentId, $m['status']);
+            }
+
             // Told they have a place (not that they dropped one).
             if ($becameEnrolled && $m['status'] === 'enrolled') {
                 (new MailOutbox())->tell($this->institutionId, $studentId, MailOutbox::ENROLLED, MailOutbox::offeringLabel($offeringId), $this->now);

@@ -400,4 +400,92 @@ final class OfferingCopyServiceTest extends DatabaseTestCase
         $this->assertCount(2, $terms['sources']);
         $this->assertSame([$this->targetTerm, $this->sourceTerm], array_map('intval', array_column($terms['targets'], 'id')));
     }
+
+    /** A set with two empty groups, one with a member and a leader, plus an archived set. @return array<string, int> */
+    private function fillGroups(): array
+    {
+        $db   = db_connect();
+        $src  = $this->fill();
+        $now  = date('Y-m-d H:i:s');
+        $stu  = (int) $db->table('enrollments')->where('offering_id', $this->offering)->get()->getRowArray()['student_user_id'];
+
+        $db->table('group_sets')->insert(['offering_id' => $this->offering, 'name' => 'Project teams', 'formation_mode' => 'self_signup', 'min_size' => 2, 'max_size' => 4, 'signup_opens_at' => '2026-08-05 08:00:00', 'signup_closes_at' => '2026-08-12 08:00:00', 'status' => 'active', 'created_at' => $now]);
+        $set = (int) $db->insertID();
+        $db->table('group_sets')->insert(['offering_id' => $this->offering, 'name' => 'Old teams', 'status' => 'archived', 'created_at' => $now]);
+        $db->table('student_groups')->insert(['set_id' => $set, 'name' => 'Team A', 'leader_user_id' => $stu, 'leader_finalized_at' => $now, 'status' => 'active', 'created_at' => $now]);
+        $groupA = (int) $db->insertID();
+        $db->table('student_groups')->insert(['set_id' => $set, 'name' => 'Team B', 'status' => 'active', 'created_at' => $now]);
+        $db->table('student_group_members')->insert(['group_id' => $groupA, 'set_id' => $set, 'student_user_id' => $stu, 'joined_at' => $now]);
+
+        $db->table('assessment_rubric_criteria')->where('criteria_title', 'Clarity')->update(['scope' => 'group']);
+        $db->table('assessments')->where('id', $src['assessment'])->update(['assessment_type_id' => $this->assignmentTypeId()]);
+        (new \App\Services\Groups\ActivityGroupService())->attachAssessment($src['assessment'], null, ['formation_mode' => 'manual', 'min_size' => 1, 'max_size' => 5], (int) $this->teacher->id);
+
+        return $src;
+    }
+
+    private function assignmentTypeId(): int
+    {
+        $db  = db_connect();
+        $row = $db->table('assessment_types')->where('name', 'Assignment')->get()->getRowArray();
+
+        if ($row === null) {
+            $db->table('assessment_types')->insert(['name' => 'Assignment', 'created_at' => date('Y-m-d H:i:s')]);
+
+            return (int) $db->insertID();
+        }
+
+        return (int) $row['id'];
+    }
+
+    public function testCopyHasSetsWithEmptyGroupsAndNoMembers(): void
+    {
+        $this->fillGroups();
+        $this->service->copy($this->institution, $this->sourceTerm, $this->targetTerm, [$this->offering], false, $this->actor);
+
+        $db   = db_connect();
+        $sets = $db->table('group_sets')->where('offering_id', $this->copied())->get()->getResultArray();
+
+        $this->assertCount(1, $sets, 'archived set is not copied');
+        $this->assertSame('Project teams', $sets[0]['name']);
+        $this->assertSame('self_signup', $sets[0]['formation_mode']);
+        $this->assertSame([2, 4, 'active'], [(int) $sets[0]['min_size'], (int) $sets[0]['max_size'], $sets[0]['status']]);
+
+        // Window dates move with the term like the assessment dates (+90 days).
+        $this->assertSame('2026-11-03 08:00:00', $sets[0]['signup_opens_at']);
+        $this->assertSame('2026-11-10 08:00:00', $sets[0]['signup_closes_at']);
+
+        $groups = $db->table('student_groups')->where('set_id', $sets[0]['id'])->orderBy('name')->get()->getResultArray();
+        $this->assertSame(['Team A', 'Team B'], array_column($groups, 'name'));
+
+        foreach ($groups as $group) {
+            $this->assertNull($group['leader_user_id']);
+            $this->assertNull($group['leader_finalized_at']);
+            $this->assertSame('active', $group['status']);
+            $this->assertNull($group['config_id']);
+            $this->assertSame(0, $this->rowsIn('student_group_members', 'group_id', (int) $group['id']));
+        }
+
+        $this->assertSame(0, $this->rowsIn('student_group_members', 'set_id', (int) $sets[0]['id']));
+    }
+
+    public function testCopiedAssessmentsHaveNoActivityGroupConfigAndRubricScopeSurvives(): void
+    {
+        $this->fillGroups();
+        $this->service->copy($this->institution, $this->sourceTerm, $this->targetTerm, [$this->offering], false, $this->actor);
+
+        $db = db_connect();
+        $new = $db->query('SELECT a.id FROM assessments a JOIN course_modules m ON m.id = a.module_id WHERE m.offering_id = ?', [$this->copied()])->getRowArray()['id'];
+
+        $this->assertSame(0, $this->rowsIn('activity_group_configs', 'assessment_id', (int) $new));
+        $this->assertSame(1, $db->query('SELECT COUNT(*) AS n FROM assessment_rubric_criteria c JOIN assessment_rubrics r ON r.id = c.rubric_id WHERE r.assessment_id = ? AND c.scope = ?', [$new, 'group'])->getRowArray()['n'] + 0);
+    }
+
+    public function testAnOfferingWithoutSetsCopiesAsBefore(): void
+    {
+        $this->fill();
+        $this->service->copy($this->institution, $this->sourceTerm, $this->targetTerm, [$this->offering], false, $this->actor);
+
+        $this->assertSame(0, $this->rowsIn('group_sets', 'offering_id', $this->copied()));
+    }
 }

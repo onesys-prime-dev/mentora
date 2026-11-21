@@ -28,6 +28,12 @@
 
                             <?= $this->include('pages/courses/features/modules/learning-items/views/' . $currentItem['item_type']) ?>
 
+                            <?php // A student's group on an ungraded item that uses groups (screen 3D); student-card.js fills it. ?>
+                            <?php if (\App\Services\Courses\CourseViewer::isStudentHere($user) && in_array($currentItem['item_type'], ['reading', 'video', 'pdf', 'link', 'discussion'], true)
+                                && (new \App\Services\Groups\ActivityGroupService())->findByLearningItem((int) $currentItem['id']) !== null): ?>
+                                <?= view('pages/courses/features/assessments/partials/student-group-card', ['groupItem' => $currentItem], ['saveData' => false]) ?>
+                            <?php endif; ?>
+
                         <?php endif; ?>
 
                     </div>

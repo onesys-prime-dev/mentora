@@ -37,7 +37,10 @@ class MailOutbox
     public const DEAN        = 'dean';
     public const CHAIRPERSON = 'chairperson';
 
-    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON];
+    /** Group activity news (GroupNotifier); its in-app notice is made by GroupNotifier, not here. */
+    public const GROUP = 'group';
+
+    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP];
 
     /** How long a row waits so that changes made one after another make one email. */
     public const MERGE_SECONDS = 120;
@@ -323,6 +326,8 @@ class MailOutbox
         foreach ($by[self::CHAIRPERSON] ?? [] as $department) {
             $out .= "You are now the chairperson of {$department}.\n\n";
         }
+
+        $out .= $this->list('About your groups', $by[self::GROUP] ?? []);
 
         $out .= isset($by[self::WELCOME])
             ? "If you were not expecting this, you can ignore this email: nothing happens unless the link is used.\n"

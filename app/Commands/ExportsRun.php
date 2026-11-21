@@ -72,6 +72,13 @@ class ExportsRun extends BaseCommand
             log_message('error', 'Scheduled publishing failed: ' . $e->getMessage());
         }
 
+        // Group sign-up closing soon or just closed (told once each). Same rule: a failure is logged and tried next minute.
+        try {
+            (new \App\Services\Notifications\NotificationTriggers())->groupWindows(new \DateTimeImmutable());
+        } catch (Throwable $e) {
+            log_message('error', 'Group sign-up notices failed: ' . $e->getMessage());
+        }
+
         // The scheduler check watches for this job going quiet (6.2).
         ScheduledJobs::heartbeat($this->name);
 

@@ -15,7 +15,8 @@ use CodeIgniter\Shield\Entities\User;
  *    instructors; enrolled students once the item is published, visible
  *    and not locked behind an incomplete prerequisite
  *  - assignment submission / quiz response upload: the student who
- *    submitted it, and instructors teaching that section
+ *    submitted it (every member, for a shared group submission), and
+ *    instructors teaching that section
  *  - AI generation source: instructors teaching the course
  *  - announcement / discussion attachment: the course section's instructors
  *    and enrolled students
@@ -139,7 +140,7 @@ class FileAccessService
         $work = array_merge(
 
             $db->table('assessment_submissions')
-                ->select(['assessment_submissions.student_id', 'assessments.course_id', 'course_modules.offering_id'])
+                ->select(['assessment_submissions.student_id', 'assessment_submissions.group_id', 'assessments.course_id', 'course_modules.offering_id'])
                 ->join('assessments', 'assessments.id = assessment_submissions.assessment_id')
                 ->join('course_modules', 'course_modules.id = assessments.module_id', 'left')
                 ->where('assessment_submissions.submission_file_id', $fileId)
@@ -161,6 +162,11 @@ class FileAccessService
 
             // Their own work, in a course they study, whatever else they teach.
             if ((int) $row['student_id'] === $userId) {
+                return true;
+            }
+
+            // A shared group submission is every member's work.
+            if (!empty($row['group_id']) && $db->table('student_group_members')->where('group_id', $row['group_id'])->where('student_user_id', $userId)->countAllResults() > 0) {
                 return true;
             }
 
