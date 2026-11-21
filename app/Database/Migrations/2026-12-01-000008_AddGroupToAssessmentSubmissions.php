@@ -14,7 +14,7 @@ class AddGroupToAssessmentSubmissions extends Migration
 {
     public function up()
     {
-        $t = $this->db->prefixTable('assessment_submissions');
+        $t = db_connect()->prefixTable('assessment_submissions');
 
         $this->db->query("ALTER TABLE {$t}
             ADD COLUMN group_id INT UNSIGNED NULL,
@@ -45,7 +45,7 @@ class AddGroupToAssessmentSubmissions extends Migration
     {
         $this->forge->dropTable('group_extensions', true);
 
-        $t = $this->db->prefixTable('assessment_submissions');
+        $t = db_connect()->prefixTable('assessment_submissions');
         $this->db->query("ALTER TABLE {$t} DROP FOREIGN KEY fk_submission_group, DROP FOREIGN KEY fk_submission_submitter");
         $this->db->query("ALTER TABLE {$t} DROP INDEX uq_submission_group_attempt, DROP COLUMN group_id, DROP COLUMN submitted_by_user_id");
     }
