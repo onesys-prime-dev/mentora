@@ -35,8 +35,9 @@ test("TC-GRO-01 Set up: the lab is a graded group activity with Team 1 of four",
         runSql(`INSERT IGNORE INTO student_group_members (group_id, config_id, student_user_id, joined_at) VALUES (${team}, ${config}, ${student(n)}, NOW())`);
     }
 
+    // Attempt 90: student1 may already have a solo attempt 1 on the lab (the unique key is assessment, student, attempt).
     runSql(`INSERT INTO assessment_submissions (assessment_id, student_id, group_id, submitted_by_user_id, attempt_number, started_at, submitted_at, submission_text, status, is_graded, score)
-        SELECT ${lab}, ${student(1)}, ${team}, ${student(1)}, 1, NOW(), NOW(), 'Our table design', 'Graded', 1, 16 FROM DUAL
+        SELECT ${lab}, ${student(1)}, ${team}, ${student(1)}, 90, NOW(), NOW(), 'Our table design', 'Graded', 1, 16 FROM DUAL
         WHERE NOT EXISTS (SELECT 1 FROM assessment_submissions WHERE assessment_id = ${lab} AND group_id = ${team})`);
     const shared = `(SELECT id FROM (SELECT id FROM assessment_submissions WHERE assessment_id = ${lab} AND group_id = ${team} LIMIT 1) s)`;
 

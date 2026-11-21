@@ -9,7 +9,7 @@
 // these cases has been executed; expect selector fixes on the first real run.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { openCourse, openItem, openModule, signInAs } from "./support/course.js";
+import { itemRow, openCourse, openItem, openModule, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -27,18 +27,28 @@ async function openReading(page, account, role) {
     await openItem(page, READING);
 }
 
+/** Opens the reading's own actions menu and chooses Edit (every item row has a hidden Edit button). */
+async function editReading(page) {
+    const row = itemRow(page, READING);
+
+    await row.locator("[data-learning-item-actions]").click();
+    await row.locator("[data-learning-item-edit-button]").click();
+}
+
 test.afterAll(() => {
     runSql(`DELETE FROM learning_completions WHERE learning_item_id = ${ITEM}`);
 });
 
 test("TC-LIG-01 The instructor turns on groups for the reading with completion for the group", async ({ page }) => {
     await openReading(page, accounts.instructor, "instructor");
-    await page.locator("[data-learning-item-edit-button]").first().click();
+    await editReading(page);
 
     const section = page.locator("[data-group-activity]");
     await expect(section).toBeVisible();
     await expect(section.getByText("Students do this on their own")).toBeVisible();
-    await section.getByRole("switch", { name: "Group activity" }).check({ force: true });
+    const groupSwitch = section.getByRole("switch", { name: "Group activity" });
+    await expect(groupSwitch).toBeEnabled();
+    await groupSwitch.click({ force: true });
 
     const attach = page.getByRole("dialog", { name: "Make this a group activity" });
     await attach.getByLabel("Group set").selectOption({ label: "Start from scratch" });
@@ -91,10 +101,12 @@ test("TC-LIG-03 Student2's reading is complete too, and the card says who marked
 
 test("TC-LIG-04 Switching groups off asks first, then the reading has no group card", async ({ page }) => {
     await openReading(page, accounts.instructor, "instructor");
-    await page.locator("[data-learning-item-edit-button]").first().click();
+    await editReading(page);
 
     const section = page.locator("[data-group-activity]");
-    await section.getByRole("switch", { name: "Group activity" }).uncheck({ force: true });
+    const groupSwitch = section.getByRole("switch", { name: "Group activity" });
+    await expect(groupSwitch).toBeEnabled();
+    await groupSwitch.click({ force: true });
     const confirm = page.getByRole("dialog", { name: "Stop using groups here?" });
     await expect(confirm).toBeVisible();
     await confirm.getByRole("button", { name: "Remove groups" }).click();

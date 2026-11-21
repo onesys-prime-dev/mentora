@@ -43,7 +43,9 @@ test("TC-GA-01 Switching Group activity on attaches groups, and a setting persis
     await openEditor(page, LAB);
 
     await expect(section(page).getByText("Students work on this alone")).toBeVisible();
-    await section(page).getByRole("switch", { name: "Group activity" }).check({ force: true });
+    const groupSwitch = section(page).getByRole("switch", { name: "Group activity" });
+    await expect(groupSwitch).toBeEnabled();
+    await groupSwitch.click({ force: true });
 
     const attach = page.getByRole("dialog", { name: "Make this a group activity" });
     await attach.getByLabel("Group set").selectOption({ label: "Start from scratch" });
@@ -82,7 +84,11 @@ test("TC-GA-03 A quiz's editor has no Group activity card", async ({ page }) => 
 test("TC-GA-04 Switching it off asks first, then removes the activity's groups", async ({ page }) => {
     await openEditor(page, LAB);
 
-    await section(page).getByRole("switch", { name: "Group activity" }).uncheck({ force: true });
+    const groupSwitch = section(page).getByRole("switch", { name: "Group activity" });
+
+    await expect(groupSwitch).toBeEnabled();
+
+    await groupSwitch.click({ force: true });
     const confirm = page.getByRole("dialog", { name: "Stop using groups here?" });
     await expect(confirm.getByText("This removes the activity's groups.")).toBeVisible();
     await confirm.getByRole("button", { name: "Remove groups" }).click();

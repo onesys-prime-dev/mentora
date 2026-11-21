@@ -39,7 +39,9 @@ test("TC-GAS-02 Set up: the instructor makes the lab a group activity with two g
     await page.locator("[data-assessment]").filter({ hasText: LAB }).locator("[data-edit-assessment-button]").first().click();
 
     const section = page.locator("[data-group-activity]");
-    await section.getByRole("switch", { name: "Group activity" }).check({ force: true });
+    const groupSwitch = section.getByRole("switch", { name: "Group activity" });
+    await expect(groupSwitch).toBeEnabled();
+    await groupSwitch.click({ force: true });
     const attach = page.getByRole("dialog", { name: "Make this a group activity" });
     await attach.getByLabel("Group set").selectOption({ label: "Start from scratch" });
     await attach.getByRole("button", { name: "Make it a group activity" }).click();
