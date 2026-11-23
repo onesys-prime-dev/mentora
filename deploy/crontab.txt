@@ -7,3 +7,4 @@
 * * * * *    cd '{site}' && {php} spark exports:run >> writable/logs/cron-exports.log 2>&1
 45 3 * * *   cd '{site}' && {php} spark messages:sync-course-chats >> writable/logs/cron-messages.log 2>&1
 */15 * * * * cd '{site}' && {php} spark messages:notify >> writable/logs/cron-messages.log 2>&1
+20 4 * * *   cd '{site}' && find writable/session -type f -name 'ci_session*' -mmin +1440 -delete

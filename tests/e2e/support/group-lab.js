@@ -7,6 +7,13 @@ const lab = "(SELECT id FROM assessments WHERE title = 'Lab 1: Designing a Table
  * The group specs share the lab and run in file order, so each one starts from this state.
  */
 export function resetLab() {
+    // The lab sits behind "What Is a Database?": let the four students in.
+    for (const n of [1, 2, 3, 4]) {
+        runSql(`INSERT INTO learning_completions (learning_item_id, student_user_id, status, completed_at, created_at)
+            SELECT i.id, u.user_id, 'completed', NOW(), NOW() FROM learning_items i JOIN auth_identities u ON u.secret = 'student${n}@mentora.test'
+            WHERE i.title = 'What Is a Database?' AND NOT EXISTS (SELECT 1 FROM learning_completions c WHERE c.learning_item_id = i.id AND c.student_user_id = u.user_id AND c.status = 'completed')`);
+    }
+
     runSql(`DELETE FROM assessment_submissions WHERE assessment_id = ${lab} AND group_id IS NOT NULL`);
     runSql(`DELETE FROM activity_group_configs WHERE assessment_id = ${lab}`);
 }

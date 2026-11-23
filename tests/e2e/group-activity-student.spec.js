@@ -124,6 +124,7 @@ test("TC-GAS-07 An ungrouped student sees the join warning with the submit form 
     await expect(page.locator("[data-assignment-submit]")).toBeDisabled();
 
     await card(page).locator("[data-sg-candidate]").first().getByRole("button", { name: "Join" }).click();
+    await expect(card(page).getByRole("button", { name: "Leave group" })).toBeVisible();
     runSql("INSERT INTO group_extensions (group_id, assessment_id, until_at, reason, created_at) SELECT m.group_id, c.assessment_id, DATE_ADD(NOW(), INTERVAL 30 DAY), 'Power cut', NOW() FROM student_group_members m JOIN activity_group_configs c ON c.id = m.config_id JOIN auth_identities i ON i.user_id = m.student_user_id WHERE i.secret = 'student1@mentora.test' LIMIT 1");
     await page.reload();
 

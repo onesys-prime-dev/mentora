@@ -12,7 +12,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
-import { runSql } from "./support/database.js";
+import { queryValue, runSql } from "./support/database.js";
 import { createLabConfig, resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -75,8 +75,8 @@ test("TC-GRO-03 The parent sees the child's group and own grade, never a teammat
     });
 
     await signInAs(page, accounts.parent, "parent");
-    const child = String(runSql(`SELECT ${student(1)}`)).match(/\d+/)[0];
-    const offering = String(runSql("SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A' LIMIT 1")).match(/\d+/)[0];
+    const child = queryValue(`SELECT ${student(1)}`);
+    const offering = queryValue("SELECT o.id FROM course_offerings o JOIN courses c ON c.id = o.course_id WHERE c.course_code = 'IT101' AND o.section_code = 'A' LIMIT 1");
     await page.goto(`/parent/children/${child}/courses/${offering}/x/assessments`);
 
     const line = page.locator("[data-parent-group]").first();

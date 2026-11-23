@@ -8,6 +8,7 @@
 // these cases has been executed; expect selector fixes on the first real run.
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
+import { queryValue } from "./support/database.js";
 import { createLabConfig, resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -18,6 +19,8 @@ const LAB = "Lab 1: Designing a Table";
 const card = (page) => page.locator("[data-student-group]");
 
 async function openAssignment(page, account) {
+    // A case may switch accounts: start signed out.
+    await page.context().clearCookies();
     await signInAs(page, account, "student");
     await openCourse(page, "student", "IT101", "A");
     await openTab(page, "Assessments");
@@ -36,7 +39,8 @@ test("TC-GAL-02 student1 proposes Night Owls and invites student2; the card wait
     const dialog = page.getByRole("dialog", { name: "Propose a new group" });
     await expect(dialog).toContainText("Groups have 2 to 3 members, you included.");
     await dialog.getByLabel("Group name").fill("Night Owls");
-    await dialog.locator("input[name=invitee_ids]").first().check();
+    const student2 = queryValue("SELECT user_id FROM auth_identities WHERE secret = 'student2@mentora.test' LIMIT 1");
+    await dialog.locator(`input[name=invitee_ids][value="${student2}"]`).check();
     await dialog.getByRole("button", { name: "Send invitations" }).click();
 
     await expect(card(page).getByText("Waiting for your instructor to approve this group.")).toBeVisible();

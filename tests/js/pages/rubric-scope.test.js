@@ -29,7 +29,7 @@ async function load() {
 function page(groupActivity) {
 
     document.body.innerHTML = `
-        <div id="rubric-editor-container" ${groupActivity ? "data-group-activity=\"1\"" : ""}></div>
+        <div id="rubric-editor-container" ${groupActivity ? "data-rubric-group-activity=\"1\"" : ""}></div>
         <button data-add-rubric-criteria data-context="create"></button>
         <div data-rubric-scope-field class="hidden">
             <select data-criteria-create-scope>

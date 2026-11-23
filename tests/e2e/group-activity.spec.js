@@ -8,6 +8,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
+import { queryValue } from "./support/database.js";
 import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -26,8 +27,11 @@ async function seriousProblems(page) {
 const overflowOf = (page) => page.evaluate(() => globalThis.document.documentElement.scrollWidth - globalThis.document.documentElement.clientWidth);
 
 /** Opens an assessment's editor from the Assessments tab (a card, or a row in the drafts list). */
-async function openEditor(page, title) {
-    await signInAs(page, accounts.instructor, "instructor");
+async function openEditor(page, title, signedIn = false) {
+    if (!signedIn) {
+        await signInAs(page, accounts.instructor, "instructor");
+    }
+
     await openCourse(page, "instructor", "IT101", "A");
     await openTab(page, "Assessments");
 
@@ -57,7 +61,9 @@ test("TC-GA-01 Switching Group activity on attaches groups, and a setting persis
     await expect(section(page).getByLabel("Submission style")).toBeVisible();
     const saved = page.waitForResponse((r) => r.url().includes("/settings") && r.request().method() === "PUT");
     await section(page).getByLabel("Grading").selectOption("individual");
-    expect((await saved).ok()).toBe(true);
+    const response = await saved;
+    expect(response.ok(), await response.text()).toBe(true);
+    expect(queryValue("SELECT grading_mode FROM activity_group_configs ORDER BY id DESC LIMIT 1"), "grading_mode in the database").toContain("individual");
     await expect(page.locator("[data-groups-live]").first()).toHaveText("Group activity settings saved");
 
     await section(page).getByRole("button", { name: "Add group" }).click();
@@ -65,7 +71,9 @@ test("TC-GA-01 Switching Group activity on attaches groups, and a setting persis
     await name.getByRole("button", { name: "Save" }).click();
     await expect(section(page).locator("[data-group-card]").filter({ hasText: "Team 1" })).toBeVisible();
 
+    // The editor is closed after a reload: open it again.
     await page.reload();
+    await openEditor(page, LAB, true);
     await expect(section(page).getByLabel("Grading")).toHaveValue("individual");
     await expect(section(page).locator("[data-group-card]").filter({ hasText: "Team 1" })).toBeVisible();
 });

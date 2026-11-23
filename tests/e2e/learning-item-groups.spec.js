@@ -10,7 +10,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { courseAddress, openCourse, openItem, openModule, signInAs } from "./support/course.js";
-import { runSql } from "./support/database.js";
+import { queryValue, runSql } from "./support/database.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -32,7 +32,7 @@ async function openReadingEditor(page) {
     await signInAs(page, accounts.instructor, "instructor");
     const href = await courseAddress(page, "instructor", "IT101", "A");
     const base = new URL(href, page.url()).pathname.match(/\/instructor\/courses\/\d+\/[^/]+/)[0];
-    const id = String(runSql(`SELECT id FROM learning_items WHERE title = '${READING}' LIMIT 1`)).match(/\d+/)[0];
+    const id = queryValue(`SELECT id FROM learning_items WHERE title = '${READING}' LIMIT 1`);
 
     await page.goto(`${base}/modules?item=${id}&editor=1`);
 }
@@ -42,6 +42,8 @@ test.afterAll(() => {
 });
 
 test("TC-LIG-01 The instructor turns on groups for the reading with completion for the group", async ({ page }) => {
+    // The demo data has the reading completed already; the later cases start from not completed.
+    runSql(`DELETE FROM learning_completions WHERE learning_item_id = ${ITEM}`);
     await openReadingEditor(page);
 
     const section = page.locator("[data-group-activity]");
@@ -56,6 +58,7 @@ test("TC-LIG-01 The instructor turns on groups for the reading with completion f
     await attach.locator("input[name=completion_mode][value=any]").check();
     await attach.getByRole("button", { name: "Use groups" }).click();
     await expect(attach).toBeHidden();
+    expect(queryValue(`SELECT completion_mode FROM activity_group_configs WHERE learning_item_id = ${ITEM}`), "completion_mode in the database").toContain("any");
 
     await section.getByRole("button", { name: "Add group" }).click();
     const name = page.getByRole("dialog", { name: "Add group" });
