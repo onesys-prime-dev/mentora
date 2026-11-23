@@ -53,7 +53,7 @@ test("TC-LIG-01 The instructor turns on groups for the reading with completion f
 
     const attach = page.getByRole("dialog", { name: "Make this a group activity" });
     await attach.getByLabel("Group set").selectOption({ label: "Start from scratch" });
-    await attach.getByText("Any member marks it done for the group").click();
+    await attach.locator("input[name=completion_mode][value=any]").check();
     await attach.getByRole("button", { name: "Use groups" }).click();
     await expect(attach).toBeHidden();
 

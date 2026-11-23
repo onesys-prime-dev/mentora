@@ -8,8 +8,7 @@
 // these cases has been executed; expect selector fixes on the first real run.
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
-import { runSql } from "./support/database.js";
-import { resetLab } from "./support/group-lab.js";
+import { createLabConfig, resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -27,7 +26,7 @@ async function openAssignment(page, account) {
 
 test("TC-GAL-01 Set up: the lab uses student proposals with an open window", async () => {
     resetLab();
-    runSql(`INSERT INTO activity_group_configs (assessment_id, formation_mode, min_size, max_size, nonleader_can_rename, created_at) SELECT (SELECT id FROM assessments WHERE title = 'Lab 1: Designing a Table' LIMIT 1), 'proposed', 2, 3, 0, NOW() FROM DUAL`);
+    createLabConfig({ formation_mode: "'proposed'", min_size: 2, max_size: 3, nonleader_can_rename: 0 });
 });
 
 test("TC-GAL-02 student1 proposes Night Owls and invites student2; the card waits for approval", async ({ page }) => {

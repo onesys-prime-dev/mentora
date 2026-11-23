@@ -55,7 +55,9 @@ test("TC-GA-01 Switching Group activity on attaches groups, and a setting persis
     await expect(attach).toBeHidden();
 
     await expect(section(page).getByLabel("Submission style")).toBeVisible();
+    const saved = page.waitForResponse((r) => r.url().includes("/settings") && r.request().method() === "PUT");
     await section(page).getByLabel("Grading").selectOption("individual");
+    expect((await saved).ok()).toBe(true);
     await expect(page.locator("[data-groups-live]").first()).toHaveText("Group activity settings saved");
 
     await section(page).getByRole("button", { name: "Add group" }).click();
