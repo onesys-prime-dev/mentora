@@ -96,11 +96,10 @@ test("TC-GRP-03 Generate groups previews without saving, then saves after confir
 
     const detail = page.locator("[data-group-set-detail]");
     const cards = detail.locator("[data-group-card]");
-    const before = await cards.count();
-
     await detail.getByRole("button", { name: "Generate groups" }).click();
     const dialog = page.getByRole("dialog", { name: "Generate groups" });
     await expect(dialog.getByText(/^Pool: \d+ students?$/)).toBeVisible();
+    const before = await cards.count(); // counted once the set has loaded
 
     await dialog.getByLabel("Split by").selectOption("count");
     await dialog.getByLabel("How many").fill("2");

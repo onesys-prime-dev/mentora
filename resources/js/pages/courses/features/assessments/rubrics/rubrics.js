@@ -53,7 +53,7 @@ export function initializeRubrics(offeringId, assessmentId, refresh) {
 
     // The "Scored" choice only matters when the assessment is a group activity.
     state.groupActivity =
-        document.querySelector("#rubric-editor-container")?.dataset.groupActivity === "1";
+        document.querySelector("#rubric-editor-container")?.dataset.rubricGroupActivity === "1";
 
     document
         .querySelectorAll("[data-rubric-scope-field]")

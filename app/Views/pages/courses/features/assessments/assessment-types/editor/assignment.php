@@ -73,7 +73,7 @@
             id="rubric-editor-container"
             class="flex flex-col"
             data-assessment-id="<?= esc($currentAssessment['id']) ?>"
-            <?= ! empty($isGroupActivity) ? 'data-group-activity="1"' : '' ?>>
+            <?= ! empty($isGroupActivity) ? 'data-rubric-group-activity="1"' : '' ?>>
 
             <div
                 class="<?= $currentRubric ? 'hidden' : 'flex' ?> h-40 gap-3"

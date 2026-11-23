@@ -74,7 +74,7 @@ test("TC-GG-02 The instructor grades the group once, adjusts one member with a r
     await detail.getByLabel(/Group score/).fill("16");
     await detail.getByLabel("Add feedback").fill("Clear structure. Test it more.");
 
-    const third = detail.locator("[data-gg-member]").filter({ hasText: /student3|Student 3/i }).first();
+    const third = detail.locator(`[data-gg-member="${queryValue(`SELECT ${student(3)}`)}"]`);
     await third.getByLabel(/Adjustment/).fill("-4");
     await expect(third.locator("[data-gg-total]")).toContainText("12");
 

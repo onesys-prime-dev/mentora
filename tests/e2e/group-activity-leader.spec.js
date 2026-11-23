@@ -19,6 +19,8 @@ const LAB = "Lab 1: Designing a Table";
 const card = (page) => page.locator("[data-student-group]");
 
 async function openAssignment(page, account) {
+    // A case may switch accounts: start signed out.
+    await page.context().clearCookies();
     await signInAs(page, account, "student");
     await openCourse(page, "student", "IT101", "A");
     await openTab(page, "Assessments");

@@ -42,6 +42,8 @@ test.afterAll(() => {
 });
 
 test("TC-LIG-01 The instructor turns on groups for the reading with completion for the group", async ({ page }) => {
+    // The demo data has the reading completed already; the later cases start from not completed.
+    runSql(`DELETE FROM learning_completions WHERE learning_item_id = ${ITEM}`);
     await openReadingEditor(page);
 
     const section = page.locator("[data-group-activity]");
