@@ -31,6 +31,12 @@ final class CrontabBlockTest extends CIUnitTestCase
         $this->assertStringNotContainsString('{site}', $block);
     }
 
+    public function testTheBlockPrunesExpiredSessions(): void
+    {
+        // The server's PHP has session.gc_probability = 0, so nothing else deletes them.
+        $this->assertStringContainsString("cd '/home/site/htdocs/app' && find writable/session -type f -name 'ci_session*' -mmin +1440 -delete", $this->block());
+    }
+
     public function testMergingAddsTheBlockToACrontabWithout(): void
     {
         $merged = CrontabBlock::merge("MAILTO=ops@example.com\n0 4 * * * /usr/bin/other-site-job\n", $this->block());
