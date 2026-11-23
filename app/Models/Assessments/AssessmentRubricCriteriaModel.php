@@ -18,6 +18,7 @@ class AssessmentRubricCriteriaModel extends Model
         'criteria_title',
         'description',
         'max_points',
+        'scope',
         'performance_level',
         'order_index',
         'created_at',

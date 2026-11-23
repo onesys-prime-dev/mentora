@@ -85,11 +85,54 @@ class ParentCourseTabs
                     'due'    => $row['due_ts'] !== null ? 'Due ' . date('D j M, g:i A', (int) $row['due_ts']) : 'No due date',
                     'status' => (string) $row['student']['label'],
                     'tone'   => (string) $row['student']['tone'],
+                    'group'  => $row['is_quiz'] ? null : $this->groupLine((int) $row['id'], (int) $child->id, (float) $row['total_points']),
                 ];
             }
         }
 
         return ['html' => view('pages/parent/course/assessments', ['groups' => $groups], ['saveData' => false])];
+    }
+
+    /**
+     * A group activity (4F, D14): the child's own group (its name and the members' first names) and the child's own
+     * grade as the student's result gives it (AssessmentResultService::memberAttempts, so it matches the gradebook):
+     * the final, the group and individual parts, and the child's own adjustment and reason. Never the private note,
+     * and never a teammate's score or adjustment (only the child's own member row is ever read). Null when this is
+     * not a group activity or the child is in no group of it.
+     *
+     * @return array{name: string, members: list<string>, grade: ?array<string, mixed>}|null
+     */
+    private function groupLine(int $assessmentId, int $childId, float $total): ?array
+    {
+        $group = (new \App\Services\Groups\GroupSubmissionResolver())->groupFor($assessmentId, $childId);
+
+        if ($group === null) {
+            return null;
+        }
+
+        $members = array_column(db_connect()->table('student_group_members m')
+            ->select("COALESCE(NULLIF(TRIM(p.first_name), ''), u.username) AS name", false)
+            ->join('users u', 'u.id = m.student_user_id')->join('user_profiles p', 'p.user_id = u.id', 'left')
+            ->where('m.group_id', (int) $group['id'])->orderBy('m.id', 'ASC')->get()->getResultArray(), 'name');
+
+        $results = new \App\Services\Courses\Assessments\AssessmentResultService();
+        $own     = db_connect()->table('assessment_submissions')->where('assessment_id', $assessmentId)->where('student_id', $childId)->get()->getResultArray();
+        $counted = $results->resultFor(false, $results->memberAttempts($assessmentId, $childId, $own))['counted'];
+        $score   = $counted['member_score'] ?? null;
+
+        return [
+            'name'    => (string) $group['name'],
+            'members' => $members,
+            'grade'   => $score === null ? null : [
+                'excused'    => !empty($counted['excused']),
+                'final'      => $counted['score'],
+                'total'      => $total,
+                'group'      => $score['group_points'],
+                'individual' => $score['individual_points'],
+                'adjustment' => (float) $score['adjustment'],
+                'reason'     => (string) $score['adjustment_reason'],
+            ],
+        ];
     }
 
     /**

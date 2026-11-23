@@ -72,7 +72,8 @@
         <div
             id="rubric-editor-container"
             class="flex flex-col"
-            data-assessment-id="<?= esc($currentAssessment['id']) ?>">
+            data-assessment-id="<?= esc($currentAssessment['id']) ?>"
+            <?= ! empty($isGroupActivity) ? 'data-rubric-group-activity="1"' : '' ?>>
 
             <div
                 class="<?= $currentRubric ? 'hidden' : 'flex' ?> h-40 gap-3"
@@ -307,5 +308,8 @@
     </div>
 
     <?= $this->include('pages/courses/features/assessments/partials/modals/submission-type') ?>
+
+    <!-- Group activity (assignments only: a quiz is never group work) -->
+    <?= $this->include('pages/courses/features/assessments/partials/group-activity-section') ?>
 
 </div>

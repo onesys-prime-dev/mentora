@@ -144,6 +144,15 @@ class CourseController extends BaseController
             return redirect()->to(site_url($modules) . '?item=' . $learningItemId);
         }
 
+        // The Groups tab: the course's instructor and chairperson, and the dean to read; never a student or the
+        // institution's administrator (group activities FR-10).
+        $groupsTab = \App\Services\Courses\CourseViewer::isDeanViewer($user)
+            || (! \App\Services\Courses\CourseViewer::isReadOnlyViewer($user) && \App\Services\Courses\CourseViewer::seesInstructorView($user, $offeringId));
+
+        if ($activeFeature === 'groups' && ! $groupsTab) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
         return view(
             'pages/courses/view',
             [
@@ -157,6 +166,8 @@ class CourseController extends BaseController
                 'course' => $course,
 
                 'activeFeature' => $activeFeature,
+
+                'groupsTab' => $groupsTab,
 
                 // The banner and tabs stay put and only the content card scrolls.
                 'fullHeight' => true,

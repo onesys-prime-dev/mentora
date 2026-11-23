@@ -38,9 +38,18 @@ if ($db->connect_errno) {
     exit(1);
 }
 
-if (! $db->query($sql)) {
+$result = $db->query($sql);
+
+if (! $result) {
     fwrite(STDERR, "Could not run [{$sql}]: {$db->error}\n");
     exit(1);
 }
 
 echo "ok ({$db->affected_rows} row(s))\n";
+
+// A SELECT also prints its rows, one per line, cells separated by tabs (see queryValue() in database.js).
+if ($result instanceof mysqli_result) {
+    while ($row = $result->fetch_row()) {
+        echo implode("\t", array_map(static fn ($cell) => (string) $cell, $row)), "\n";
+    }
+}

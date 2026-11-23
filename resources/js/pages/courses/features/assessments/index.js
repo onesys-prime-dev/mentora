@@ -44,6 +44,9 @@ import {
     initializeInspectorPanel,
 } from "./inspector/inspector.js";
 
+import { initializeActivityGroups } from "../../groups/activity-panel.js";
+import { initializeStudentGroupCard } from "../../groups/student-card.js";
+
 import { bindPasswordGate } from "./quiz-taking/password-gate.js";
 
 import {
@@ -61,6 +64,10 @@ import {
 import {
     initializeGradeWork,
 } from "./grading/grading.js";
+
+import {
+    initializeGroupGrading,
+} from "../../groups/grading.js";
 
 import {
     initializeQuizTaking,
@@ -772,6 +779,16 @@ export async function loadAssessmentView(
                 }
             );
 
+        // The dean's read-only groups of a group activity (4E); the server draws the frame only for them.
+        initializeGroupGrading(
+            document.querySelector("[data-dean-groups] [data-group-grading]")
+        );
+
+        // Students only, assignments only: the card removes itself when this is not a group activity.
+        initializeStudentGroupCard(
+            document.querySelector("[data-student-group]")
+        );
+
         initializeAssignmentSubmission({
 
             onSubmitted: () =>
@@ -1026,6 +1043,11 @@ export async function loadAssessmentEditor(
             returnToList
         );
 
+        // Assignments only: the quiz editor has no group activity card.
+        initializeActivityGroups(
+            document.querySelector("[data-group-activity]")
+        );
+
         bindDeleteAssessmentModal(
             offeringId,
             assessmentId,
@@ -1212,6 +1234,17 @@ export async function loadGradeWork(
                 "click",
                 (event) => viewStudentGrade(event.currentTarget.dataset.viewStudentGrade, refresh)
             );
+
+        // A group activity draws the group view (screen 2B); a solo student's own work opens on the per-student page.
+        const groupView = document.querySelector("[data-group-grading]");
+
+        if (groupView) {
+            initializeGroupGrading(groupView, {
+                gradeStudent: (nextStudentId) => loadGradeWork(offeringId, assessmentId, nextStudentId, refresh, { pushState: true, mode: "navigate" }),
+            });
+
+            return;
+        }
 
         initializeGradeWork(
             offeringId,

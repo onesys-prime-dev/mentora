@@ -93,6 +93,21 @@
 
             </div>
 
+
+            <div class="hidden" data-rubric-scope-field>
+
+                <?= view('components/form-field', [
+                    'name'    => 'scope',
+                    'label'   => 'Scored',
+                    'type'    => 'select',
+                    'value'   => 'individual',
+                    'options' => ['individual' => 'Per student', 'group' => 'Group'],
+                    'help'    => 'Group criteria are scored once for the whole group. Per-student criteria are scored for each member.',
+                    'attrs'   => 'data-criteria-editor-scope',
+                ], ['saveData' => false]) ?>
+
+            </div>
+
         </form>
 
         <!-- Footer -->

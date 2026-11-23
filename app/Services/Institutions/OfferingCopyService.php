@@ -370,6 +370,7 @@ class OfferingCopyService
         }
 
         $this->copyScheme($sourceId, $offeringId, $assessments);
+        $this->copyGroupSets($sourceId, $offeringId, $shiftDays);
 
         return [
             'offering_id' => $offeringId,
@@ -380,6 +381,41 @@ class OfferingCopyService
             'schedules'   => count($schedules),
             'instructors' => $instructors,
         ];
+    }
+
+    /**
+     * Group set structure only (D20): active sets and their group names, empty. No members, leaders,
+     * invitations, votes, extensions or activity groups. The source already respects the set/group limits.
+     */
+    private function copyGroupSets(int $sourceId, int $offeringId, int $shiftDays): void
+    {
+        $db   = db_connect();
+        $now  = date('Y-m-d H:i:s');
+        $sets = $db->table('group_sets')->where(['offering_id' => $sourceId, 'status' => 'active'])->orderBy('id')->get()->getResultArray();
+
+        foreach ($sets as $set) {
+            $old = (int) $set['id'];
+
+            $new = $this->insert('group_sets', [
+                'offering_id'      => $offeringId,
+                'name'             => $set['name'],
+                'formation_mode'   => $set['formation_mode'],
+                'min_size'         => $set['min_size'],
+                'max_size'         => $set['max_size'],
+                'signup_opens_at'  => $this->shift($set['signup_opens_at'], $shiftDays),
+                'signup_closes_at' => $this->shift($set['signup_closes_at'], $shiftDays),
+                'status'           => 'active',
+                'created_by'       => null,
+                'created_at'       => $now,
+                'updated_at'       => $now,
+            ]);
+
+            $groups = $db->table('student_groups')->select('name')->where(['set_id' => $old, 'status' => 'active'])->orderBy('id')->get()->getResultArray();
+
+            foreach ($groups as $group) {
+                $this->insert('student_groups', ['set_id' => $new, 'name' => $group['name'], 'status' => 'active', 'created_at' => $now, 'updated_at' => $now]);
+            }
+        }
     }
 
     /**

@@ -100,6 +100,11 @@ class AssessmentOverviewService
 
             $attempt = $attempts[$id][(int) $user->id] ?? null;
 
+            // A group member's standing is the group's work with their own final (AssessmentResultService).
+            if (!$assessment['is_quiz']) {
+                $attempt['attempts'] = $this->resultService->memberAttempts($id, (int) $user->id, $attempt['attempts'] ?? []);
+            }
+
             $lock = !empty($assessment['learning_item_id'])
                 ? ($locks[(int) $assessment['learning_item_id']] ?? null)
                 : null;
@@ -308,7 +313,8 @@ class AssessmentOverviewService
         $byId = array_column($rows, null, 'id');
 
         $graded = db_connect()->table('assessment_submissions')
-            ->select(['id', 'assessment_id', 'score', 'graded_at'])
+            ->select(['assessment_submissions.id', 'assessment_submissions.assessment_id', 'assessment_submissions.graded_at'])
+            ->select(AssessmentResultService::MEMBER_SCORE_SQL, false)
             ->select(
                 "(SELECT message FROM assessment_feedbacks
                     WHERE submission_id = assessment_submissions.id
@@ -320,12 +326,13 @@ class AssessmentOverviewService
                     WHERE submission_id = assessment_submissions.id) AS message_count",
                 false
             )
-            ->where('student_id', $studentId)
-            ->whereIn('assessment_id', array_keys($byId))
-            ->where('is_graded', 1)
+            ->join('group_member_scores gms', AssessmentResultService::memberJoinSql($studentId), 'left', false)
+            ->where(AssessmentResultService::memberRowSql($studentId), null, false)
+            ->whereIn('assessment_submissions.assessment_id', array_keys($byId))
+            ->where('assessment_submissions.is_graded', 1)
             ->where('EXISTS (SELECT 1 FROM assessment_feedbacks WHERE submission_id = assessment_submissions.id)', null, false)
-            ->orderBy('graded_at', 'DESC')
-            ->orderBy('id', 'DESC')
+            ->orderBy('assessment_submissions.graded_at', 'DESC')
+            ->orderBy('assessment_submissions.id', 'DESC')
             ->limit(self::FEEDBACK_LIMIT)
             ->get()
             ->getResultArray();

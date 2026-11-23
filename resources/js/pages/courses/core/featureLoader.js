@@ -20,6 +20,8 @@ const loaders = {
 
     instructor: () => import("../features/instructor/index.js"),
 
+    groups: () => import("../groups/index.js"),
+
 };
 
 // The loading shape of each tab, the same one the server draws on a page load
@@ -43,6 +45,8 @@ const skeletons = {
     grades: () => import("../features/grades/skeleton.js").then((m) => m.renderGradesSkeleton),
 
     instructor: () => import("../features/instructor/skeleton.js").then((m) => m.renderInstructorSkeleton),
+
+    groups: () => import("../groups/skeleton.js").then((m) => m.renderGroupsSkeleton),
 
 };
 

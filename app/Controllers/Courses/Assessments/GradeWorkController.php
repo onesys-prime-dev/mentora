@@ -38,16 +38,14 @@ class GradeWorkController extends BaseController
 
     public function reopenGrading(int $submissionId)
     {
-        return $this->response->setJSON(
-            $this->gradeWorkService->reopenGrading(auth()->user(), $submissionId)
-        );
+        return $this->answer($this->gradeWorkService->reopenGrading(auth()->user(), $submissionId));
     }
 
     public function startGrading(int $submissionId)
     {
         $user = auth()->user();
 
-        return $this->response->setJSON(
+        return $this->answer(
             $this->gradeWorkService->startGrading(
                 $user,
                 $submissionId
@@ -61,7 +59,7 @@ class GradeWorkController extends BaseController
 
         $data = $this->request->getJSON(true) ?? [];
 
-        return $this->response->setJSON(
+        return $this->answer(
             $this->gradeWorkService->submitGrade(
                 $user,
                 $submissionId,
@@ -74,7 +72,7 @@ class GradeWorkController extends BaseController
     {
         $data = $this->request->getJSON(true) ?? [];
 
-        return $this->response->setJSON(
+        return $this->answer(
             $this->gradeWorkService->gradeQuestion(
                 auth()->user(),
                 $submissionId,
@@ -82,5 +80,11 @@ class GradeWorkController extends BaseController
                 $data
             )
         );
+    }
+
+    /** A group's submission is refused with 422 (graded from the group view); every other answer is as before. */
+    private function answer(array $result)
+    {
+        return $this->response->setStatusCode(($result['code'] ?? null) === 'group_submission' ? 422 : 200)->setJSON($result);
     }
 }

@@ -16,6 +16,8 @@ class AssessmentSubmissionModel extends Model
     protected $allowedFields = [
         'assessment_id',
         'student_id',
+        'group_id',
+        'submitted_by_user_id',
         'attempt_number',
         'started_at',
         'submitted_at',
