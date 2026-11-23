@@ -12,6 +12,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { courseAddress, openCourse, openTab, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
+import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -34,6 +35,7 @@ async function openGroupGrading(page) {
 }
 
 test("TC-GG-01 Set up: the lab becomes a group activity with Team 1 of four, handed in by student1", async ({ page }) => {
+    resetLab();
     await signInAs(page, accounts.instructor, "instructor");
     await openCourse(page, "instructor", "IT101", "A");
     await openTab(page, "Assessments");

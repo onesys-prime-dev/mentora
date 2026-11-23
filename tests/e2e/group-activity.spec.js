@@ -8,6 +8,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
+import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -40,6 +41,7 @@ async function openEditor(page, title) {
 const section = (page) => page.locator("[data-group-activity]");
 
 test("TC-GA-01 Switching Group activity on attaches groups, and a setting persists", async ({ page }) => {
+    resetLab();
     await openEditor(page, LAB);
 
     await expect(section(page).getByText("Students work on this alone")).toBeVisible();

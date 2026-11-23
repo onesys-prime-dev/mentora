@@ -9,7 +9,7 @@
 // these cases has been executed; expect selector fixes on the first real run.
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { itemRow, openCourse, openItem, openModule, signInAs } from "./support/course.js";
+import { courseAddress, openCourse, openItem, openModule, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -27,12 +27,14 @@ async function openReading(page, account, role) {
     await openItem(page, READING);
 }
 
-/** Opens the reading's own actions menu and chooses Edit (every item row has a hidden Edit button). */
-async function editReading(page) {
-    const row = itemRow(page, READING);
+/** Opens the reading's editor by its address (the module list's Edit buttons sit in hidden menus). */
+async function openReadingEditor(page) {
+    await signInAs(page, accounts.instructor, "instructor");
+    const href = await courseAddress(page, "instructor", "IT101", "A");
+    const base = new URL(href, page.url()).pathname.match(/\/instructor\/courses\/\d+\/[^/]+/)[0];
+    const id = String(runSql(`SELECT id FROM learning_items WHERE title = '${READING}' LIMIT 1`)).match(/\d+/)[0];
 
-    await row.locator("[data-learning-item-actions]").click();
-    await row.locator("[data-learning-item-edit-button]").click();
+    await page.goto(`${base}/modules?item=${id}&editor=1`);
 }
 
 test.afterAll(() => {
@@ -40,8 +42,7 @@ test.afterAll(() => {
 });
 
 test("TC-LIG-01 The instructor turns on groups for the reading with completion for the group", async ({ page }) => {
-    await openReading(page, accounts.instructor, "instructor");
-    await editReading(page);
+    await openReadingEditor(page);
 
     const section = page.locator("[data-group-activity]");
     await expect(section).toBeVisible();
@@ -100,8 +101,7 @@ test("TC-LIG-03 Student2's reading is complete too, and the card says who marked
 });
 
 test("TC-LIG-04 Switching groups off asks first, then the reading has no group card", async ({ page }) => {
-    await openReading(page, accounts.instructor, "instructor");
-    await editReading(page);
+    await openReadingEditor(page);
 
     const section = page.locator("[data-group-activity]");
     const groupSwitch = section.getByRole("switch", { name: "Group activity" });

@@ -13,6 +13,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
+import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -25,6 +26,7 @@ const lab = `(SELECT id FROM assessments WHERE title = '${LAB}' LIMIT 1)`;
 const student = (n) => `(SELECT user_id FROM auth_identities WHERE secret = 'student${n}@mentora.test' LIMIT 1)`;
 
 test("TC-GRO-01 Set up: the lab is a graded group activity with Team 1 of four", async () => {
+    resetLab();
     runSql(`INSERT IGNORE INTO activity_group_configs (assessment_id, formation_mode, min_size, max_size, grading_mode, submission_style, created_at)
         SELECT ${lab}, 'manual', 1, 6, 'collective_adjust', 'shared', NOW() FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM activity_group_configs WHERE assessment_id = ${lab})`);
     const config = `(SELECT id FROM (SELECT id FROM activity_group_configs WHERE assessment_id = ${lab}) c)`;

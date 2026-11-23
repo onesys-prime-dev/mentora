@@ -11,6 +11,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
+import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -33,6 +34,7 @@ test("TC-GAS-01 An assignment that is not a group activity has no Group activity
 });
 
 test("TC-GAS-02 Set up: the instructor makes the lab a group activity with two groups", async ({ page }) => {
+    resetLab();
     await signInAs(page, accounts.instructor, "instructor");
     await openCourse(page, "instructor", "IT101", "A");
     await openTab(page, "Assessments");
@@ -115,6 +117,7 @@ test("TC-GAS-06 The card fits a 360 px phone with full-width buttons, and axe fi
 });
 
 test("TC-GAS-07 An ungrouped student sees the join warning with the submit form shown disabled, and an extended deadline is told", async ({ page }) => {
+    runSql("DELETE FROM student_group_members WHERE student_user_id = (SELECT user_id FROM auth_identities WHERE secret = 'student1@mentora.test' LIMIT 1)");
     await openAssignment(page, LAB);
 
     await expect(page.getByText("You're not in a group yet. You can't submit until you join one.").first()).toBeVisible();
