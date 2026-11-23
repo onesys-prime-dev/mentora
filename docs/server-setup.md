@@ -151,7 +151,8 @@ The deploy installs the nine scheduled jobs itself (audit D5): it writes the
 block between `# BEGIN mentora jobs` and `# END mentora jobs` in the site
 user's crontab from `deploy/crontab.txt`, with the site's folder and
 `PHP_BIN`, leaving every other line alone, and fails if afterwards `crontab -l`
-is missing one. The block it writes looks like this:
+is missing one. The same block also holds one housekeeping line that is not a
+`spark` job (see "Session cleanup" below). The block it writes looks like this:
 
 ```cron
 # BEGIN mentora jobs
@@ -164,6 +165,7 @@ is missing one. The block it writes looks like this:
 * * * * *    cd '<site folder>' && php8.5 spark exports:run >> writable/logs/cron-exports.log 2>&1
 45 3 * * *   cd '<site folder>' && php8.5 spark messages:sync-course-chats >> writable/logs/cron-messages.log 2>&1
 */15 * * * * cd '<site folder>' && php8.5 spark messages:notify >> writable/logs/cron-messages.log 2>&1
+20 4 * * *   cd '<site folder>' && find writable/session -type f -name 'ci_session*' -mmin +1440 -delete
 # END mentora jobs
 ```
 
@@ -176,6 +178,30 @@ To install it by hand (as the site user, from the site folder):
 (crontab -l 2>/dev/null || true) | php8.5 spark jobs:crontab --no-header --site "$PWD" --php php8.5 > /tmp/next-crontab
 crontab /tmp/next-crontab && crontab -l | php8.5 spark jobs:crontab --no-header --verify
 ```
+
+### Session cleanup (the `find writable/session` line)
+
+Sessions are files in `writable/session/`. Ubuntu's PHP ships with
+`session.gc_probability = 0` (in `/etc/php/8.5/fpm/php.ini`), so PHP never
+deletes expired ones; the distro's own cleanup cron only covers
+`/var/lib/php/sessions`, not the app's folder. Without this line the folder only
+grows: by November 2026 staging held about 186,000 session files (743 MB),
+roughly 6,000 new ones a day. That made the deploy's "Set writable permissions"
+step take about an hour, and it slows anything that walks the folder.
+
+The line runs daily at 04:20 server time and deletes `ci_session*` files not
+touched for 24 hours (1440 minutes, the same as `session.gc_maxlifetime`), so a
+signed-in user is never logged out by it, and the folder's `index.html` stays.
+It writes no log, as `find -delete` prints nothing on success. To check it is working:
+
+```bash
+crontab -l | grep 'writable/session'                         # the line is installed
+find writable/session -type f -mmin +2880 | wc -l            # 0: daily runs leave nothing older than 48h
+find writable/session -type f | wc -l                        # one or two days of sessions, not a growing pile
+```
+
+To clear a pile by hand (as the site user, from the site folder), run the same
+`find ... -delete` command once.
 
 **Check once on staging:** that CloudPanel's **Cron Jobs** screen does not
 rewrite the crontab and drop lines it did not create (the repository can't tell).
