@@ -265,8 +265,9 @@ jobs:
           ssh $SSH_OPTS "$REMOTE" bash -s -- "$DEPLOY_PATH" <<'REMOTE_SCRIPT'
           set -euo pipefail
           cd "$1"
-          find writable -type d -exec chmod 775 {} \;
-          find writable -type f -exec chmod 664 {} \;
+          # Only fix what is wrong, batched: writable/ is never pruned, so one chmod per file took ~1h.
+          find writable -type d ! -perm 775 -exec chmod 775 {} +
+          find writable -type f ! -perm 664 -exec chmod 664 {} +
           REMOTE_SCRIPT
 
       # Runs with the same PHP the website runs on (PHP_BIN, 8.5 by default),
