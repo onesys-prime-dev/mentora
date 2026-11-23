@@ -59,7 +59,7 @@ test("TC-GG-01 Set up: the lab becomes a group activity with Team 1 of four, han
     }
 
     runSql(`INSERT INTO assessment_submissions (assessment_id, student_id, group_id, submitted_by_user_id, attempt_number, started_at, submitted_at, submission_text, status, is_graded, score)
-        SELECT ${lab}, ${student(1)}, g.id, ${student(1)}, 1, NOW(), NOW(), 'Our table design', 'Submitted', 0, 0 FROM student_groups g WHERE g.config_id = ${config} AND g.name = 'Team 1'`);
+        SELECT ${lab}, ${student(1)}, g.id, ${student(1)}, 90, NOW(), NOW(), 'Our table design', 'Submitted', 0, 0 FROM student_groups g WHERE g.config_id = ${config} AND g.name = 'Team 1'`);
 });
 
 test("TC-GG-02 The instructor grades the group once, adjusts one member with a reason, and saves all four", async ({ page }) => {

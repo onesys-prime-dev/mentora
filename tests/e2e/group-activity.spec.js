@@ -8,6 +8,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
+import { runSql } from "./support/database.js";
 import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -57,7 +58,9 @@ test("TC-GA-01 Switching Group activity on attaches groups, and a setting persis
     await expect(section(page).getByLabel("Submission style")).toBeVisible();
     const saved = page.waitForResponse((r) => r.url().includes("/settings") && r.request().method() === "PUT");
     await section(page).getByLabel("Grading").selectOption("individual");
-    expect((await saved).ok()).toBe(true);
+    const response = await saved;
+    expect(response.ok(), await response.text()).toBe(true);
+    expect(String(runSql("SELECT grading_mode FROM activity_group_configs ORDER BY id DESC LIMIT 1")), "grading_mode in the database").toContain("individual");
     await expect(page.locator("[data-groups-live]").first()).toHaveText("Group activity settings saved");
 
     await section(page).getByRole("button", { name: "Add group" }).click();

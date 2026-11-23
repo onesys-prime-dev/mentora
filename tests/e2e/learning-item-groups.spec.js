@@ -56,6 +56,7 @@ test("TC-LIG-01 The instructor turns on groups for the reading with completion f
     await attach.locator("input[name=completion_mode][value=any]").check();
     await attach.getByRole("button", { name: "Use groups" }).click();
     await expect(attach).toBeHidden();
+    expect(String(runSql(`SELECT completion_mode FROM activity_group_configs WHERE learning_item_id = ${ITEM}`)), "completion_mode in the database").toContain("any");
 
     await section.getByRole("button", { name: "Add group" }).click();
     const name = page.getByRole("dialog", { name: "Add group" });
