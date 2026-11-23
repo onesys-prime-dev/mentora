@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Parkinsans:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#0040A6;--brand-dark:#002068;--tint:#F2F7FF;--ink:#1A1C1E;--muted:#646464;--line:#E8ECF2;--page:#EEF2F8;--ok:#2E7D4F;--warn:#8A4B00}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:var(--page);font-size:14px;line-height:1.5}
+  .wrap{max-width:1320px;margin:0 auto;padding:24px 16px 64px}
+  .intro h1{font-family:Parkinsans;font-size:24px;margin:0 0 6px}
+  .intro p{margin:0 0 24px;color:var(--muted);max-width:760px}
+  .row{display:grid;gap:24px;grid-template-columns:1fr}
+  @media(min-width:1150px){.row{grid-template-columns:minmax(0,1fr) 380px}}
+  .cap{font-size:12px;color:var(--muted);margin:0 0 8px 4px}
+  .frame{background:var(--page);border-radius:20px;box-shadow:0 0 0 1px var(--line);overflow:hidden}
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--line);background:#fff}
+  .logo{font-family:Parkinsans;font-weight:700;color:var(--brand);font-size:18px}
+  .av{display:inline-grid;place-items:center;border-radius:999px;font-weight:600;color:#fff;font-family:Parkinsans}
+  .page{padding:20px}
+  .ph h2{font-family:Parkinsans;font-size:22px;margin:0}
+  .ph p{margin:0 0 16px;color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}
+  nav.jump{position:sticky;top:12px;background:#fff;border-radius:16px;padding:8px}
+  nav.jump a{display:block;padding:8px 12px;border-radius:10px;color:#374151;text-decoration:none;font-size:13px}
+  nav.jump a.on{background:var(--tint);color:var(--brand);font-weight:600}
+  .card{background:#fff;border-radius:16px;padding:18px 20px;margin-bottom:14px}
+  .card h3{margin:0 0 4px;font-size:15px;color:var(--brand)}
+  .card .lead{margin:0 0 14px;color:var(--muted);font-size:13px}
+  label{display:block;font-size:12px;font-weight:600;margin:10px 0 4px;color:#374151}
+  input,select{width:100%;max-width:360px;border:1px solid #CBD3DF;border-radius:10px;padding:9px 12px;font:14px Poppins}
+  input:focus-visible,.btn:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+  .meter{display:flex;gap:4px;max-width:360px;margin-top:6px}.meter i{flex:1;height:4px;border-radius:4px;background:#E5E7EB}.meter i.f{background:var(--ok)}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .btn{border:0;border-radius:999px;padding:8px 16px;font:600 13px Poppins;cursor:pointer}
+  .primary{background:var(--brand);color:#fff}.ghost{background:#fff;color:var(--brand);box-shadow:inset 0 0 0 1px #C9D6EE}
+  .linkish{background:none;border:0;color:var(--brand);font:500 13px Poppins;padding:0;cursor:pointer;text-decoration:underline}
+  .rowline{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .pill{border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+  .pill.on{background:#E7F5EC;color:var(--ok)}.pill.req{background:#FFF4E5;color:var(--warn)}
+  .switch{width:42px;height:24px;border-radius:999px;background:var(--brand);position:relative;flex-shrink:0}
+  .switch:after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+  .switch.off{background:#CBD3DF}.switch.off:after{right:auto;left:3px}
+  .opt{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line)}
+  .opt:first-of-type{border-top:0}
+  .opt b{font-size:13px;font-weight:600}.opt span{display:block;font-size:12px;color:var(--muted)}
+  .times{display:flex;gap:8px;margin-top:6px}.times input{width:120px}
+  ul.act{list-style:none;margin:0;padding:0}
+  ul.act li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:13px}
+  ul.act li:first-child{border-top:0}
+  ul.act time{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);margin-top:7px;flex-shrink:0}.dot.w{background:#D97706}
+  /* phone */
+  .phone{width:360px;margin:0 auto;border-radius:32px;border:8px solid #1F2937;background:var(--page);overflow:hidden;height:760px;display:flex;flex-direction:column}
+  .phone .hdr{padding:10px 14px}
+  .phone .page{padding:14px;overflow:auto}
+  .jumpsel{display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:999px;padding:8px 14px;font-size:13px;margin-bottom:12px;box-shadow:inset 0 0 0 1px var(--line)}
+  .phone .card{padding:14px}
+  .phone input{max-width:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Settings: one page, five sections</h1>
+    <p>Reached from the account menu → Settings. Order and content follow D13 (password), D14 (two-step sign-in, sign out elsewhere), D15 (notifications, moved here unchanged), D16 (recent security activity). Shown for Maria, an instructor whose school does not require two-step sign-in.</p>
+  </div>
+  <div class="row">
+    <div>
+      <p class="cap">/settings, desktop</p>
+      <div class="frame">
+        <div class="hdr"><span class="logo">Mentora</span><span class="av" style="width:32px;height:32px;font-size:13px;background:#0E7C66">MS</span></div>
+        <div class="page">
+          <div class="ph"><h2>Settings</h2><p>Your password, sign-in and the emails Mentora sends you.</p></div>
+          <div class="grid">
+            <nav class="jump" aria-label="Settings sections">
+              <a class="on" href="#">Password</a><a href="#">Two-step sign-in</a><a href="#">Signed-in devices</a><a href="#">Notifications</a><a href="#">Recent activity</a>
+            </nav>
+            <div>
+              <section class="card"><h3>Password</h3><p class="lead">Changing it signs you out everywhere else and emails you a notice.</p>
+                <label for="c">Current password</label><input id="c" type="password" value="••••••••••">
+                <label for="n">New password</label><input id="n" type="password" value="••••••••••••">
+                <div class="meter" aria-hidden="true"><i class="f"></i><i class="f"></i><i class="f"></i><i></i></div>
+                <div class="hint">At least 10 characters (your school's rule). Strong.</div>
+                <label for="r">Confirm new password</label><input id="r" type="password" value="••••••••••••">
+                <div class="rowline" style="margin-top:14px"><button class="btn primary">Change password</button><button class="linkish">Forgot your current password? Email me a link</button></div>
+              </section>
+
+              <section class="card"><h3>Two-step sign-in</h3><p class="lead">After your password, we email a code to m•••••s@school.edu.ph.</p>
+                <div class="rowline"><span class="pill" style="background:#F3F4F6;color:#374151">Off</span><button class="btn ghost">Turn on</button></div>
+                <div class="hint" style="margin-top:8px">If your school requires it, you will see "Required by your school" here and it cannot be turned off.</div>
+              </section>
+
+              <section class="card"><h3>Signed-in devices</h3><p class="lead">Signed in on a shared or lost device? End every other session. This one stays signed in.</p>
+                <button class="btn ghost">Sign out of all other devices</button>
+              </section>
+
+              <section class="card"><h3>Notifications</h3><p class="lead">Emails about messages. Your quiet hours hold message emails until they end.</p>
+                <div class="opt"><div><b>Email me about new messages</b><span>When you have unread messages and are not signed in.</span></div><div class="switch" role="switch" aria-checked="true"></div></div>
+                <div class="opt"><div><b>Quiet hours</b><span>No message emails between these times.</span>
+                  <div class="times"><input value="9:00 PM" aria-label="From"><input value="7:00 AM" aria-label="To"></div></div><div class="switch" role="switch" aria-checked="true"></div></div>
+                <div style="margin-top:8px"><button class="btn primary">Save notifications</button></div>
+              </section>
+
+              <section class="card"><h3>Recent activity</h3><p class="lead">Security changes to your account in the last 90 days.</p>
+                <ul class="act">
+                  <li><span class="dot"></span>Password changed <time>Nov 20, 4:12 PM</time></li>
+                  <li><span class="dot w"></span>Your photo was removed by your school <time>Nov 2, 9:03 AM</time></li>
+                  <li><span class="dot"></span>Correction approved: last name <time>Oct 28, 1:40 PM</time></li>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="cap">/settings, phone (parent account: shows the children card)</p>
+      <div class="phone">
+        <div class="hdr"><span class="logo">Mentora</span><span class="av" style="width:30px;height:30px;font-size:12px;background:#B4532A">RG</span></div>
+        <div class="page">
+          <div class="ph"><h2 style="font-size:20px">Settings</h2></div>
+          <div class="jumpsel" role="button" aria-haspopup="listbox">Jump to: Notifications <span>▾</span></div>
+          <section class="card"><h3>Notifications</h3><p class="lead">Which of your children Mentora emails you about.</p>
+            <div class="opt"><div><b>Ana Reyes</b><span>Grade 11 · STEM</span></div><div class="switch" role="switch" aria-checked="true"></div></div>
+            <div class="opt"><div><b>Leo Reyes</b><span>BS Information Technology</span></div><div class="switch off" role="switch" aria-checked="false"></div></div>
+            <button class="btn primary" style="width:100%;margin-top:8px">Save notifications</button>
+          </section>
+          <section class="card"><h3>Two-step sign-in</h3><p class="lead">A code is emailed after your password.</p>
+            <div class="rowline"><span class="pill on">On</span><button class="btn ghost">Turn off</button></div>
+            <div class="hint" style="margin-top:6px">Turning it off asks for your password.</div>
+          </section>
+          <section class="card"><h3>Signed-in devices</h3><button class="btn ghost" style="width:100%">Sign out of all other devices</button></section>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
