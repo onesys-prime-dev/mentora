@@ -13,7 +13,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { openCourse, openTab, signInAs } from "./support/course.js";
 import { runSql } from "./support/database.js";
-import { resetLab } from "./support/group-lab.js";
+import { createLabConfig, resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -27,8 +27,7 @@ const student = (n) => `(SELECT user_id FROM auth_identities WHERE secret = 'stu
 
 test("TC-GRO-01 Set up: the lab is a graded group activity with Team 1 of four", async () => {
     resetLab();
-    runSql(`INSERT IGNORE INTO activity_group_configs (assessment_id, formation_mode, min_size, max_size, grading_mode, submission_style, created_at)
-        SELECT ${lab}, 'manual', 1, 6, 'collective_adjust', 'shared', NOW() FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM activity_group_configs WHERE assessment_id = ${lab})`);
+    createLabConfig({ formation_mode: "'manual'", min_size: 1, max_size: 6, grading_mode: "'collective_adjust'", submission_style: "'shared'" });
     const config = `(SELECT id FROM (SELECT id FROM activity_group_configs WHERE assessment_id = ${lab}) c)`;
     runSql(`INSERT INTO student_groups (config_id, name, status) SELECT ${config}, 'Team 1', 'active' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM student_groups WHERE config_id = ${config} AND name = 'Team 1')`);
     const team = `(SELECT id FROM (SELECT id FROM student_groups WHERE config_id = ${config} AND name = 'Team 1') g)`;

@@ -52,7 +52,7 @@ test("TC-GG-01 Set up: the lab becomes a group activity with Team 1 of four, han
     await page.getByRole("dialog", { name: "Add group" }).getByRole("button", { name: "Save" }).click();
     await expect(section.locator("[data-group-card]").filter({ hasText: "Team 1" })).toBeVisible();
 
-    runSql(`UPDATE activity_group_configs SET grading_mode = 'collective_adjust', submission_style = 'shared', max_size = 6 WHERE id = ${config}`);
+    runSql(`UPDATE activity_group_configs SET grading_mode = 'collective_adjust', submission_style = 'shared', max_size = 6 WHERE assessment_id = ${lab}`);
 
     for (const n of [1, 2, 3, 4]) {
         runSql(`INSERT INTO student_group_members (group_id, config_id, student_user_id, joined_at) SELECT g.id, g.config_id, ${student(n)}, NOW() FROM student_groups g WHERE g.config_id = ${config} AND g.name = 'Team 1'`);
