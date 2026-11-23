@@ -21,3 +21,8 @@ export function runSql(statement) {
 
     return result.stdout;
 }
+
+/** The first cell of the first row of a SELECT, as text ("" when there is no row). */
+export function queryValue(statement) {
+    return runSql(statement).split("\n")[1]?.split("\t")[0] ?? "";
+}

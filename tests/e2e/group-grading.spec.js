@@ -11,7 +11,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { courseAddress, openCourse, openTab, signInAs } from "./support/course.js";
-import { runSql } from "./support/database.js";
+import { queryValue, runSql } from "./support/database.js";
 import { resetLab } from "./support/group-lab.js";
 import { accounts } from "./support/sign-in.js";
 
@@ -29,7 +29,7 @@ const view = (page) => page.locator("[data-group-grading]");
 
 async function openGroupGrading(page) {
     await signInAs(page, accounts.instructor, "instructor");
-    const id = String(runSql(`SELECT id FROM assessments WHERE title = '${LAB}' LIMIT 1`)).match(/\d+/)[0];
+    const id = queryValue(`SELECT id FROM assessments WHERE title = '${LAB}' LIMIT 1`);
     await page.goto(`${await courseAddress(page, "instructor", "IT101", "A")}/grades?assessment=${id}&grade=1`);
     await expect(view(page).locator("[data-gg-group]").first()).toBeVisible();
 }
