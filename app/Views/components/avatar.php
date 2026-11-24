@@ -6,8 +6,8 @@
 |--------------------------------------------------------------------------
 | Params: person (a row of AvatarData::forMany; only id and name are needed,
 | initials and colour are worked out when missing), size (xs|sm|md|lg|xl),
-| interactive (bool, default false: a button carrying the hooks the profile
-| modal binds to later, instead of a plain element).
+| interactive (bool, default false: a button that opens the person's card on
+| hover and their profile on click (shared/person-card.js), instead of a plain element).
 | Colours mirror AvatarData::COLOURS and resources/js/shared/avatar.js.
 |--------------------------------------------------------------------------
 */
@@ -38,7 +38,7 @@ $classes = $sizeClasses . ' shrink-0 inline-flex items-center justify-center ove
 $tag     = $interactive ? 'button' : 'span';
 ?>
 <<?= $tag ?>
-    <?= $interactive ? 'type="button" data-avatar-open data-user-id="' . $id . '" aria-label="' . esc($name) . '"' : '' ?>
+    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : '' ?>
     class="<?= $classes ?>"
     style="background-color: <?= $colour ?>"
     data-avatar>

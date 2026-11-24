@@ -29,6 +29,9 @@ import "./shared/side-panel";
 import "./shared/split-divider";
 import "./shared/spa/page-progress";
 import "./shared/messages-badge";
+import { initPersonCard } from "./shared/person-card";
+
+initPersonCard();
 
 const page = document.body.dataset.page;
 

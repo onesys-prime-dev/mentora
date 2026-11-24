@@ -70,8 +70,9 @@ final class AvatarComponentTest extends RouteTestCase
         $this->assertStringContainsString('h-18 w-18', $this->avatar($person, 'xl'));
         $this->assertStringNotContainsString('<button', $this->avatar($person));
 
-        $btn = $this->dom($this->avatar($person, 'md', true))->query('//button[@data-avatar-open][@data-user-id="4"]');
+        $btn = $this->dom($this->avatar($person, 'md', true))->query('//button[@type="button"][@data-person-avatar="4"][@aria-haspopup="dialog"][starts-with(@aria-label,"Open Ana Reyes")][contains(@aria-label,"profile")]');
         $this->assertSame(1, $btn->length);
+        $this->assertStringNotContainsString('data-person-avatar', $this->avatar($person));
     }
 
     public function testNamesAreEscaped(): void
