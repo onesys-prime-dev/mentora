@@ -1349,17 +1349,7 @@ class SisImporter
     /** A student number is unique within the institution that issued it (QA MISS-DB-01); the database refuses a duplicate too. */
     private function numberTaken(?string $number, ?int $userId): bool
     {
-        if ($number === null) {
-            return false;
-        }
-
-        $query = db_connect()->table('user_profiles')->where('student_number_institution_id', $this->institutionId)->where('student_number', $number);
-
-        if ($userId !== null) {
-            $query->where('user_id !=', $userId);
-        }
-
-        return $query->countAllResults() > 0;
+        return StudentNumbers::taken($number, $this->institutionId, $userId);
     }
 
     /** The institution recorded beside a student number: this one, or none when there is no number. */

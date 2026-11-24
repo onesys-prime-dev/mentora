@@ -17,8 +17,12 @@ final class SecurityNotice
     /** @param string $body the text after "Hello," */
     public static function send(User $user, string $subject, string $body): void
     {
-        $to = (string) $user->email;
+        self::sendTo((string) $user->email, (int) $user->id, $subject, $body);
+    }
 
+    /** The same notice to an address that is not (yet) the account's sign-in email, such as a new address to confirm. */
+    public static function sendTo(string $to, int $userId, string $subject, string $body): void
+    {
         if ($to === '') {
             return;
         }
@@ -34,10 +38,10 @@ final class SecurityNotice
             $email->setMessage("Hello,\n\n" . $body);
 
             if ($email->send() !== true) {
-                log_message('error', 'Security notice "{subject}" to user {user} was not accepted by the mail server.', ['subject' => $subject, 'user' => $user->id]);
+                log_message('error', 'Security notice "{subject}" to user {user} was not accepted by the mail server.', ['subject' => $subject, 'user' => $userId]);
             }
         } catch (Throwable $e) {
-            log_message('error', 'Security notice "{subject}" to user {user} failed: {message}', ['subject' => $subject, 'user' => $user->id, 'message' => $e->getMessage()]);
+            log_message('error', 'Security notice "{subject}" to user {user} failed: {message}', ['subject' => $subject, 'user' => $userId, 'message' => $e->getMessage()]);
         }
     }
 
