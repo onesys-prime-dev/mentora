@@ -160,6 +160,7 @@ export function initPersonCard() {
         }
 
         render(content, "card", result);
+        pop.removeAttribute("aria-busy");
         place();
     }
 
@@ -183,6 +184,11 @@ export function initPersonCard() {
 
         if (run === modalRun) {
             render(body, "panel", result);
+
+            // A Retry that re-rendered itself away leaves focus nowhere.
+            if (!dialogEl.contains(document.activeElement)) {
+                (body.querySelector("a[href], button") ?? dialogEl.querySelector("[data-dialog-panel]")).focus();
+            }
         }
     }
 
@@ -232,18 +238,49 @@ export function initPersonCard() {
             }
         },
         focusout: (event) => {
-            if (avatarOf(event) && !pop?.contains(event.relatedTarget)) {
+            const to = event.relatedTarget;
+
+            if ((avatarOf(event) || inPop(event)) && !pop?.contains(to) && to !== popAvatar) {
                 scheduleClose();
             }
         },
         keydown: (event) => {
-            if (event.key === "Escape" && pop) {
+            if (!pop) {
+                return;
+            }
+
+            const controls = [...pop.querySelectorAll("a[href], button:not([disabled])")];
+
+            if (event.key === "Escape") {
                 const avatar = popAvatar;
+                const had = pop.contains(document.activeElement) || document.activeElement === avatar;
+
+                closePopover();
+
+                if (had) {
+                    avatar?.focus();
+                }
+            } else if (event.key === "Tab" && event.target === popAvatar && !event.shiftKey && controls.length) {
+                event.preventDefault();
+                clearTimeout(closeTimer);
+                controls[0].focus();
+            } else if (event.key === "Tab" && inPop(event) && (event.shiftKey ? event.target === controls[0] : event.target === controls.at(-1))) {
+                // Back to the avatar; going forward, from the avatar Tab carries on to the next thing on the page.
+                const avatar = popAvatar;
+
+                if (event.shiftKey) {
+                    event.preventDefault();
+                    avatar?.focus();
+
+                    return;
+                }
 
                 closePopover();
                 avatar?.focus();
             }
         },
+        scroll: () => closePopover(),
+        resize: () => closePopover(),
         click: (event) => {
             const target = event.target instanceof Element ? event.target : null;
             const retry = target?.closest("[data-person-retry]");
@@ -261,14 +298,24 @@ export function initPersonCard() {
                     openModal(modalId, document.activeElement);
                 }
             } else if (copy) {
-                navigator.clipboard?.writeText(copy.dataset.profileCopyEmail).then(
+                const failed = () => {
+                    status.textContent = "Couldn't copy the email";
+                };
+                const label = copy.textContent;
+
+                Promise.resolve(navigator.clipboard?.writeText(copy.dataset.profileCopyEmail)).then(
                     () => {
+                        if (!navigator.clipboard) {
+                            return failed();
+                        }
+
                         copy.textContent = "Copied";
                         status.textContent = "Email copied";
+                        setTimeout(() => {
+                            copy.textContent = label;
+                        }, 2000);
                     },
-                    () => {
-                        status.textContent = "Couldn't copy the email";
-                    },
+                    failed,
                 );
             } else if (see) {
                 if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
@@ -289,8 +336,10 @@ export function initPersonCard() {
         returning = false;
     }, 0);
 
+    const onWindow = ["scroll", "resize"];
+
     for (const [type, handler] of Object.entries(on)) {
-        document.addEventListener(type, handler);
+        (onWindow.includes(type) ? window : document).addEventListener(type, handler, type === "scroll");
     }
 
     dialogEl?.addEventListener("dialog:close", onClose);
@@ -300,7 +349,7 @@ export function initPersonCard() {
         status.remove();
 
         for (const [type, handler] of Object.entries(on)) {
-            document.removeEventListener(type, handler);
+            (onWindow.includes(type) ? window : document).removeEventListener(type, handler, type === "scroll");
         }
 
         dialogEl?.removeEventListener("dialog:close", onClose);

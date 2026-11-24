@@ -121,4 +121,17 @@ final class AppShellLayoutTest extends RouteTestCase
         $this->assertStringContainsString("setProperty('--app-header-h'", $html);
         $this->assertStringContainsString("'data-scrolled'", $html);
     }
+
+    public function testTheAdminShellCarriesTheProfileModalToo(): void
+    {
+        $admin = model(UserModel::class)->findById(CourseFactory::user('admin')->id);
+
+        auth()->logout();
+        Services::resetSingle('auth');
+        $this->withSession([]);
+        $this->loggedInAs($admin);
+        $this->withSession();
+
+        $this->assertStringContainsString('id="person-dialog"', $this->call('GET', 'admin/institutions')->response()->getBody());
+    }
 }

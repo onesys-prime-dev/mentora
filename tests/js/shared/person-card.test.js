@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { initPersonCard } from "../../../resources/js/shared/person-card.js";
 
-const CARD = '<div data-person-card="7"><a href="/people/7" data-person-panel="7">See more</a></div>';
+const CARD = '<div data-person-card="7"><button type="button" id="msg">Message</button><a href="/people/7" data-person-panel="7">See more</a></div>';
 const PANEL = '<div data-person-profile="7"><button type="button" data-profile-copy-email="a@b.test">Copy email</button></div>';
 
 const reply = (status, body = "") => ({ ok: status >= 200 && status < 300, status, text: () => Promise.resolve(body) });
@@ -131,6 +131,95 @@ describe("the popover", () => {
 
 });
 
+describe("the popover and the keyboard", () => {
+
+    const open = async () => {
+        avatar.focus();
+        await vi.advanceTimersByTimeAsync(300);
+    };
+
+    it("Tab on the avatar moves into the popover and focus leaving the avatar does not close it", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        await open();
+
+        const tab = fire(avatar, "keydown", { key: "Tab", shiftKey: false });
+
+        expect(tab.defaultPrevented).toBe(true);
+        expect(document.activeElement.id).toBe("msg");
+
+        await vi.advanceTimersByTimeAsync(500);
+        expect(document.querySelector("[data-person-popover]")).not.toBeNull();
+
+    });
+
+    it("Shift+Tab on the first control returns to the avatar; Tab past the last one closes it", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        await open();
+        fire(avatar, "keydown", { key: "Tab" });
+
+        const back = fire(document.activeElement, "keydown", { key: "Tab", shiftKey: true });
+
+        expect(back.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(avatar);
+
+        fire(avatar, "keydown", { key: "Tab" });
+        document.querySelector("[data-person-panel]").focus();
+        fire(document.activeElement, "keydown", { key: "Tab", shiftKey: false });
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+
+    });
+
+    it("Escape inside the popover returns focus to the avatar", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        await open();
+        fire(avatar, "keydown", { key: "Tab" });
+        fire(document.activeElement, "keydown", { key: "Escape" });
+
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+        expect(document.activeElement).toBe(avatar);
+
+    });
+
+    it("Escape does not take focus from somewhere else", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+        document.body.insertAdjacentHTML("beforeend", '<input id="other">');
+        document.getElementById("other").focus();
+        fire(document, "keydown", { key: "Escape" });
+
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+        expect(document.activeElement.id).toBe("other");
+
+    });
+
+    it("closes on scroll", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+        fire(window, "scroll");
+
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+
+    });
+
+    it("clears aria-busy once the card is shown", async () => {
+
+        start({ "/people/7/card": reply(500) });
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(document.querySelector("[data-person-popover]").hasAttribute("aria-busy")).toBe(false);
+
+    });
+
+});
+
 describe("the profile modal", () => {
 
     it("opens on click with the panel, and focus goes back to the avatar on close", async () => {
@@ -240,6 +329,23 @@ describe("the profile modal", () => {
         expect(writeText).toHaveBeenCalledWith("a@b.test");
         expect(document.querySelector("[role=status]").textContent).toBe("Email copied");
         expect(document.querySelector("[data-profile-copy-email]").textContent).toBe("Copied");
+
+        await vi.advanceTimersByTimeAsync(2000);
+        expect(document.querySelector("[data-profile-copy-email]").textContent).toBe("Copy email");
+
+    });
+
+    it("says so instead of throwing when the clipboard is missing", async () => {
+
+        start({ "/people/7/panel": reply(200, PANEL) });
+        vi.stubGlobal("navigator", {});
+
+        avatar.click();
+        await vi.advanceTimersByTimeAsync(0);
+        document.querySelector("[data-profile-copy-email]").click();
+        await vi.advanceTimersByTimeAsync(0);
+
+        expect(document.querySelector("[role=status]").textContent).toBe("Couldn't copy the email");
 
     });
 

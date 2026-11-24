@@ -84,6 +84,8 @@ $flat = $flat ?? true;
 
     <?= $this->include('layouts/partials/header-metrics') ?>
 
+    <?= $this->include('layouts/partials/person-dialog') ?>
+
     <?= $this->renderSection('scripts') ?>
 
 </body>
