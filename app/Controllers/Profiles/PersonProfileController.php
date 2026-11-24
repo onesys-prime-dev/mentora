@@ -8,8 +8,6 @@ use App\Controllers\BaseController;
 use App\Filters\MessagesFilter;
 use App\Services\Auth\RolePermissions;
 use App\Services\Messaging\ConversationService;
-use App\Services\Messaging\MessagingContextResolver;
-use App\Services\Messaging\MessagingPolicy;
 use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\ProfileReader;
@@ -89,7 +87,7 @@ class PersonProfileController extends BaseController
         if ($p === null) {
             return null;
         }
-        if (($p['display_name'] ?? '') === '') {
+        if ($id === (int) $viewer->id && ($p['display_name'] ?? '') === '') {
             $p['display_name'] = (string) $viewer->username; // only yourself as a system administrator: no profile row
         }
 
@@ -110,10 +108,7 @@ class PersonProfileController extends BaseController
         if ($subject === null) {
             return false;
         }
-        $resolver = new MessagingContextResolver();
-        $context  = $resolver->forStart($viewer, $subject, null);
-
-        // D32: the one accepted active_role read in the profile; the button follows Messages' own rule.
-        return $context !== null && (new MessagingPolicy())->canStart($resolver->activeRole($viewer), $resolver->activeRole($subject), $context);
+        // D32: the one accepted active_role read in the profile; the same check that starting the conversation makes.
+        return (new ConversationService())->resolveDirectStart($viewer, $subject) !== null;
     }
 }

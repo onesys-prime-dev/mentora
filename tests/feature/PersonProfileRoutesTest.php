@@ -318,6 +318,55 @@ final class PersonProfileRoutesTest extends RouteTestCase
         $this->assertSame(404, $status);
     }
 
+    /** A parent whose $n children are all in a course $this->instructor teaches. */
+    private function parentOfPupils(int $n): User
+    {
+        $parent   = PeopleFactory::person('parent', 'Mona', 'Multi', null, $this->institution);
+        $offering = DeanFactory::offering($this->program, $this->term, 'PK' . $n);
+        CourseFactory::assignInstructor($offering, $this->instructor);
+        for ($i = 0; $i < $n; $i++) {
+            $child = PeopleFactory::person('student', 'Kid' . $i, 'Multi', null, $this->institution);
+            CourseFactory::enroll($offering, $child);
+            $this->link($parent, $child);
+        }
+
+        return $parent;
+    }
+
+    private function postMessageStatus(User $viewer, User $subject): int
+    {
+        $this->signIn($viewer);
+        $this->withSession();
+
+        try {
+            return $this->step('POST', "people/{$subject->id}/message")->response()->getStatusCode();
+        } catch (PageNotFoundException) {
+            return 404;
+        }
+    }
+
+    public function testAParentSharingOneChildWithTheInstructorCanMessageThem(): void
+    {
+        $parent = $this->parentOfPupils(1);
+
+        foreach ($this->bodies($parent, $this->instructor) as $uri => $body) {
+            $this->assertStringContainsString('data-person-message', $body, $uri);
+        }
+        $this->assertSame(302, $this->postMessageStatus($parent, $this->instructor));
+        $this->assertSame(1, db_connect()->table('conversations')->where('created_by', $parent->id)->where('subject_student_id IS NOT NULL', null, false)->countAllResults());
+    }
+
+    public function testAParentSharingTwoChildrenWithTheInstructorGetsNoButtonThatWouldFail(): void
+    {
+        $parent = $this->parentOfPupils(2);
+
+        foreach ($this->bodies($parent, $this->instructor) as $uri => $body) {
+            $this->assertStringNotContainsString('data-person-message', $body, $uri);
+        }
+        $this->assertSame(404, $this->postMessageStatus($parent, $this->instructor));
+        $this->assertSame(0, db_connect()->table('conversations')->where('created_by', $parent->id)->countAllResults());
+    }
+
     // --- Admin row, self, caching ---------------------------------------------------
 
     public function testTheAdminRowIsOnlyForTheSubjectsOwnInstitutionalAdmin(): void
