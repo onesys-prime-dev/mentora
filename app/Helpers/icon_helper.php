@@ -60,6 +60,7 @@ if (! function_exists('icon_registry')) {
             'message' => ['color' => $dark, 'fill' => true, 'viewBox' => '0 0 20 20', 'body' => '<path fill-rule="evenodd" clip-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z"/>'],
             'calendar' => ['color' => $dark, 'fill' => true, 'viewBox' => '0 0 20 20', 'body' => '<path fill-rule="evenodd" clip-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"/>'],
             'search' => ['color' => $gray, 'body' => $path('M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z')],
+            'pencil' => ['color' => $blue, 'body' => $path('M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zM16.862 4.487L19.5 7.125')],
             'code' => ['color' => 'text-white', 'body' => $path('M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4')],
             'door' => ['color' => $blue, 'body' => $path('M4 21h16M6 21V4a1 1 0 011-1h10a1 1 0 011 1v17M14.5 12h.01')],
             'home' => ['color' => $blue, 'body' => $path('M3 10.5L12 3l9 7.5M5 9.5V20a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V9.5')],

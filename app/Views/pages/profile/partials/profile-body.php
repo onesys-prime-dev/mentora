@@ -6,9 +6,12 @@
  * @var array<string, mixed> $p      ProfileReader output
  * @var array<string, mixed> $own    owner-only extras: official, student_number, portal_on (empty for a viewer)
  * @var array<string, mixed> $avatar AvatarData row
+ * @var array<string, mixed>|null $edit set only on the owner's own page: their editable values (pencils and dialogs); null for a viewer
  */
 
 $own       = $own ?? [];
+$edit      = $edit ?? null;
+$pencil    = static fn (string $dialog, string $label): string => $edit === null ? '' : '<button type="button" data-dialog-open="' . $dialog . '" aria-label="' . esc($label, 'attr') . '" class="inline-flex items-center justify-center rounded-full p-1.5 text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11">' . icon('pencil', 'h-4 w-4') . '</button>';
 $card      = 'flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6';
 $heading   = 'flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm font-bold text-brand';
 $dl        = 'grid grid-cols-1 gap-x-6 gap-y-0 text-sm sm:grid-cols-[9rem_minmax(0,1fr)]';
@@ -50,6 +53,9 @@ $official  = $own['official'] ?? [];
                 </ul>
             <?php endif; ?>
         </div>
+        <?php if ($edit !== null): ?>
+            <button type="button" data-dialog-open="profile-edit-identity" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11"><?= icon('pencil', 'h-4 w-4') ?>Edit name &amp; pronouns</button>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -58,7 +64,7 @@ $official  = $own['official'] ?? [];
 
         <?php if (array_key_exists('bio', $p)): ?>
             <section class="<?= $card ?>" aria-labelledby="profile-about" data-profile-about>
-                <h2 id="profile-about" class="<?= $heading ?>">About</h2>
+                <h2 id="profile-about" class="<?= $heading ?>">About<?= $pencil('profile-edit-about', 'Edit about') ?></h2>
                 <?php if (trim((string) $p['bio']) !== ''): ?>
                     <p class="whitespace-pre-line break-words text-sm text-[#1A1C1E]"><?= esc($p['bio']) ?></p>
                 <?php else: ?>
@@ -69,7 +75,7 @@ $official  = $own['official'] ?? [];
 
         <?php if ($staffInfo !== null): ?>
             <section class="<?= $card ?>" aria-labelledby="profile-office" data-profile-office>
-                <h2 id="profile-office" class="<?= $heading ?>">Office &amp; consultation</h2>
+                <h2 id="profile-office" class="<?= $heading ?>">Office &amp; consultation<?= ($edit['staff'] ?? false) ? $pencil('profile-edit-staff', 'Edit office and consultation') : '' ?></h2>
                 <dl class="<?= $dl ?>">
                     <dt class="<?= $dt ?>">Office</dt>
                     <dd class="<?= $dd ?>"><?= trim((string) $staffInfo['office_location']) !== '' ? esc($staffInfo['office_location']) : $empty ?></dd>
