@@ -509,4 +509,23 @@ final class UserAdminServiceTest extends DatabaseTestCase
         $this->assertSame([(int) $a->id], $result['done']);
         $this->assertSame([], $result['skipped']);
     }
+
+    public function testAnEmailChangeTellsTheOldAddressOnlyWhenItChanged(): void
+    {
+        $user = PeopleFactory::person('student', 'Maria', 'Santos', 'maria@example.com', $this->acme);
+        $this->mailer->sent = [];
+
+        $this->service->update((int) $user->id, ['first_name' => 'Maria', 'last_name' => 'Santos', 'email' => 'maria.new@example.com'], $this->admin);
+
+        $this->assertCount(1, $this->mailer->sent);
+        $this->assertSame('maria@example.com', $this->mailer->sent[0]['to']);
+        $this->assertStringContainsString('was changed to maria.new@example.com by your school', $this->mailer->sent[0]['message']);
+        $entry = $this->audit('profile.email_changed_by_admin');
+        $this->assertCount(1, $entry);
+        $this->assertSame((int) $this->admin->id, (int) $entry[0]['actor_user_id']);
+
+        $this->mailer->sent = [];
+        $this->service->update((int) $user->id, ['first_name' => 'Marie', 'last_name' => 'Santos', 'email' => 'maria.new@example.com'], $this->admin);
+        $this->assertSame([], $this->mailer->sent);
+    }
 }

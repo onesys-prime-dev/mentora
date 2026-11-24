@@ -1178,6 +1178,7 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('export', 'Institution\PeopleController::exportSelected', ['filter' => 'permission:people.view']);
             $routes->post('(:num)/photo', 'Profiles\ProfilePhotoController::adminUpload/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/photo/remove', 'Profiles\ProfilePhotoController::adminRemove/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/clear', 'Institution\PeopleController::clear/$1', ['filter' => 'permission:people.manage']);
             $routes->post('/', 'Institution\PeopleController::invite', ['filter' => 'permission:people.manage']);
             $routes->post('bulk/deactivate', 'Institution\PeopleController::bulkDeactivate', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('bulk/reactivate', 'Institution\PeopleController::bulkReactivate', ['filter' => 'permission:people.manage']);

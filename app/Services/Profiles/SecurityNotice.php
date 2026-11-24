@@ -45,6 +45,13 @@ final class SecurityNotice
         }
     }
 
+    /** D26: tells the OLD address that the school (or an import) changed the sign-in email. */
+    public static function emailChangedByAdmin(string $oldEmail, string $newEmail, int $userId): void
+    {
+        self::sendTo($oldEmail, $userId, 'Your Mentora sign-in email was changed', "Your Mentora sign-in email was changed to {$newEmail} by your school. If this wasn't expected, contact your school.
+");
+    }
+
     /** The closing lines for a change the owner may not have made. */
     public static function ifNotYou(): string
     {

@@ -7,6 +7,7 @@
  * @var bool                 $canMessage MessagingPolicy::canStart allows the viewer to start a conversation
  * @var bool                 $canPeople  the viewer may open the People list (people.view)
  * @var array{has: bool, on: bool}|null $photo for an administrator who may manage people: the person's photo state (null hides the admin actions)
+ * @var array<string, string>|null $clearable field => label of what an administrator may clear now (null hides the menu)
  * @var bool                 $modal      drawn in the profile modal (a dialog cannot open over it)
  */
 
@@ -25,8 +26,7 @@ $q = (string) ($p['email'] ?? end($last));
             . (trim((string) ($p['email'] ?? '')) !== '' ? '<button type="button" data-profile-copy-email="' . esc((string) $p['email'], 'attr') . '" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">' . 'Copy email</button>' : ''),
     ], ['saveData' => false]) ?>
 
-    <?php if (array_key_exists('admin_actions', $p) && (($canPeople ?? false) || ($photo ?? null) !== null)): ?>
-        <?php // Phase 6 adds Clear field here. ?>
+    <?php if (array_key_exists('admin_actions', $p) && (($canPeople ?? false) || ($photo ?? null) !== null || ($clearable ?? null) !== null)): ?>
         <section class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm sm:px-6" aria-label="Admin actions" data-profile-admin>
             <span class="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-semibold text-brand">Admins only</span>
             <?php if ($canPeople ?? false): ?>
@@ -44,7 +44,25 @@ $q = (string) ($p['email'] ?? end($last));
                     <?php endif; ?>
                 <?php endif; ?>
             <?php endif; ?>
+            <?php if (($clearable ?? []) !== []): ?>
+                <?php $adminBtn ??= 'inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11'; ?>
+                <?php if ($modal ?? false): ?>
+                    <a href="<?= esc(site_url('people/' . (int) $p['id']), 'attr') ?>" class="<?= $adminBtn ?>" data-admin-clear-link>Clear a field</a>
+                <?php else: ?>
+                    <details class="relative" data-admin-clear>
+                        <summary class="<?= $adminBtn ?> cursor-pointer list-none">Clear a field</summary>
+                        <div class="absolute left-0 z-10 mt-2 flex min-w-48 flex-col rounded-xl bg-white p-1 shadow-lg ring-1 ring-black/5">
+                            <?php foreach ($clearable as $field => $label): ?>
+                                <button type="button" data-dialog-open="person-clear-<?= esc($field, 'attr') ?>" class="rounded-lg px-3 py-2 text-left text-sm text-[#1A1C1E] hover:bg-brand-tint pointer-coarse:min-h-11">Clear <?= esc($label) ?></button>
+                            <?php endforeach; ?>
+                        </div>
+                    </details>
+                <?php endif; ?>
+            <?php endif; ?>
         </section>
+        <?php if (!($modal ?? false)): foreach (($clearable ?? []) as $field => $label): ?>
+            <?= view('components/confirm', ['id' => 'person-clear-' . $field, 'title' => 'Clear ' . $name . "'s " . $label . '?', 'text' => 'The ' . $label . ' is emptied. They are told that your school cleared it, and can add it again.', 'action' => site_url('institution/people/' . (int) $p['id'] . '/clear'), 'confirmLabel' => 'Clear ' . $label, 'tone' => 'danger', 'ajax' => true, 'fields' => '<input type="hidden" name="field" value="' . esc($field, 'attr') . '">'], ['saveData' => false]) ?>
+        <?php endforeach; endif; ?>
         <?php if (($photo['on'] ?? false) === true && ! ($modal ?? false)): ?>
             <?= view('pages/profile/partials/dialogs/photo', ['id' => 'person-photo-upload', 'title' => 'Upload a photo for ' . $name, 'action' => site_url('institution/people/' . (int) $p['id'] . '/photo'), 'removeUrl' => '', 'has' => false, 'on' => true], ['saveData' => false]) ?>
             <?php if ($photo['has']): ?>

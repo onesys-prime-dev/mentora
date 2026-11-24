@@ -40,6 +40,9 @@ class PeopleService
 
     public const ROLES = UserAdminService::ASSIGNABLE_ROLES;
 
+    /** Who has a home department (D8): the staff who teach or lead. */
+    public const HOME_DEPARTMENT_ROLES = ['instructor', 'chairperson', 'dean'];
+
     private UserAdminService $users;
 
     private UserDirectory $directory;
@@ -232,6 +235,18 @@ class PeopleService
         $person = $this->member($institutionId, $userId);
         $this->person($input);
 
+        // Only for staff, and only when the form sent it; empty clears it.
+        $home = null;
+        $sent = array_key_exists('home_department_id', $input) && array_intersect(self::HOME_DEPARTMENT_ROLES, $person['roles']) !== [];
+
+        if ($sent && trim((string) $input['home_department_id']) !== '') {
+            $home = (int) $input['home_department_id'];
+
+            if (! array_key_exists($home, $this->departments($institutionId))) {
+                throw StructureException::field('home_department_id', 'Choose a department of your institution.');
+            }
+        }
+
         try {
             $this->users->update($userId, $input, $actor);
         } catch (InvalidArgumentException $e) {
@@ -239,6 +254,37 @@ class PeopleService
 
             throw str_contains($message, 'already exists') ? StructureException::field('email', $message) : $this->asRefusal($e);
         }
+
+        if ($sent) {
+            $this->setHomeDepartment($institutionId, $userId, $home, $actor);
+        }
+    }
+
+    /**
+     * The institution's departments, for the home department choice.
+     *
+     * @return array<int, string> id => name
+     */
+    public function departments(int $institutionId): array
+    {
+        $rows = db_connect()->table('departments d')->select('d.id, d.name')->join('colleges c', 'c.id = d.college_id')
+            ->where('c.institution_id', $institutionId)->orderBy('d.name')->get()->getResultArray();
+
+        return array_column($rows, 'name', 'id');
+    }
+
+    private function setHomeDepartment(int $institutionId, int $userId, ?int $departmentId, ?User $actor): void
+    {
+        $db      = db_connect();
+        $current = $db->table('user_profiles')->select('home_department_id')->where('user_id', $userId)->get()->getRowArray();
+
+        if ($current === null || ($current['home_department_id'] === null ? null : (int) $current['home_department_id']) === $departmentId) {
+            return;
+        }
+
+        $db->table('user_profiles')->where('user_id', $userId)->update(['home_department_id' => $departmentId]);
+
+        service('auditLogger')->log('profile.home_department_set', $actor ?? auth()->user(), ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $institutionId, 'new' => ['department_id' => $departmentId]]);
     }
 
     /**
@@ -505,6 +551,8 @@ class PeopleService
             ->whereIn('user_id', array_map(static fn (array $r): int => (int) $r['id'], $rows))->where('photo_file_id IS NOT NULL', null, false)->get()->getResultArray(), 'user_id'));
         // Photos are kept while the school has them off, but nothing can be removed then (as on the person page).
         $photosOn  = (int) db_connect()->table('institutions')->select('profile_photos_enabled')->where('id', $institutionId)->get()->getRow('profile_photos_enabled') === 1;
+        $homes     = $rows === [] ? [] : array_column(db_connect()->table('user_profiles')->select('user_id, home_department_id')
+            ->whereIn('user_id', array_map(static fn (array $r): int => (int) $r['id'], $rows))->where('home_department_id IS NOT NULL', null, false)->get()->getResultArray(), 'home_department_id', 'user_id');
         $shaped    = [];
 
         foreach ($rows as $r) {
@@ -527,6 +575,8 @@ class PeopleService
                 'viewable'       => $active && $id !== $actorId && ! $isAdmin,
                 'last_admin'     => $isAdmin && $active && $admins <= 1,
                 'has_photo'      => $photosOn && in_array($id, $withPhoto, true),
+                'staff'          => array_intersect(self::HOME_DEPARTMENT_ROLES, $r['roles']) !== [],
+                'home_department_id' => $homes[$id] ?? '',
             ];
         }
 

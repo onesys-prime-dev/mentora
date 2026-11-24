@@ -9,7 +9,9 @@ use App\Services\Notifications\MailOutbox;
 use App\Services\Notifications\NotificationService;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\HTTP\Files\UploadedFile;
+use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * What an institution's administrator may do to someone else's profile (D6): remove their photo, or
@@ -45,6 +47,52 @@ class ProfileModeration
 
         $this->photos()->upload($subjectId, $file, $admin);
         $subjectId === (int) $admin->id || $this->tell($subjectId, 'added', 'Your school added a profile photo for you', 'You can change or remove it on your profile.');
+    }
+
+    /** Fields an administrator may clear when they are misused (D5, FR9), with the words the owner is told. */
+    public const CLEARABLE = [
+        'preferred_first_name' => 'preferred name',
+        'pronouns'             => 'pronouns',
+        'bio'                  => 'bio',
+        'office_location'      => 'office location',
+        'consultation_hours'   => 'consultation hours',
+        'work_phone'           => 'work phone',
+    ];
+
+    /**
+     * Empties one profile field. The audit row names the field, never the old value.
+     *
+     * @throws PageNotFoundException a person of another institution, or a field that cannot be cleared
+     */
+    public function clearField(int $subjectId, string $field, User $admin): void
+    {
+        $this->guard($subjectId, $admin);
+
+        if (! isset(self::CLEARABLE[$field])) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $db = db_connect();
+
+        if ($db->table('user_profiles')->where('user_id', $subjectId)->where("{$field} IS NOT NULL", null, false)->countAllResults() === 0) {
+            return;
+        }
+
+        $db->table('user_profiles')->where('user_id', $subjectId)->update([$field => null]);
+
+        $institution = (new PlanLimits())->institutionOf($subjectId);
+        service('auditLogger')->log('profile.field_cleared_by_admin', $admin, ['target_type' => 'user', 'target_id' => $subjectId, 'institution_id' => $institution, 'new' => ['field' => $field]]);
+
+        if ($subjectId === (int) $admin->id) {
+            return;
+        }
+
+        $label = self::CLEARABLE[$field];
+        $body  = "Your school cleared your {$label}.";
+        (new NotificationService())->send($subjectId, 'profile.field', $body, 'You can add it again on your profile.', false, "profile.field:{$subjectId}:{$field}:" . bin2hex(random_bytes(6)), $institution, 'profile');
+
+        $owner = model(UserModel::class)->findById($subjectId);
+        $owner === null || SecurityNotice::send($owner, "Your {$label} was cleared", $body . "\n\nYou can add it again on your profile. If this wasn't expected, contact your school.\n");
     }
 
     private function guard(int $subjectId, User $admin): void

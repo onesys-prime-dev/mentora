@@ -36,6 +36,8 @@ final class SisMapper
             'suffix'         => self::optional($record, 'suffix'),
             'email'          => strtolower($record['email']),
             'student_number' => self::optional($record, 'student_number'),
+            // Instructors only; absent and empty both leave what the school set alone.
+            'home_department' => self::optional($record, 'home_department'),
         ];
     }
 

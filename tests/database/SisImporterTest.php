@@ -648,4 +648,97 @@ final class SisImporterTest extends DatabaseTestCase
         $this->assertSame(['welcome', 'student', (string) $this->user('ben@example.com')['user_id']], [$row['kind'], $row['detail'], (string) $row['user_id']]);
         $this->assertSame(1, db_connect()->table('mail_outbox')->countAllResults());
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Home departments and email-change notices (Task 6.3)
+    |--------------------------------------------------------------------------
+    */
+
+    private function instructorCsv(string $columns, string $row): void
+    {
+        SisFixture::drop($this->institution, 'instructors', "external_id,email,first_name,last_name{$columns}\n{$row}\n");
+    }
+
+    private function homeOf(string $email): mixed
+    {
+        return db_connect()->table('user_profiles')->where('user_id', $this->user($email)['user_id'])->get()->getRow('home_department_id');
+    }
+
+    private function departmentId(string $name): int
+    {
+        return (int) db_connect()->table('departments d')->join('colleges c', 'c.id = d.college_id')->where('c.institution_id', $this->institution)->where('d.name', $name)->get()->getRow('id');
+    }
+
+    public function testAnInstructorsHomeDepartmentIsMappedByNameOrByCode(): void
+    {
+        $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,IT');
+        $this->run_();
+        $this->assertSame($this->departmentId('IT'), (int) $this->homeOf('ivy@example.com'));
+
+        db_connect()->table('user_profiles')->where('user_id', $this->user('ivy@example.com')['user_id'])->update(['home_department_id' => null]);
+        $code = db_connect()->table('departments')->where('id', $this->departmentId('IT'))->get()->getRow('code');
+        $this->instructorCsv(',home_department', "I1,ivy@example.com,Ivy,Tan,{$code}");
+        $result = $this->run_();
+
+        $this->assertSame($this->departmentId('IT'), (int) $this->homeOf('ivy@example.com'));
+        $this->assertSame(1, $result->datasets['instructors']['updated']);
+    }
+
+    public function testAnUnknownHomeDepartmentIsReportedAndIgnored(): void
+    {
+        $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,Basket Weaving');
+        $result = $this->run_();
+
+        $this->assertNull($this->homeOf('ivy@example.com'));
+        $this->assertSame(1, $result->datasets['instructors']['created']);
+        $this->assertSame(0, $result->datasets['instructors']['failed']);
+        $this->assertStringContainsString('Basket Weaving', $result->issues[0]['reason']);
+    }
+
+    public function testWithoutTheColumnOrWithAnEmptyCellTheHomeDepartmentIsUntouched(): void
+    {
+        $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,IT');
+        $this->run_();
+        $before = $this->homeOf('ivy@example.com');
+        $this->assertNotNull($before);
+
+        $this->instructorCsv('', 'I1,ivy@example.com,Ivy,Tan');
+        $this->assertSame(1, $this->run_()->datasets['instructors']['skipped']);
+        $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,');
+        $this->assertSame(1, $this->run_()->datasets['instructors']['skipped']);
+
+        $this->assertEquals($before, $this->homeOf('ivy@example.com'));
+    }
+
+    public function testAnEmailChangeTellsTheOldAddressAndIsAudited(): void
+    {
+        SisFixture::dropAll($this->institution);
+        $this->run_();
+        $mailer = FakeEmail::install();
+        db_connect()->table('audit_logs')->emptyTable();
+
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\nS2,ben@example.com,Ben,Ng\n");
+        $this->run_();
+
+        $this->assertCount(1, $mailer->sent);
+        $this->assertSame('ann@example.com', $mailer->sent[0]['to']);
+        $this->assertStringContainsString('was changed to anna.lee@example.com by your school', $mailer->sent[0]['message']);
+        $entry = db_connect()->table('audit_logs')->where('action', 'profile.email_changed_by_import')->get()->getResultArray();
+        $this->assertCount(1, $entry);
+        $this->assertSame((int) $this->actor->id, (int) $entry[0]['actor_user_id']);
+    }
+
+    public function testAPreviewOrAnUnchangedEmailSendsNothing(): void
+    {
+        SisFixture::dropAll($this->institution);
+        $this->run_();
+        $mailer = FakeEmail::install();
+
+        $this->run_();
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\n");
+        $this->run_(true);
+
+        $this->assertSame([], $mailer->sent); // (the preview's audit row is rolled back by the run itself, which this isolated test cannot show)
+    }
 }

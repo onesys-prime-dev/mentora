@@ -665,4 +665,23 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
         $this->assertTrue($this->service->apply($this->institution, $preview['token'], $this->actor)->ok);
     }
+
+    public function testAnUploadMapsAnInstructorsHomeDepartmentAndEmailChangesTellTheOldAddress(): void
+    {
+        $mailer = FakeEmail::install();
+        $files  = ['instructors' => "email,first_name,last_name,home_department\nivy@example.com,Ivy,Tan,IT\nzed@example.com,Zed,Poe,Nowhere\n"];
+
+        $preview = $this->service->preview($this->institution, $files, $this->actor);
+        $this->service->apply($this->institution, $preview['token'], $this->actor);
+
+        $home = static fn (string $email) => db_connect()->table('user_profiles')->join('auth_identities', 'auth_identities.user_id = user_profiles.user_id')->where('secret', $email)->get()->getRow('home_department_id');
+        $this->assertNotNull($home('ivy@example.com'));
+        $this->assertNull($home('zed@example.com'));
+
+        // Re-uploading without the column leaves it alone; a staff row cannot change its email by itself in an upload (it is the key).
+        $again = $this->service->preview($this->institution, ['instructors' => "email,first_name,last_name\nivy@example.com,Ivy,Tan\n"], $this->actor);
+        $this->service->apply($this->institution, $again['token'], $this->actor);
+        $this->assertNotNull($home('ivy@example.com'));
+        $this->assertSame([], array_filter($mailer->sent, static fn (array $m): bool => str_contains($m['message'], 'by your school')));
+    }
 }

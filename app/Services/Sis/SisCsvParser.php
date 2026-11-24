@@ -133,7 +133,8 @@ final class SisCsvParser
             throw new SisException("{$dataset}.csv is missing the column(s): " . implode(', ', $missing) . '.');
         }
 
-        $keep     = array_merge($spec['required'], $spec['optional']);
+        // An instructor's home department is read when the column is there but is not part of the spec or the template.
+        $keep     = array_merge($spec['required'], $spec['optional'], $dataset === 'instructors' ? ['home_department'] : []);
         $records  = [];
         $rejected = [];
         $rowNos   = [];

@@ -11,6 +11,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\ProfileModeration;
 use App\Services\Profiles\ProfilePhotoService;
 use App\Services\Profiles\ProfileReader;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -104,7 +105,17 @@ class PersonProfileController extends BaseController
             // Admin actions follow the People routes: Open in People needs people.view, the photo controls people.manage (null hides them).
             'canPeople'  => $admin && $permissions->allows($viewer, 'people.view'),
             'photo'      => $admin && $permissions->allows($viewer, 'people.manage') ? (new ProfilePhotoService())->state($id) : null,
+            // Fields an administrator may clear that hold something now (field => label); null without people.manage.
+            'clearable'  => $admin && $permissions->allows($viewer, 'people.manage') ? $this->clearable($id) : null,
         ];
+    }
+
+    /** @return array<string, string> */
+    private function clearable(int $id): array
+    {
+        $row = db_connect()->table('user_profiles')->select(implode(', ', array_keys(ProfileModeration::CLEARABLE)))->where('user_id', $id)->get()->getRowArray() ?? [];
+
+        return array_filter(ProfileModeration::CLEARABLE, static fn (string $label, string $field): bool => trim((string) ($row[$field] ?? '')) !== '', ARRAY_FILTER_USE_BOTH);
     }
 
     /** @param array<string, mixed> $p */
