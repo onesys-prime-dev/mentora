@@ -53,6 +53,13 @@ final class ProfilePolicyTest extends CIUnitTestCase
         yield 'parent -> other child' => [['viewerRank' => 'parent', 'subjectRoles' => ['student']], []];
         yield 'parent -> parent' => [['viewerRank' => 'parent', 'subjectRoles' => ['parent']], []];
         yield 'parent -> deactivated' => [['viewerRank' => 'parent', 'subjectActive' => false], self::BASICS];
+        // Deactivated subjects keep the relationship gate
+        yield 'parent -> unrelated deactivated student' => [['viewerRank' => 'parent', 'subjectRoles' => ['student'], 'subjectActive' => false], []];
+        yield 'parent -> own deactivated child' => [['viewerRank' => 'parent', 'subjectRoles' => ['student'], 'subjectActive' => false, 'viewerIsParentOfSubject' => true], self::BASICS];
+        yield 'student -> unrelated deactivated parent' => [['viewerRank' => 'student', 'subjectRoles' => ['parent'], 'subjectActive' => false], []];
+        yield 'student -> own deactivated parent' => [['viewerRank' => 'student', 'subjectRoles' => ['parent'], 'subjectActive' => false, 'viewerIsChildOfSubject' => true], self::BASICS];
+        yield 'staff -> deactivated student' => [['subjectRoles' => ['student'], 'subjectActive' => false], self::BASICS];
+        yield 'admin -> deactivated staff, no admin_actions' => [['viewerIsInstitutionAdmin' => true, 'subjectActive' => false], self::BASICS];
         // Outside the rows
         yield 'subject is system admin' => [['subjectIsSystemAdmin' => true], []];
         yield 'other institution' => [['sameInstitution' => false], []];

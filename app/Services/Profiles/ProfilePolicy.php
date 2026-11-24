@@ -30,12 +30,14 @@ final class ProfilePolicy
         if ($c->subjectIsSystemAdmin || ! $c->sameInstitution || $c->viewerRank === null) {
             return [];
         }
-        if (! $c->subjectActive) {
-            return self::BASICS;
-        }
-
         $fields = $this->canonical($this->visibleToViewer($c));
-        if ($fields !== [] && $c->viewerIsInstitutionAdmin) {
+        if ($fields === []) {
+            return [];
+        }
+        if (! $c->subjectActive) {
+            return self::BASICS; // only people the viewer could see if active
+        }
+        if ($c->viewerIsInstitutionAdmin) {
             $fields[] = 'admin_actions';
         }
 
