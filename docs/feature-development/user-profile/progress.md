@@ -32,8 +32,10 @@ User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages
 - Whole-phase review fixes done (64e659be). **Phase 1 complete** 2026-11-24.
 - 2026-11-24 user: "continue everything. decide everything for me. just tell me if you are done with all the phases." Claude rules on open decisions (ledger + decision register) and runs all phases; tests now use XAMPP MySQL :3306 (`vendor/bin/phpunit`).
 
+- **Phase 2 complete** 2026-11-24 on `feat/user-profile-p2-my-profile` (7c4c7938..98af4cd4).
+
 ## Next action
-Phase 2 on `feat/user-profile-p2-my-profile` (from p1).
+Phase 3 on `feat/user-profile-p3-people` (from p2).
 
 ## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
 Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.

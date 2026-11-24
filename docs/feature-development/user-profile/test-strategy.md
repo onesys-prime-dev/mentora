@@ -48,3 +48,11 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - Reviews: four task reviews + one whole-phase review (fix wave: roles shown per viewer, `ProfileReader::forViewer` single entry point, admin/chair/dean role details, system admin own role) + re-review, all addressed.
 - NOT RUN: Playwright (no UI journey yet in Phase 1); no browser screenshot of the header/dashboard avatar.
 - Known limits: a child opening their own deactivated parent gets 404 instead of basics (hides, not leaks); `pronouns` key is present as null when not granted (renderers must use the field list).
+
+### Phase 2 (2026-11-24) — feat/user-profile-p2-my-profile
+- phpunit (run in three parts because of memory): unit 1270, database 4377, feature+session 4643 — 10290 tests OK. New: ProfilePageTest, ProfileEditServiceTest, ProfileEditRoutesTest; ProfileReaderTest extended.
+- vitest 123 files / 1252 OK (tests/js/pages/profile). Two calendar tests fail only under heavy load and pass alone (known flaky).
+- Playwright: tests/e2e/profile.spec.js 11/11 (TC-PRF-01..05 + screenshots at 360/768/1440, no horizontal overflow); parent.spec + menu-placement 10/11 (TC-PRT-02 known pre-existing).
+- RED runs shown for 2.1, 2.3 and the fix wave; Task 2.2's tests were written after the code (no RED) — mutation reasoning in review showed the rules are pinned.
+- Reviews: three task reviews (+ fix rounds) and a whole-phase review; fixes: parent page kept until Phase 5, header-name memo flushed between test classes, Studies/Contact/Official split, avatar overlap, section codes, empty fields hidden from viewers.
+- Known limits: parent/profile old page and its notification/password forms remain until Phase 5; photo checklist item arrives in Phase 4; responsive snapshot baseline for student-profile is stale until the next responsive run.
