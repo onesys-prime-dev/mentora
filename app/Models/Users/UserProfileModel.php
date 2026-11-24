@@ -23,6 +23,16 @@ class UserProfileModel extends Model
         'student_number_institution_id',
         'program_id',
         'active_role',
+        'preferred_first_name',
+        'pronouns',
+        'bio',
+        'office_location',
+        'consultation_hours',
+        'work_phone',
+        'photo_file_id',
+        'home_department_id',
+        'two_factor_opt_in',
+        'checklist_dismissed_at',
     ];
 
     protected $useSoftDeletes = true;
