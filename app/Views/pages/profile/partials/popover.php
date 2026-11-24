@@ -14,7 +14,7 @@ $top      = $p['roles'][0] ?? null;
 $roleName = static fn (string $r): string => $r === 'admin' ? 'System admin' : ucfirst(str_replace('_', ' ', $r));
 $gone     = array_key_exists('deactivated_badge', $p);
 ?>
-<div class="flex w-[19rem] max-w-full flex-col gap-3 rounded-2xl bg-white p-4 shadow-lg" aria-label="<?= esc($name . ', summary', 'attr') ?>" data-person-card="<?= $id ?>">
+<div class="flex w-[19rem] max-w-full flex-col gap-3 rounded-2xl bg-white p-4 shadow-lg" data-person-card="<?= $id ?>">
     <div class="flex items-start gap-3">
         <?= view('components/avatar', ['person' => $avatar, 'size' => 'lg'], ['saveData' => false]) ?>
         <div class="flex min-w-0 flex-col gap-0.5">

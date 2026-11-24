@@ -17,7 +17,9 @@ $q = (string) ($p['email'] ?? end($last));
         'p'       => $p,
         'isOwner' => false,
         'avatar'  => $avatar,
-        'actions' => $canMessage ? view('pages/profile/partials/message-button', ['id' => (int) $p['id']], ['saveData' => false]) : '',
+        'actions' => ($canMessage ? view('pages/profile/partials/message-button', ['id' => (int) $p['id']], ['saveData' => false]) : '')
+            // The address is copied by shared/person-card.js, which reads it from this button.
+            . (trim((string) ($p['email'] ?? '')) !== '' ? '<button type="button" data-profile-copy-email="' . esc((string) $p['email'], 'attr') . '" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">' . 'Copy email</button>' : ''),
     ], ['saveData' => false]) ?>
 
     <?php if (array_key_exists('admin_actions', $p)): ?>

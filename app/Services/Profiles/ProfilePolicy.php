@@ -34,11 +34,13 @@ final class ProfilePolicy
         if ($fields === []) {
             return [];
         }
-        if (! $c->subjectActive) {
-            return self::BASICS; // only people the viewer could see if active
-        }
+        // D25: admins manage deactivated people in People, so their admin row stays.
         if ($c->viewerIsInstitutionAdmin) {
             $fields[] = 'admin_actions';
+        }
+        if (! $c->subjectActive) {
+            // only people the viewer could see if active
+            return $this->canonical([...self::BASICS, ...($c->viewerIsInstitutionAdmin ? ['admin_actions'] : [])]);
         }
 
         return $fields;

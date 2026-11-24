@@ -59,7 +59,8 @@ final class ProfilePolicyTest extends CIUnitTestCase
         yield 'student -> unrelated deactivated parent' => [['viewerRank' => 'student', 'subjectRoles' => ['parent'], 'subjectActive' => false], []];
         yield 'student -> own deactivated parent' => [['viewerRank' => 'student', 'subjectRoles' => ['parent'], 'subjectActive' => false, 'viewerIsChildOfSubject' => true], self::BASICS];
         yield 'staff -> deactivated student' => [['subjectRoles' => ['student'], 'subjectActive' => false], self::BASICS];
-        yield 'admin -> deactivated staff, no admin_actions' => [['viewerIsInstitutionAdmin' => true, 'subjectActive' => false], self::BASICS];
+        yield 'admin -> deactivated staff keeps admin_actions' => [['viewerIsInstitutionAdmin' => true, 'subjectActive' => false], ['photo', 'names', 'roles', 'admin_actions', 'deactivated_badge']];
+        yield 'admin -> deactivated student keeps admin_actions' => [['viewerIsInstitutionAdmin' => true, 'subjectRoles' => ['student'], 'subjectActive' => false], ['photo', 'names', 'roles', 'admin_actions', 'deactivated_badge']];
         // Outside the rows
         yield 'subject is system admin' => [['subjectIsSystemAdmin' => true], []];
         yield 'other institution' => [['sameInstitution' => false], []];
@@ -83,7 +84,7 @@ final class ProfilePolicyTest extends CIUnitTestCase
         // Admin actions
         yield 'institutional admin gets admin_actions' => [['viewerIsInstitutionAdmin' => true], [...self::STAFF_FULL, 'admin_actions']];
         yield 'admin actions on a student' => [['viewerIsInstitutionAdmin' => true, 'subjectRoles' => ['student']], [...self::STUDENT_FOR_STAFF, 'admin_actions']];
-        yield 'admin sees deactivated as basics only' => [['viewerIsInstitutionAdmin' => true, 'subjectActive' => false], self::BASICS];
+        yield 'admin sees deactivated as basics plus admin_actions' => [['viewerIsInstitutionAdmin' => true, 'subjectActive' => false], ['photo', 'names', 'roles', 'admin_actions', 'deactivated_badge']];
         yield 'admin gets nothing when subject is hidden' => [['viewerIsInstitutionAdmin' => true, 'sameInstitution' => false], []];
         // Self
         yield 'self instructor' => [['isSelf' => true], self::STAFF_FULL];

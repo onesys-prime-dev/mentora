@@ -229,6 +229,25 @@ final class PersonProfileRoutesTest extends RouteTestCase
         }
     }
 
+    public function testTheirAdminStillGetsOpenInPeopleOnADeactivatedPerson(): void
+    {
+        $gone  = PeopleFactory::person('instructor', 'Rico', 'Gonely', 'rico@x.test', $this->institution, false);
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+
+        foreach ($this->bodies($admin, $gone) as $uri => $body) {
+            if (str_ends_with($uri, '/card')) {
+                continue;
+            }
+            $this->assertStringContainsString('data-profile-admin', $body, $uri);
+            $this->assertStringContainsString('Open in People', $body, $uri);
+            $this->assertStringNotContainsString('data-person-message', $body, $uri);
+            $this->assertStringNotContainsString('rico@x.test', $body, $uri);
+        }
+        foreach ($this->bodies($this->instructor, $gone) as $uri => $body) {
+            $this->assertStringNotContainsString('data-profile-admin', $body, $uri);
+        }
+    }
+
     public function testADeactivatedPersonStaysHiddenFromWhoCouldNotSeeThemActive(): void
     {
         $gone = PeopleFactory::person('student', 'Gina', 'Gonestud', null, $this->institution, false);
@@ -251,6 +270,30 @@ final class PersonProfileRoutesTest extends RouteTestCase
         // No shared course between this student and Sabrina.
         foreach ($this->bodies($this->student, $this->staff) as $uri => $body) {
             $this->assertStringNotContainsString('data-person-message', $body, $uri);
+        }
+    }
+
+    public function testMessageIsAbsentInAReadOnlyInstitution(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+
+        foreach ($this->bodies($this->student, $this->instructor) as $uri => $body) {
+            $this->assertStringNotContainsString('data-person-message', $body, $uri);
+        }
+    }
+
+    public function testCopyEmailSitsBesideMessageNotInTheContactCard(): void
+    {
+        foreach ($this->bodies($this->instructor, $this->staff) as $uri => $body) {
+            if (str_ends_with($uri, '/card')) {
+                $this->assertStringNotContainsString('data-profile-copy-email', $body, $uri);
+
+                continue;
+            }
+            $this->assertStringContainsString('staff-subj@x.test', $body, $uri);
+            $band = substr($body, 0, (int) strpos($body, 'data-profile-contact'));
+            $this->assertStringContainsString('data-profile-copy-email', $band, "{$uri}: in the action row, before the Contact card");
+            $this->assertSame(1, substr_count($body, 'data-profile-copy-email'), $uri);
         }
     }
 

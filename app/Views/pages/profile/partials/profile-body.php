@@ -116,11 +116,7 @@ $showOffice = $staffInfo !== null && $officeRows !== [];
         <h2 id="profile-contact" class="<?= $heading ?>">Contact</h2>
         <dl class="<?= $dl ?>">
             <dt class="<?= $dt ?>">Email</dt>
-            <dd class="<?= $dd ?> flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span class="min-w-0 break-all"><?= esc($p['email']) ?></span>
-                <?php // Copying is Task 3.2's script; the button carries the address it copies. ?>
-                <button type="button" data-profile-copy-email="<?= esc($p['email'], 'attr') ?>" class="inline-flex items-center rounded-full border border-brand/30 bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Copy email</button>
-            </dd>
+            <dd class="<?= $dd ?> min-w-0 break-all"><?= esc($p['email']) ?></dd>
         </dl>
     </section>
 <?php endif; ?>

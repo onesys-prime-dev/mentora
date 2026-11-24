@@ -58,6 +58,13 @@ export function initPersonCard() {
         try {
             const response = await fetch(`/people/${id}/${kind}`, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } });
 
+            // An expired session lands on /login: never cache or show that page, take the whole page there.
+            if (response.redirected) {
+                window.location.assign(response.url);
+
+                return { redirected: true };
+            }
+
             if (response.status === 404) {
                 return { gone: true };
             }
@@ -78,6 +85,10 @@ export function initPersonCard() {
 
     // Puts a result into a container: the fragment, or a message (with Retry unless the profile is gone).
     function render(container, kind, result) {
+        if (result.redirected) {
+            return;
+        }
+
         container.removeAttribute("aria-busy");
 
         if (result.html !== undefined) {
@@ -143,7 +154,7 @@ export function initPersonCard() {
         const run = ++popRun;
 
         popAvatar = avatar;
-        pop = make("div", { "data-person-popover": id, role: "dialog", "aria-label": avatar.getAttribute("aria-label") ?? "Profile summary", "aria-busy": "true", class: "fixed z-40 rounded-2xl bg-white shadow-lg ring-1 ring-black/5" });
+        pop = make("div", { "data-person-popover": id, role: "dialog", "aria-label": `${(avatar.getAttribute("aria-label") ?? "").replace(/^Open (.*)'s profile$/, "$1") || "Profile"}, profile summary`, "aria-busy": "true", class: "fixed z-40 rounded-2xl bg-white shadow-lg ring-1 ring-black/5" });
         pop.append(make("span", { "aria-hidden": "true", class: "absolute h-3 w-3 rotate-45 bg-white ring-1 ring-black/5" }));
 
         const content = make("div", { class: "relative rounded-2xl bg-white" });

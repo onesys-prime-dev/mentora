@@ -100,6 +100,38 @@ describe("the popover", () => {
 
     });
 
+    it("labels the popover as the person's profile summary", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(document.querySelector("[data-person-popover]").getAttribute("aria-label")).toBe("Maria Santos, profile summary");
+
+    });
+
+    it("sends the whole page to the login when the session expired, caching and showing nothing", async () => {
+
+        const assign = vi.fn();
+
+        vi.stubGlobal("location", { assign });
+        const fetchMock = start({ "/people/7/card": { ...reply(200, "<form>login</form>"), redirected: true, url: "http://x.test/login" } });
+
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(assign).toHaveBeenCalledWith("http://x.test/login");
+        expect(document.body.innerHTML).not.toContain("<form>login</form>");
+
+        mouseOut(avatar);
+        await vi.advanceTimersByTimeAsync(500);
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    });
+
     it("shows a retry on failure that asks again", async () => {
 
         const fetchMock = start({ "/people/7/card": reply(500) });

@@ -7,6 +7,7 @@ namespace App\Controllers\Profiles;
 use App\Controllers\BaseController;
 use App\Filters\MessagesFilter;
 use App\Services\Auth\RolePermissions;
+use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
@@ -101,7 +102,7 @@ class PersonProfileController extends BaseController
     /** @param array<string, mixed> $p */
     private function canMessage(User $viewer, int $id, array $p): bool
     {
-        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
+        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || (new InstitutionAccess())->stateFor((int) $viewer->id) !== InstitutionAccess::WRITABLE || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
             return false;
         }
         $subject = model(UserModel::class)->findById($id);
