@@ -4,6 +4,7 @@
  *
  * @var array<string, mixed> $p      ProfileReader output for the signed-in person
  * @var array<string, mixed> $own    what only the owner sees: official, student_number, portal_on
+ * @var bool $isOwner always true here: the body draws the owner's own cards
  * @var array<string, mixed> $avatar AvatarData row
  * @var array<string, mixed>|null $edit the owner's editable values; null when there is no profile row to edit
  * @var bool $canPreview whether to show the Me / As a student sees it toggle
@@ -37,14 +38,14 @@
         <?php if ($previewP === null): ?>
             <p class="rounded-2xl bg-white p-4 text-sm text-[#646464] shadow-sm sm:p-6">Students in your school can't see your profile.</p>
         <?php else: ?>
-            <?= view('pages/profile/partials/profile-body', ['p' => $previewP, 'own' => [], 'avatar' => $avatar, 'edit' => null], ['saveData' => false]) ?>
+            <?= view('pages/profile/partials/profile-body', ['p' => $previewP, 'isOwner' => false, 'avatar' => $avatar], ['saveData' => false]) ?>
         <?php endif; ?>
     <?php else: ?>
     <?php if ($checklist !== []): ?>
         <?= view('pages/profile/partials/checklist', ['items' => $checklist], ['saveData' => false]) ?>
     <?php endif; ?>
 
-    <?= view('pages/profile/partials/profile-body', ['p' => $p, 'own' => $own, 'avatar' => $avatar, 'edit' => $edit], ['saveData' => false]) ?>
+    <?= view('pages/profile/partials/profile-body', ['p' => $p, 'isOwner' => $isOwner, 'own' => $own, 'avatar' => $avatar, 'edit' => $edit], ['saveData' => false]) ?>
 
     <?php if ($edit !== null): ?>
         <?= view('pages/profile/partials/dialogs/identity', ['edit' => $edit], ['saveData' => false]) ?>

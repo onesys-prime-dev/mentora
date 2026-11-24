@@ -46,7 +46,7 @@ class ProfileController extends BaseController
 
         // Only parents who can see the student now, by name (the portal must be on), as the old page did.
         if (array_key_exists('parents', $p)) {
-            $p['parents'] = (new ParentAccessService())->parentNamesWithAccess($id);
+            $p['parents'] = array_map(static fn (string $name): array => ['name' => $name], (new ParentAccessService())->parentNamesWithAccess($id));
         }
         if (array_key_exists('children', $p)) {
             $own['portal_on'] = (new ParentPortal())->enabled((new PlanLimits())->institutionOf($id));
@@ -77,6 +77,7 @@ class ProfileController extends BaseController
             'user'   => $user,
             'p'      => $p,
             'own'    => $own,
+            'isOwner' => true,
             'edit'   => $edit,
             'avatar' => (new AvatarData())->forMany([$id])[$id] ?? ['id' => $id, 'name' => $p['display_name']],
         ]);

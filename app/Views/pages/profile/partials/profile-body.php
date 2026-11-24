@@ -1,16 +1,21 @@
 <?php
 /**
  * A profile's body, drawn from ProfileReader output: only the keys that are present are drawn, so a
- * hidden field is never in the HTML. Shared by /profile now, the profile modal and /people/{id} later.
+ * hidden field is never in the HTML. Shared by /profile, the profile modal and /people/{id}.
  *
  * @var array<string, mixed> $p      ProfileReader output
- * @var array<string, mixed> $own    owner-only extras: official, student_number, portal_on (empty for a viewer)
+ * @var bool                 $isOwner the owner's own /profile (true) or anyone viewing it, the preview included (false)
+ * @var string               $actions HTML for the band's action row (Message), viewers only
+ * @var array<string, mixed> $own    owner-only extras: official, student_number, portal_on (never built for a viewer)
  * @var array<string, mixed> $avatar AvatarData row
  * @var array<string, mixed>|null $edit set only on the owner's own page: their editable values (pencils and dialogs); null for a viewer
  */
 
-$own       = $own ?? [];
-$edit      = $edit ?? null;
+$isOwner   = $isOwner ?? false;
+$own       = $isOwner ? ($own ?? []) : [];
+$edit      = $isOwner ? ($edit ?? null) : null;
+$actions   = $actions ?? '';
+$gone      = array_key_exists('deactivated_badge', $p);
 $pencil    = static fn (string $dialog, string $label): string => $edit === null ? '' : '<button type="button" data-dialog-open="' . $dialog . '" aria-label="' . esc($label, 'attr') . '" class="inline-flex items-center justify-center rounded-full p-1.5 text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11">' . icon('pencil', 'h-4 w-4') . '</button>';
 $card      = 'flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6';
 $heading   = 'flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm font-bold text-brand';
@@ -24,12 +29,11 @@ $roles     = array_column($p['roles'] ?? [], 'role');
 $isStaff   = array_intersect($roles, ['dean', 'chairperson', 'instructor', 'institutional_admin']) !== [];
 $legal     = (string) ($p['legal_name'] ?? '');
 $official  = $own['official'] ?? [];
-$isOwner   = array_key_exists('official', $own); // only the owner's own page carries the school-managed block
 ?>
 
 <?php // Header band: the one bold element. ?>
 <section class="overflow-hidden rounded-2xl bg-white shadow-sm" aria-label="<?= esc($p['display_name'], 'attr') ?>" data-profile-band>
-    <div class="h-20 bg-linear-to-r from-brand-dark to-brand sm:h-24" aria-hidden="true"></div>
+    <div class="h-20 sm:h-24 <?= $gone ? 'bg-gray-300' : 'bg-linear-to-r from-brand-dark to-brand' ?>" aria-hidden="true"></div>
     <div class="-mt-10 flex flex-wrap items-end gap-x-5 gap-y-3 px-4 pb-5 sm:-mt-12 sm:px-6">
         <div class="self-start rounded-full ring-4 ring-white">
             <?= view('components/avatar', ['person' => $avatar, 'size' => 'xl'], ['saveData' => false]) ?>
@@ -41,19 +45,28 @@ $isOwner   = array_key_exists('official', $own); // only the owner's own page ca
                     <span class="font-sans text-sm font-medium text-[#646464]"><?= esc($p['pronouns']) ?></span>
                 <?php endif; ?>
             </p>
+            <?php if ($gone): ?>
+                <p><span class="inline-flex rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700" data-profile-deactivated>Deactivated</span></p>
+            <?php endif; ?>
             <?php if ($legal !== '' && $legal !== $p['display_name']): ?>
                 <p class="text-xs text-[#646464]">Legal name: <?= esc($legal) ?></p>
             <?php endif; ?>
             <?php if (! empty($p['roles'])): ?>
                 <ul class="mt-1 flex flex-wrap gap-1.5" aria-label="Roles">
                     <?php foreach ($p['roles'] as $role): ?>
-                        <li class="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-semibold text-brand">
+                        <li class="rounded-full px-2.5 py-0.5 text-xs font-semibold <?= $gone ? 'bg-gray-100 text-gray-700' : 'bg-brand-tint text-brand' ?>">
                             <?= esc($roleName((string) $role['role'])) ?><?= $role['detail'] !== null && $role['detail'] !== '' ? ' · ' . esc($role['detail']) : '' ?>
                         </li>
                     <?php endforeach; ?>
                 </ul>
             <?php endif; ?>
+            <?php if ($gone): ?>
+                <p class="mt-1 text-sm text-[#646464]">This account is no longer active.</p>
+            <?php endif; ?>
         </div>
+        <?php if ($actions !== ''): ?>
+            <div class="flex flex-wrap gap-2 sm:pt-14"><?= $actions ?></div>
+        <?php endif; ?>
         <?php if ($edit !== null): ?>
             <button type="button" data-dialog-open="profile-edit-identity" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11"><?= icon('pencil', 'h-4 w-4') ?>Edit name &amp; pronouns</button>
         <?php endif; ?>
@@ -103,7 +116,11 @@ $showOffice = $staffInfo !== null && $officeRows !== [];
         <h2 id="profile-contact" class="<?= $heading ?>">Contact</h2>
         <dl class="<?= $dl ?>">
             <dt class="<?= $dt ?>">Email</dt>
-            <dd class="<?= $dd ?>"><?= esc($p['email']) ?></dd>
+            <dd class="<?= $dd ?> flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span class="min-w-0 break-all"><?= esc($p['email']) ?></span>
+                <?php // Copying is Task 3.2's script; the button carries the address it copies. ?>
+                <button type="button" data-profile-copy-email="<?= esc($p['email'], 'attr') ?>" class="inline-flex items-center rounded-full border border-brand/30 bg-white px-3 py-1 text-xs font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Copy email</button>
+            </dd>
         </dl>
     </section>
 <?php endif; ?>
@@ -123,15 +140,16 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
     </section>
 <?php endif; ?>
 
-<?php if (array_key_exists('parents', $p)): ?>
+<?php // Owner-worded cards: never for a viewer, even if the policy ever let the key through. ?>
+<?php if ($isOwner && array_key_exists('parents', $p)): ?>
     <section class="<?= $card ?>" aria-labelledby="profile-parents" data-profile-parents>
         <h2 id="profile-parents" class="<?= $heading ?>">Parents who can see your progress</h2>
         <?php if ($p['parents'] === []): ?>
             <p class="text-sm text-[#646464]">No parent can see your progress.</p>
         <?php else: ?>
             <ul class="flex flex-col divide-y divide-gray-100">
-                <?php foreach ($p['parents'] as $name): ?>
-                    <li class="flex items-center gap-3 py-2 text-sm font-semibold text-[#1A1C1E]"><?= icon('user', 'h-4 w-4 shrink-0 text-brand') ?><?= esc($name) ?></li>
+                <?php foreach ($p['parents'] as $parent): ?>
+                    <li class="flex items-center gap-3 py-2 text-sm font-semibold text-[#1A1C1E]"><?= icon('user', 'h-4 w-4 shrink-0 text-brand') ?><?= esc($parent['name']) ?></li>
                 <?php endforeach; ?>
             </ul>
             <p class="text-xs text-[#646464]">They can see your courses, deadlines and grades. They cannot change anything. Your school decides who is linked to you.</p>
@@ -139,7 +157,7 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
     </section>
 <?php endif; ?>
 
-<?php if (array_key_exists('children', $p)): ?>
+<?php if ($isOwner && array_key_exists('children', $p)): ?>
     <section class="<?= $card ?>" aria-labelledby="profile-children" data-profile-children>
         <h2 id="profile-children" class="<?= $heading ?>">Your children</h2>
         <?php if (($own['portal_on'] ?? true) === false): ?>
@@ -156,7 +174,8 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
     </section>
 <?php endif; ?>
 
-<?php if (array_key_exists('courses', $p) && $isStaff && (in_array('instructor', $roles, true) || $p['courses'] !== [])): ?>
+<?php // The owner's page keeps the staff card (with its empty state); a viewer sees any subject's courses, or nothing. ?>
+<?php if (array_key_exists('courses', $p) && ($isOwner ? $isStaff && (in_array('instructor', $roles, true) || $p['courses'] !== []) : $p['courses'] !== [])): ?>
     <section class="<?= $card ?>" aria-labelledby="profile-term" data-profile-term>
         <h2 id="profile-term" class="<?= $heading ?>">This term</h2>
         <?php if ($p['courses'] === []): ?>
@@ -166,7 +185,7 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
             <?php foreach ($groups as $origin => $groupLabel): ?>
                 <?php $inGroup = array_filter($p['courses'], static fn (array $c): bool => $c['origin'] === $origin); ?>
                 <?php if ($inGroup === []) { continue; } ?>
-                <?php if (count(array_unique(array_column($p['courses'], 'origin'))) > 1): ?>
+                <?php if (! $isOwner || count(array_unique(array_column($p['courses'], 'origin'))) > 1): ?>
                     <h3 class="text-xs font-semibold uppercase tracking-wide text-[#646464]"><?= $groupLabel ?></h3>
                 <?php endif; ?>
                 <ul class="flex flex-col divide-y divide-gray-100">

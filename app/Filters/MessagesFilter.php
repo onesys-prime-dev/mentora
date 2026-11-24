@@ -29,13 +29,19 @@ class MessagesFilter implements FilterInterface
             return redirect()->to('/login');
         }
 
-        helper('feature');
-
-        if (! feature_enabled('messages') || Impersonation::active() || (new ActiveRoleService())->resolve(auth()->user()) === 'admin') {
+        if (self::closed()) {
             return service('response')->setStatusCode(404)->setJSON(self::NOT_FOUND);
         }
 
         return null;
+    }
+
+    /** Messages does not exist for the signed-in person right now (also asked by the profile's Message button). */
+    public static function closed(): bool
+    {
+        helper('feature');
+
+        return ! feature_enabled('messages') || Impersonation::active() || (new ActiveRoleService())->resolve(auth()->user()) === 'admin';
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)

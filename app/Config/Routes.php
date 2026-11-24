@@ -52,6 +52,12 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 $routes->get('profile', 'Profiles\ProfileController::index', ['filter' => 'session']);
 $routes->post('profile/checklist/dismiss', 'Profiles\ProfileController::dismissChecklist', ['filter' => ['session', 'readonly']]);
 $routes->post('profile/(identity|about|staff)', 'Profiles\ProfileController::update/$1', ['filter' => ['session', 'readonly']]);
+// Other people's profiles (D20): the page, the popover card and the modal panel. Anyone the viewer
+// may not see answers 404. Message starts (or reopens) a direct conversation as the Messages API does.
+$routes->get('people/(:num)', 'Profiles\PersonProfileController::show/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/card', 'Profiles\PersonProfileController::card/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/panel', 'Profiles\PersonProfileController::panel/$1', ['filter' => 'session']);
+$routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
