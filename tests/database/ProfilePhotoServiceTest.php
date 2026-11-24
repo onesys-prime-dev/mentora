@@ -179,11 +179,36 @@ final class ProfilePhotoServiceTest extends DatabaseTestCase
 
     public function testATinyOrHugeImageIsRefused(): void
     {
-        foreach ([[40, 200], [6001, 64]] as [$w, $h]) {
+        foreach ([[40, 200], [4001, 64]] as [$w, $h]) {
             $e = $this->refused(fn () => $this->service->upload((int) $this->owner->id, $this->upload($this->image($w, $h), 'me.png', 'image/png'), $this->owner));
-            $this->assertStringContainsString('between 64 and 6000 pixels', $e->getMessage());
+            $this->assertStringContainsString('between 64 and 4000 pixels', $e->getMessage());
         }
         $this->assertSame(0, db_connect()->table('files')->countAllResults());
+    }
+
+    public function testAPhotoTakenSidewaysComesOutUpright(): void
+    {
+        // 200x100, red on the left half and blue on the right, tagged Orientation 6 (rotate 90 degrees clockwise to view):
+        // upright it is 100x200 with red on top, so the top of the square must be red and the bottom blue.
+        $img = imagecreatetruecolor(200, 100);
+        imagefilledrectangle($img, 0, 0, 99, 99, imagecolorallocate($img, 255, 0, 0));
+        imagefilledrectangle($img, 100, 0, 199, 99, imagecolorallocate($img, 0, 0, 255));
+        ob_start();
+        imagejpeg($img, null, 95);
+        $jpeg    = (string) ob_get_clean();
+        $tiff    = 'II*' . chr(0) . pack('V', 8) . pack('v', 1) . pack('vvVvv', 0x0112, 3, 1, 6, 0) . pack('V', 0);
+        $payload = 'Exif' . chr(0) . chr(0) . $tiff;
+        $tagged  = chr(0xFF) . chr(0xD8) . chr(0xFF) . chr(0xE1) . pack('n', strlen($payload) + 2) . $payload . substr($jpeg, 2);
+
+        $this->service->upload((int) $this->owner->id, $this->upload($tagged, 'me.jpg', 'image/jpeg'), $this->owner);
+
+        [$big] = $this->pair();
+        $out   = imagecreatefromjpeg($this->storage->path($big['storage_key']));
+        $top   = imagecolorsforindex($out, imagecolorat($out, 200, 20));
+        $low   = imagecolorsforindex($out, imagecolorat($out, 200, 236));
+        $this->assertGreaterThan(150, $top['red'], 'the top is red');
+        $this->assertLessThan(100, $top['blue']);
+        $this->assertGreaterThan(150, $low['blue'], 'the bottom is blue');
     }
 
     public function testTheStoredPhotosCarryNoExif(): void

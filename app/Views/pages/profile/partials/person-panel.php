@@ -5,6 +5,8 @@
  * @var array<string, mixed> $p          ProfileReader::forViewer output
  * @var array<string, mixed> $avatar     AvatarData row
  * @var bool                 $canMessage MessagingPolicy::canStart allows the viewer to start a conversation
+ * @var array{has: bool, on: bool}|null $photo for an administrator: the person's photo state
+ * @var bool                 $modal      drawn in the profile modal (a dialog cannot open over it)
  */
 
 $name = (string) $p['display_name'];
@@ -23,10 +25,28 @@ $q = (string) ($p['email'] ?? end($last));
     ], ['saveData' => false]) ?>
 
     <?php if (array_key_exists('admin_actions', $p)): ?>
-        <?php // Phase 4 adds Remove photo here, Phase 6 Clear field. ?>
+        <?php // Phase 6 adds Clear field here. ?>
         <section class="flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 shadow-sm sm:px-6" aria-label="Admin actions" data-profile-admin>
             <span class="rounded-full bg-brand-tint px-2.5 py-0.5 text-xs font-semibold text-brand">Admins only</span>
             <a href="<?= esc(site_url('institution/people') . '?' . http_build_query(['q' => $q]), 'attr') ?>" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11"><?= icon('users', 'h-4 w-4 text-brand') ?>Open in People</a>
+            <?php if (($photo['on'] ?? false) === true): ?>
+                <?php $adminBtn = 'inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11'; ?>
+                <?php if ($modal ?? false): ?>
+                    <?php // A dialog cannot open over this modal; the page has the photo controls. ?>
+                    <a href="<?= esc(site_url('people/' . (int) $p['id']), 'attr') ?>" class="<?= $adminBtn ?>" data-admin-photo-link><?= icon('pencil', 'h-4 w-4 text-brand') ?>Change photo</a>
+                <?php else: ?>
+                    <button type="button" data-dialog-open="person-photo-upload" class="<?= $adminBtn ?>"><?= icon('pencil', 'h-4 w-4 text-brand') ?>Upload photo</button>
+                    <?php if ($photo['has']): ?>
+                        <button type="button" data-dialog-open="person-photo-remove" class="<?= $adminBtn ?>">Remove photo</button>
+                    <?php endif; ?>
+                <?php endif; ?>
+            <?php endif; ?>
         </section>
+        <?php if (($photo['on'] ?? false) === true && ! ($modal ?? false)): ?>
+            <?= view('pages/profile/partials/dialogs/photo', ['id' => 'person-photo-upload', 'title' => 'Upload a photo for ' . $name, 'action' => site_url('institution/people/' . (int) $p['id'] . '/photo'), 'removeUrl' => '', 'has' => false, 'on' => true], ['saveData' => false]) ?>
+            <?php if ($photo['has']): ?>
+                <?= view('components/confirm', ['id' => 'person-photo-remove', 'title' => 'Remove ' . $name . "'s photo?", 'text' => 'Their profile shows their initials until they add a photo again. They are told that your school removed it.', 'action' => site_url('institution/people/' . (int) $p['id'] . '/photo/remove'), 'confirmLabel' => 'Remove photo', 'tone' => 'danger', 'ajax' => true], ['saveData' => false]) ?>
+            <?php endif; ?>
+        <?php endif; ?>
     <?php endif; ?>
 </div>

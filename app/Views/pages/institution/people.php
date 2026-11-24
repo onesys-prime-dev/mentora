@@ -78,6 +78,13 @@ foreach ($peopleRows as $p) {
             . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
             . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
 
+        if ($p['has_photo'] ?? false) {
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Remove ' . $label . '&#039;s photo?"'
+                . ' data-dialog-text="Their profile shows their initials until they add a photo again. They are told that your school removed it."'
+                . ' data-dialog-label="Remove photo" data-dialog-action="' . $url('/' . $p['id'] . '/photo/remove') . '">Remove photo</button>';
+        }
+
         if ($p['active']) {
             $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
                 . ' data-dialog-title="Send ' . $label . ' a password link?"'

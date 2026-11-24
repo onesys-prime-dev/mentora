@@ -27,6 +27,12 @@ describe("renderAvatar", () => {
         expect(img.getAttribute("src")).toBe("/p.jpg");
     });
 
+    it("uses the 256 px photo for the larger sizes", () => {
+        const p = { ...person, photoUrl: "/p64.jpg", photoUrlLg: "/p256.jpg" };
+        expect(renderAvatar(p, "sm").querySelector("img").getAttribute("src")).toBe("/p64.jpg");
+        expect(renderAvatar(p, "xl").querySelector("img").getAttribute("src")).toBe("/p256.jpg");
+    });
+
     it("sizes by the map and falls back to md", () => {
         expect(renderAvatar(person, "xs").className).toContain("h-6 w-6");
         expect(renderAvatar(person, "xl").className).toContain("h-18 w-18");

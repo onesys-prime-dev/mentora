@@ -14,7 +14,7 @@ use CodeIgniter\Shield\Entities\User;
  * A person's profile photo (FR6, D6).
  *
  *  - Accepted by content (getimagesize of the upload), never by its name or the browser's type:
- *    JPEG, PNG or WebP, at most 5 MB, 64 to 6000 pixels a side.
+ *    JPEG, PNG or WebP, at most 5 MB, 64 to 4000 pixels a side.
  *  - Centre-cropped square and re-encoded from pixels to JPEG at 256 and 64 px, so EXIF/GPS never
  *    survives. Both are files rows owned by the subject; user_profiles.photo_file_id points at the
  *    256 one, and the 64 one sits beside it as "{name}-64.jpg" (D6 allows no other column).
@@ -27,7 +27,7 @@ class ProfilePhotoService
 
     public const MIN_PIXELS = 64;
 
-    public const MAX_PIXELS = 6000;
+    public const MAX_PIXELS = 4000;
 
     private const SIZES = [256, 64];
 
@@ -44,7 +44,10 @@ class ProfilePhotoService
     {
     }
 
-    /** @throws ProfileEditException */
+    /**
+     * @throws ProfileEditException
+     * @throws \App\Exceptions\PlanLimitExceeded when the school has no storage left
+     */
     public function upload(int $subjectId, UploadedFile $file, User $actor): void
     {
         if ($file->getError() === UPLOAD_ERR_NO_FILE) {
@@ -52,6 +55,10 @@ class ProfilePhotoService
         }
         if (! $file->isValid()) {
             throw new ProfileEditException('The photo could not be uploaded: ' . $file->getErrorString() . '.', 'photo');
+        }
+
+        if (! $this->state($subjectId)['on']) {
+            throw new ProfileEditException('Your school has turned profile photos off.', 'photo');
         }
 
         $temp = $file->getTempName();
@@ -69,6 +76,9 @@ class ProfilePhotoService
         if ($read === null) {
             throw new ProfileEditException('The photo must be a JPEG, PNG or WebP image.', 'photo');
         }
+        if (! function_exists($read)) {
+            throw new ProfileEditException('This server cannot read that kind of image. Choose a JPEG or PNG.', 'photo');
+        }
         if (min($info[0], $info[1]) < self::MIN_PIXELS || max($info[0], $info[1]) > self::MAX_PIXELS) {
             throw new ProfileEditException('The photo must be between ' . self::MIN_PIXELS . ' and ' . self::MAX_PIXELS . ' pixels on each side.', 'photo');
         }
@@ -84,7 +94,11 @@ class ProfilePhotoService
             throw new ProfileEditException('There is no profile to add a photo to.', 'photo');
         }
 
-        $encoded = $this->squares($source, (int) $info[0], (int) $info[1]);
+        if ($info['mime'] === 'image/jpeg') {
+            $source = $this->upright($source, $temp);
+        }
+
+        $encoded = $this->squares($source, imagesx($source), imagesy($source));
         (new PlanLimits())->assertCanStore($actor, array_sum(array_map('strlen', $encoded)));
 
         $storage = $this->storage();
@@ -104,27 +118,33 @@ class ProfilePhotoService
 
         $files = new FileModel();
         $ids   = [];
-        $db->transStart();
-        foreach ($encoded as $size => $bytes) {
-            $files->insert([
-                'owner_user_id'     => $subjectId,
-                'original_filename' => "profile-photo-{$size}.jpg",
-                'stored_filename'   => $keys[$size][0],
-                'mime_type'         => 'image/jpeg',
-                'file_size'         => strlen($bytes),
-                'storage_key'       => $keys[$size][1],
-                'status'            => 'active',
-            ]);
-            $ids[$size] = (int) $files->getInsertID();
-        }
-        $db->table('user_profiles')->where('user_id', $subjectId)->update(['photo_file_id' => $ids[256], 'updated_at' => date('Y-m-d H:i:s')]);
-        $db->transComplete();
-
-        if (! $db->transStatus()) {
-            foreach ($keys as [, $key]) {
-                $storage->delete($key);
+        $saved = false;
+        try {
+            $db->transStart();
+            foreach ($encoded as $size => $bytes) {
+                $files->insert([
+                    'owner_user_id'     => $subjectId,
+                    'original_filename' => "profile-photo-{$size}.jpg",
+                    'stored_filename'   => $keys[$size][0],
+                    'mime_type'         => 'image/jpeg',
+                    'file_size'         => strlen($bytes),
+                    'storage_key'       => $keys[$size][1],
+                    'status'            => 'active',
+                ]);
+                $ids[$size] = (int) $files->getInsertID();
             }
-
+            $db->table('user_profiles')->where('user_id', $subjectId)->update(['photo_file_id' => $ids[256], 'updated_at' => date('Y-m-d H:i:s')]);
+            $db->transComplete();
+            $saved = $db->transStatus();
+        } finally {
+            // Whether the transaction failed or threw, the new files must not be left behind.
+            if (! $saved) {
+                foreach ($keys as [, $key]) {
+                    $storage->delete($key);
+                }
+            }
+        }
+        if (! $saved) {
             throw new ProfileEditException('The photo could not be saved. Try again.', 'photo');
         }
 
@@ -143,6 +163,20 @@ class ProfilePhotoService
         $db->table('user_profiles')->where('user_id', $subjectId)->update(['photo_file_id' => null, 'updated_at' => date('Y-m-d H:i:s')]);
         $this->release($old);
         $this->audit($actor, $subjectId, 'removed', 'removed_by_admin');
+    }
+
+    /**
+     * Whether the subject has a stored photo and whether their institution shows photos, for the controls
+     * (the photo is kept while photos are off, so "has" does not depend on "on").
+     *
+     * @return array{has: bool, on: bool}
+     */
+    public function state(int $subjectId): array
+    {
+        $row = db_connect()->table('user_profiles up')->select('up.photo_file_id, ' . self::ENABLED_SQL . ' AS photos_on', false)
+            ->where('up.user_id', $subjectId)->get()->getRowArray();
+
+        return ['has' => $row !== null && $row['photo_file_id'] !== null, 'on' => $row !== null && (int) $row['photos_on'] === 1];
     }
 
     /** The photo's URL at 64 or 256 px, or null when there is none or the subject's institution has photos off. */
@@ -189,6 +223,25 @@ class ProfilePhotoService
     | Internals
     |--------------------------------------------------------------------------
     */
+
+    /** A JPEG's EXIF Orientation applied to its pixels, so a sideways phone photo is stored upright. */
+    private function upright(\GdImage $img, string $path): \GdImage
+    {
+        $orientation = function_exists('exif_read_data') ? (int) (@exif_read_data($path)['Orientation'] ?? 1) : 1;
+        $flip        = static fn (\GdImage $i, int $mode): \GdImage => imageflip($i, $mode) ? $i : $i;
+        $turn        = static fn (\GdImage $i, int $deg): \GdImage => imagerotate($i, $deg, 0) ?: $i;
+
+        return match ($orientation) {
+            2       => $flip($img, IMG_FLIP_HORIZONTAL),
+            3       => $turn($img, 180),
+            4       => $flip($img, IMG_FLIP_VERTICAL),
+            5       => $turn($flip($img, IMG_FLIP_HORIZONTAL), 90),
+            6       => $turn($img, -90),
+            7       => $turn($flip($img, IMG_FLIP_HORIZONTAL), -90),
+            8       => $turn($img, 90),
+            default => $img,
+        };
+    }
 
     /**
      * The largest centred square, resampled to each size and written as JPEG.

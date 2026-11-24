@@ -216,21 +216,22 @@ final class ProfilePageTest extends RouteTestCase
     {
         $ivy = $this->staffUser();
 
-        $this->assertEqualsCanonicalizing(['consultation', 'office', 'pronouns', 'bio'], $this->checklist($this->body($ivy)));
+        $this->assertEqualsCanonicalizing(['photo', 'consultation', 'office', 'pronouns', 'bio'], $this->checklist($this->body($ivy)));
 
         $this->profileUpdate($ivy, ['office_location' => 'CS 204', 'bio' => 'Hello']);
-        $this->assertEqualsCanonicalizing(['consultation', 'pronouns'], $this->checklist($this->body($ivy)));
+        $this->assertEqualsCanonicalizing(['photo', 'consultation', 'pronouns'], $this->checklist($this->body($ivy)));
     }
 
     public function testAStudentAndAParentOnlyGetPronounsAndBio(): void
     {
-        $this->assertEqualsCanonicalizing(['pronouns', 'bio'], $this->checklist($this->body($this->ann)));
-        $this->assertEqualsCanonicalizing(['pronouns', 'bio'], $this->checklist($this->body($this->pam)));
+        $this->assertEqualsCanonicalizing(['photo', 'pronouns', 'bio'], $this->checklist($this->body($this->ann)));
+        $this->assertEqualsCanonicalizing(['photo', 'pronouns', 'bio'], $this->checklist($this->body($this->pam)));
     }
 
     public function testTheChecklistCardIsHiddenWhenEverythingIsFilled(): void
     {
         $this->profileUpdate($this->ann, ['pronouns' => 'she/her', 'bio' => 'Hi']);
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['profile_photos_enabled' => 0]); // no photo to add while photos are off
 
         $this->assertStringNotContainsString('data-profile-checklist', $this->body($this->ann));
     }

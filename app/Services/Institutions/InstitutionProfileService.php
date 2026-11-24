@@ -57,7 +57,7 @@ class InstitutionProfileService
     }
 
     /**
-     * @param array<string, mixed> $input name, contact_email, contact_phone, address
+     * @param array<string, mixed> $input name, contact_email, contact_phone, address, profile_photos_enabled (optional)
      *
      * @throws StructureException
      */
@@ -90,6 +90,11 @@ class InstitutionProfileService
             'contact_phone' => $phone === '' ? null : $phone,
             'address'       => $address === '' ? null : $address,
         ];
+
+        // Left out of a post that does not carry the switch (an older form), never switched off by it.
+        if (array_key_exists('profile_photos_enabled', $input)) {
+            $new['profile_photos_enabled'] = (string) $input['profile_photos_enabled'] === '1' ? 1 : 0;
+        }
 
         $this->update($institutionId, $new, 'institution.profile_updated', $actor);
     }

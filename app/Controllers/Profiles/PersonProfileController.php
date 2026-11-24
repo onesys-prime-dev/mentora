@@ -11,6 +11,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\ProfilePhotoService;
 use App\Services\Profiles\ProfileReader;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
@@ -42,7 +43,7 @@ class PersonProfileController extends BaseController
 
     public function panel(int $id): ResponseInterface
     {
-        return $this->fragment($id, 'pages/profile/partials/person-panel');
+        return $this->fragment($id, 'pages/profile/partials/person-panel', ['modal' => true]);
     }
 
     /** Starts (or reopens) the direct conversation through Messages' own start path, which asks canStart again. */
@@ -68,7 +69,8 @@ class PersonProfileController extends BaseController
     }
 
     /** Per-viewer HTML, never kept by a shared cache. */
-    private function fragment(int $id, string $view): ResponseInterface
+    /** @param array<string, mixed> $extra */
+    private function fragment(int $id, string $view, array $extra = []): ResponseInterface
     {
         $this->response->setHeader('Cache-Control', 'private, no-store');
         $data = $this->data($id);
@@ -77,7 +79,7 @@ class PersonProfileController extends BaseController
             return $this->response->setStatusCode(404)->setBody('<p class="text-sm text-[#646464]" data-profile-unavailable>This profile isn&#039;t available.</p>');
         }
 
-        return $this->response->setBody(view($view, $data, ['saveData' => false]));
+        return $this->response->setBody(view($view, $data + $extra, ['saveData' => false]));
     }
 
     /** @return array<string, mixed>|null null when the viewer may not see this person */
@@ -96,6 +98,7 @@ class PersonProfileController extends BaseController
             'p'          => $p,
             'avatar'     => (new AvatarData())->forMany([$id])[$id] ?? ['id' => $id, 'name' => $p['display_name']],
             'canMessage' => $this->canMessage($viewer, $id, $p),
+            'photo'      => array_key_exists('admin_actions', $p) ? (new ProfilePhotoService())->state($id) : null,
         ];
     }
 

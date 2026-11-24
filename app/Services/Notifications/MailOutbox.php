@@ -40,7 +40,10 @@ class MailOutbox
     /** Group activity news (GroupNotifier); its in-app notice is made by GroupNotifier, not here. */
     public const GROUP = 'group';
 
-    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP];
+    /** An administrator removed or added the person's profile photo (detail: removed | added); the bell is sent by ProfileModeration. */
+    public const PHOTO = 'photo';
+
+    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP, self::PHOTO];
 
     /** How long a row waits so that changes made one after another make one email. */
     public const MERGE_SECONDS = 120;
@@ -328,6 +331,10 @@ class MailOutbox
         }
 
         $out .= $this->list('About your groups', $by[self::GROUP] ?? []);
+
+        foreach ($by[self::PHOTO] ?? [] as $what) {
+            $out .= ($what === 'removed' ? 'Your profile photo was removed by your school.' : 'Your school added a profile photo for you.') . "\n\n";
+        }
 
         $out .= isset($by[self::WELCOME])
             ? "If you were not expecting this, you can ignore this email: nothing happens unless the link is used.\n"

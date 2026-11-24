@@ -11,6 +11,7 @@
  * @var bool $preview    the student preview is on
  * @var array<string, mixed>|null $previewP what a student would see; null = nothing
  * @var array<string, array{label: string, dialog: string}> $checklist what is still empty
+ * @var array{has: bool, on: bool} $photo the owner's photo state
  */
 ?>
 
@@ -48,6 +49,7 @@
     <?= view('pages/profile/partials/profile-body', ['p' => $p, 'isOwner' => $isOwner, 'own' => $own, 'avatar' => $avatar, 'edit' => $edit], ['saveData' => false]) ?>
 
     <?php if ($edit !== null): ?>
+        <?= view('pages/profile/partials/dialogs/photo', ['id' => 'profile-photo', 'title' => 'Profile photo', 'action' => site_url('profile/photo'), 'removeUrl' => site_url('profile/photo/remove'), 'has' => $photo['has'], 'on' => $photo['on']], ['saveData' => false]) ?>
         <?= view('pages/profile/partials/dialogs/identity', ['edit' => $edit], ['saveData' => false]) ?>
         <?php if (array_key_exists('bio', $p)): ?>
             <?= view('pages/profile/partials/dialogs/about', ['p' => $p], ['saveData' => false]) ?>

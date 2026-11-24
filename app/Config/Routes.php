@@ -58,6 +58,8 @@ $routes->get('people/(:num)', 'Profiles\PersonProfileController::show/$1', ['fil
 $routes->get('people/(:num)/card', 'Profiles\PersonProfileController::card/$1', ['filter' => 'session']);
 $routes->get('people/(:num)/panel', 'Profiles\PersonProfileController::panel/$1', ['filter' => 'session']);
 $routes->get('people/(:num)/photo/(64|256)', 'Profiles\ProfilePhotoController::show/$1/$2', ['filter' => 'session']);
+$routes->post('profile/photo', 'Profiles\ProfilePhotoController::upload', ['filter' => ['session', 'readonly']]);
+$routes->post('profile/photo/remove', 'Profiles\ProfilePhotoController::remove', ['filter' => ['session', 'readonly']]);
 $routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
@@ -1160,6 +1162,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('/', 'Institution\PeopleController::index', ['filter' => 'permission:people.view']);
             $routes->get('export', 'Institution\PeopleController::export', ['filter' => 'permission:people.view']);
             $routes->post('export', 'Institution\PeopleController::exportSelected', ['filter' => 'permission:people.view']);
+            $routes->post('(:num)/photo', 'Profiles\ProfilePhotoController::adminUpload/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/photo/remove', 'Profiles\ProfilePhotoController::adminRemove/$1', ['filter' => 'permission:people.manage']);
             $routes->post('/', 'Institution\PeopleController::invite', ['filter' => 'permission:people.manage']);
             $routes->post('bulk/deactivate', 'Institution\PeopleController::bulkDeactivate', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('bulk/reactivate', 'Institution\PeopleController::bulkReactivate', ['filter' => 'permission:people.manage']);

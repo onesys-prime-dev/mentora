@@ -9,17 +9,20 @@ const SIZES = {
     xl: "h-18 w-18 text-2xl",
 };
 
-/** @param {{id:number, name:string, initials:string, colour?:string, photoUrl?:?string}} person */
+/** @param {{id:number, name:string, initials:string, colour?:string, photoUrl?:?string, photoUrlLg?:?string}} person */
 export function renderAvatar(person, size = "md") {
     const el = document.createElement("span");
     el.className = `${SIZES[size] ?? SIZES.md} shrink-0 inline-flex items-center justify-center overflow-hidden rounded-full font-bold text-white select-none`;
     el.style.backgroundColor = person.colour ?? COLOURS[person.id % 8];
     el.dataset.avatar = "";
 
-    if (person.photoUrl) {
+    // The 256 px photo for the larger sizes, as components/avatar does.
+    const photo = (size === "lg" || size === "xl") && person.photoUrlLg ? person.photoUrlLg : person.photoUrl;
+
+    if (photo) {
         const img = document.createElement("img");
         img.className = "h-full w-full object-cover";
-        img.src = person.photoUrl;
+        img.src = photo;
         img.alt = `Photo of ${person.name}`;
         el.append(img);
     } else {

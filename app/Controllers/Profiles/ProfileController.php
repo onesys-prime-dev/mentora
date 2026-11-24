@@ -10,6 +10,7 @@ use App\Services\Parents\ParentPortal;
 use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\ProfileEditException;
 use App\Services\Profiles\ProfileEditService;
+use App\Services\Profiles\ProfilePhotoService;
 use App\Services\Profiles\ProfileReader;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Exceptions\PageNotFoundException;
@@ -67,11 +68,14 @@ class ProfileController extends BaseController
             $previewP['display_name'] = ($previewP['display_name'] ?? '') !== '' ? $previewP['display_name'] : (string) $user->username;
         }
 
+        $photo = (new ProfilePhotoService())->state($id);
+
         return view('pages/profile/index', [
+            'photo'      => $photo,
             'canPreview' => $canPreview,
             'preview'    => $preview,
             'previewP'   => $previewP,
-            'checklist'  => $edit === null ? [] : $this->checklist($edit['staff'], $row),
+            'checklist'  => $edit === null ? [] : $this->checklist($edit['staff'], $row, $photo),
             'title'  => 'My profile',
             'page'   => 'profile',
             'user'   => $user,
@@ -87,17 +91,21 @@ class ProfileController extends BaseController
      * What is still empty on the owner's own profile, unless they dismissed the card.
      *
      * @param array<string, mixed> $row
+     * @param array{has: bool, on: bool} $photo
      *
      * @return array<string, array{label: string, dialog: string}>
      */
-    private function checklist(bool $staff, array $row): array
+    private function checklist(bool $staff, array $row, array $photo): array
     {
         if (($row['checklist_dismissed_at'] ?? null) !== null) {
             return [];
         }
         $empty = static fn (string $k): bool => trim((string) ($row[$k] ?? '')) === '';
-        // Phase 4 adds the photo item here, first in the list.
         $items = [];
+        // Not while the school has photos off: there would be nowhere to show it.
+        if (! $photo['has'] && $photo['on']) {
+            $items['photo'] = ['label' => 'Add a photo', 'dialog' => 'profile-photo'];
+        }
         if ($staff && $empty('consultation_hours')) {
             $items['consultation'] = ['label' => 'Add your consultation hours', 'dialog' => 'profile-edit-staff'];
         }
