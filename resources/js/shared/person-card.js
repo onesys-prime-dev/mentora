@@ -258,6 +258,7 @@ export function initPersonCard() {
                 closePopover();
 
                 if (had) {
+                    returning = document.activeElement !== avatar;
                     avatar?.focus();
                 }
             } else if (event.key === "Tab" && event.target === popAvatar && !event.shiftKey && controls.length) {
@@ -276,6 +277,7 @@ export function initPersonCard() {
                 }
 
                 closePopover();
+                returning = document.activeElement !== avatar;
                 avatar?.focus();
             }
         },

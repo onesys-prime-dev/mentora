@@ -183,6 +183,24 @@ describe("the popover and the keyboard", () => {
 
     });
 
+    it("does not raise the popover again after Escape or after Tabbing out of it", async () => {
+
+        start({ "/people/7/card": reply(200, CARD) });
+        await open();
+        fire(document, "keydown", { key: "Escape" });
+        await vi.advanceTimersByTimeAsync(400);
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+
+        avatar.blur();
+        await open();
+        fire(avatar, "keydown", { key: "Tab" });
+        document.querySelector("[data-person-panel]").focus();
+        fire(document.activeElement, "keydown", { key: "Tab", shiftKey: false });
+        await vi.advanceTimersByTimeAsync(400);
+        expect(document.querySelector("[data-person-popover]")).toBeNull();
+
+    });
+
     it("Escape does not take focus from somewhere else", async () => {
 
         start({ "/people/7/card": reply(200, CARD) });
