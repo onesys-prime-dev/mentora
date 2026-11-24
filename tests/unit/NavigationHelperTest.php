@@ -123,7 +123,7 @@ final class NavigationHelperTest extends CIUnitTestCase
         $this->assertSame(site_url('parent/calendar'), $apps[1]['url']);
         $this->assertSame(site_url('parent/grades'), $apps[2]['url']);
         $this->assertSame(site_url('notifications'), $apps[3]['url']);
-        $this->assertSame(site_url('profile'), $apps[4]['url']);
+        $this->assertSame(site_url('parent/profile'), $apps[4]['url']);
 
         $collection = \Config\Services::routes(false);
         $collection->loadRoutes();

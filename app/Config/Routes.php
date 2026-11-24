@@ -537,10 +537,10 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
     // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
     $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
-    // The parent's own page is /profile now; the old GET redirects. These two
-    // forms are the only things a parent can post, both about their own account: the email choice for
-    // each child, and an emailed password link. Phase 5 moves them under /settings.
-    $routes->get('profile', 'Profiles\ProfileController::legacy');
+    // The parent's own page. These two forms are the only things a parent can post, and both are
+    // about their own account: the email choice for each child, and an emailed password link.
+    // Phase 5 moves them under /settings and this GET then redirects to /profile.
+    $routes->get('profile', 'Parents\ParentProfileController::index');
     $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
     $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
 

@@ -81,8 +81,7 @@ test("TC-PRT-05 The calendar is read-only", async ({ page }) => {
     await expect(page.getByText("Reminder", { exact: true })).toHaveCount(0);
 });
 
-// The email choices leave /profile until Phase 5 puts them on /settings; switch this back on then.
-test.fixme("TC-PRT-06 A parent chooses which child they are emailed about, and it is kept", async ({ page }) => {
+test("TC-PRT-06 A parent chooses which child they are emailed about, and it is kept", async ({ page }) => {
     await signInAs(page, accounts.parent, "parent");
     await page.goto("/parent/profile");
 

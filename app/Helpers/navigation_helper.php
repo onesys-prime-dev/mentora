@@ -159,7 +159,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
                 ['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('parent/grades')],
                 ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
-                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('profile')],
+                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
                 ...array_filter([messages_tile($role)]),
             ], $role);
         }

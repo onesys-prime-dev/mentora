@@ -109,6 +109,33 @@ final class ProfilePageTest extends RouteTestCase
         $this->assertStringNotContainsString('ann@school.example', $body);
     }
 
+    public function testAParentWithNoChildrenSeesTheEmptyState(): void
+    {
+        $body = $this->body(PeopleFactory::person('parent', 'Lone', 'Parent', 'lone@example.test', $this->institution));
+
+        $this->assertStringContainsString('Your children', $body);
+        $this->assertStringContainsString('You are not linked to a student yet', $body);
+    }
+
+    public function testAParentWhosePortalIsOffSeesNoChildren(): void
+    {
+        (new ParentPortal())->setInstitutionOn($this->institution, false);
+
+        $body = $this->body($this->pam);
+
+        $this->assertStringContainsString('parent portal is switched off', $body);
+        $this->assertStringNotContainsString('Ann Lee', $body);
+    }
+
+    public function testOtherRolesAreTurnedAwayFromTheOldStudentUrlLikeAnyStudentPage(): void
+    {
+        foreach (['instructor', 'chairperson', 'institutional_admin', 'admin', 'parent'] as $role) {
+            $this->loggedInAs(PeopleFactory::person($role, 'Zoe', 'Other', null, $role === 'admin' ? null : $this->institution));
+
+            $this->assertSame(302, $this->call('GET', '/student/profile')->response()->getStatusCode(), $role);
+        }
+    }
+
     public function testStaffSeeOfficeAndThisTerm(): void
     {
         $body = $this->body(PeopleFactory::person('instructor', 'Ivy', 'Teach', null, $this->institution));
@@ -129,15 +156,16 @@ final class ProfilePageTest extends RouteTestCase
         }
     }
 
-    public function testTheOldProfileUrlsRedirectPermanently(): void
+    public function testTheOldStudentProfileUrlRedirectsPermanentlyAndTheParentPageStaysUntilPhase5(): void
     {
-        foreach ([[$this->ann, '/student/profile'], [$this->pam, '/parent/profile']] as [$user, $uri]) {
-            $this->loggedInAs($user);
-            $response = $this->call('GET', $uri)->response();
+        $this->loggedInAs($this->ann);
+        $response = $this->call('GET', '/student/profile')->response();
 
-            $this->assertSame(301, $response->getStatusCode(), $uri);
-            $this->assertStringEndsWith('/profile', $response->getHeaderLine('Location'), $uri);
-        }
+        $this->assertSame(301, $response->getStatusCode());
+        $this->assertStringEndsWith('/profile', $response->getHeaderLine('Location'));
+
+        $this->loggedInAs($this->pam);
+        $this->assertSame(200, $this->call('GET', '/parent/profile')->response()->getStatusCode());
     }
 
     public function testTheParentFormsStillRespond(): void

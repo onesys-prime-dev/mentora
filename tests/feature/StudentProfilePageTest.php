@@ -83,7 +83,8 @@ final class StudentProfilePageTest extends RouteTestCase
         $this->assertStringContainsString('Parents who can see your progress', $body);
         $this->assertStringContainsString('Olga Another', $body);
         $this->assertStringContainsString('Pam Parent', $body);
-        $this->assertLessThan(strpos($body, 'Pam Parent'), strpos($body, 'Olga Another'), 'in name order');
+        $list = substr($body, (int) strpos($body, 'Parents who can see your progress'));
+        $this->assertLessThan(strpos($list, 'Pam Parent'), strpos($list, 'Olga Another'), 'in name order');
     }
 
     public function testOnlyNamesAreShownNeverAParentsEmail(): void

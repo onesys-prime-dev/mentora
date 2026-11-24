@@ -209,7 +209,7 @@ const SCREENS = [
     { name: "parent-dashboard", path: "/parent/dashboard", as: "parent", scope: "main:has([data-parent-course])" },
     // #course-content loses aria-busy once the tab's fragment has loaded.
     { name: "parent-course", path: parentCoursePath, as: "parent", scope: "main:has(#course-content:not([aria-busy]))" },
-    { name: "parent-profile", path: "/profile", as: "parent", scope: "main" },
+    { name: "parent-profile", path: "/parent/profile", as: "parent", scope: "main" },
     { name: "student-profile", path: "/profile", as: "student", scope: "main" },
     // The chairperson's and the dean's screens (Phase 6). The Grades pages are scoped to main once the selected
     // section's gradebook has loaded into it (not its skeleton). The dean is dean2: dean1's college has no courses,
