@@ -78,15 +78,7 @@ final class ProfilePolicy
             $staffGrant = array_diff($staffGrant, ['email', 'courses']);
         }
 
-        $studentGrant = [];
-        if ($isStudent) {
-            $studentGrant = match (true) {
-                $staffView                => self::STUDENT_FOR_STAFF,
-                $viewer === 'student'     => self::STUDENT_FOR_PEER,
-                $c->viewerIsParentOfSubject => self::STUDENT_FOR_PARENT,
-                default                   => [],
-            };
-        }
+        $studentGrant = $isStudent ? $this->studentGrant($c) : [];
 
         $parentGrant = [];
         if (! $isStaff && ! $isStudent) {
@@ -94,6 +86,40 @@ final class ProfilePolicy
         }
 
         return [...$staffGrant, ...$studentGrant, ...$parentGrant];
+    }
+
+    /** @return list<string> what the viewer's row grants for a subject who is a student; the own-child grant applies whatever the viewer's rank (D28) */
+    private function studentGrant(ViewContext $c): array
+    {
+        $grant = match (true) {
+            in_array($c->viewerRank, self::STAFF_ROLES, true) => self::STUDENT_FOR_STAFF,
+            $c->viewerRank === 'student'                      => self::STUDENT_FOR_PEER,
+            default                                           => [],
+        };
+
+        return $c->viewerIsParentOfSubject ? [...$grant, ...self::STUDENT_FOR_PARENT] : $grant;
+    }
+
+    /**
+     * The subject's roles this viewer may see, in RoleRank order.
+     *
+     * @return list<string>
+     */
+    public function roles(ViewContext $c): array
+    {
+        if (! in_array('roles', $this->fields($c), true)) {
+            return [];
+        }
+        if ($c->isSelf) {
+            return $c->subjectIsSystemAdmin ? ['admin'] : $c->subjectRoles;
+        }
+        $staffView = in_array($c->viewerRank, self::STAFF_ROLES, true);
+
+        return array_values(array_filter($c->subjectRoles, fn (string $r): bool => match (true) {
+            $r === 'student' => $this->studentGrant($c) !== [],
+            $r === 'parent'  => $staffView || $c->viewerIsChildOfSubject,
+            default          => true,
+        }));
     }
 
     /**

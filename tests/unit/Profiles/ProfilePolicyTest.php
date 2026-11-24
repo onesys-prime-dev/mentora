@@ -75,6 +75,11 @@ final class ProfilePolicyTest extends CIUnitTestCase
             ['photo', 'names', 'pronouns', 'roles', 'bio', 'staff_info', 'email', 'student_details', 'courses'],
         ];
         yield 'student viewer -> instructor+parent: parent adds nothing' => [['viewerRank' => 'student', 'subjectRoles' => ['instructor', 'parent']], self::STAFF_FULL];
+        // M7
+        yield 'student viewer who is the parent of the subject gets the own-child grant' => [
+            ['viewerRank' => 'student', 'subjectRoles' => ['student'], 'viewerIsParentOfSubject' => true],
+            ['photo', 'names', 'pronouns', 'roles', 'bio', 'student_details', 'courses'],
+        ];
         // Admin actions
         yield 'institutional admin gets admin_actions' => [['viewerIsInstitutionAdmin' => true], [...self::STAFF_FULL, 'admin_actions']];
         yield 'admin actions on a student' => [['viewerIsInstitutionAdmin' => true, 'subjectRoles' => ['student']], [...self::STUDENT_FOR_STAFF, 'admin_actions']];
@@ -97,5 +102,51 @@ final class ProfilePolicyTest extends CIUnitTestCase
     public function testFields(array $override, array $expected): void
     {
         $this->assertSame($expected, (new ProfilePolicy())->fields(self::ctx($override)));
+    }
+
+    /** @return iterable<string, array{array<string, mixed>, list<string>, list<string>}> */
+    public static function provideRoleCases(): iterable
+    {
+        $stuPar = ['subjectRoles' => ['student', 'parent']];
+        $insPar = ['subjectRoles' => ['instructor', 'parent']];
+        $stuIns = ['subjectRoles' => ['instructor', 'student']];
+
+        yield 'student -> student+parent' => [['viewerRank' => 'student', ...$stuPar], self::STUDENT_FOR_STUDENT, ['student']];
+        yield 'parent -> instructor+parent' => [['viewerRank' => 'parent', ...$insPar], self::STAFF_FULL, ['instructor']];
+        yield 'unlinked parent -> student+instructor' => [
+            ['viewerRank' => 'parent', ...$stuIns],
+            ['photo', 'names', 'pronouns', 'roles', 'bio', 'staff_info'],
+            ['instructor'],
+        ];
+        yield 'linked parent -> student+instructor' => [
+            ['viewerRank' => 'parent', 'viewerIsParentOfSubject' => true, ...$stuIns],
+            ['photo', 'names', 'pronouns', 'roles', 'bio', 'staff_info', 'student_details', 'courses'],
+            ['instructor', 'student'],
+        ];
+        yield 'student -> own parent who is an instructor' => [
+            ['viewerRank' => 'student', 'viewerIsChildOfSubject' => true, ...$insPar],
+            self::STAFF_FULL,
+            ['instructor', 'parent'],
+        ];
+        yield 'staff -> student+parent' => [$stuPar, self::STUDENT_FOR_STAFF, ['student', 'parent']];
+        yield 'deactivated: student -> student+parent' => [['viewerRank' => 'student', 'subjectActive' => false, ...$stuPar], self::BASICS, ['student']];
+        yield 'deactivated: parent -> instructor+parent' => [['viewerRank' => 'parent', 'subjectActive' => false, ...$insPar], self::BASICS, ['instructor']];
+        yield 'self keeps every role' => [['isSelf' => true, 'subjectRoles' => ['instructor', 'student', 'parent']], [...self::STAFF_FULL, 'student_details', 'parents', 'children'], ['instructor', 'student', 'parent']];
+        yield 'self system admin' => [['isSelf' => true, 'subjectIsSystemAdmin' => true, 'subjectRoles' => []], ['names', 'roles', 'email'], ['admin']];
+        yield 'hidden subject has no roles' => [['sameInstitution' => false], [], []];
+    }
+
+    /**
+     * @param array<string, mixed> $override
+     * @param list<string>         $fields
+     * @param list<string>         $roles
+     */
+    #[DataProvider('provideRoleCases')]
+    public function testRolesPerViewer(array $override, array $fields, array $roles): void
+    {
+        $policy = new ProfilePolicy();
+        $c      = self::ctx($override);
+        $this->assertSame($roles, $policy->roles($c));
+        $this->assertSame(array_values(array_intersect(['photo', 'names', 'pronouns', 'roles', 'bio', 'staff_info', 'email', 'student_details', 'courses', 'children', 'parents', 'admin_actions', 'deactivated_badge'], $fields)), $policy->fields($c));
     }
 }

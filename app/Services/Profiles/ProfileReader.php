@@ -6,17 +6,36 @@ namespace App\Services\Profiles;
 
 use App\Services\Parents\ParentAccessService;
 use App\Services\Subscriptions\PlanLimits;
+use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
 /** Builds the profile model for a subject; keys outside the policy's $fields are never present. */
 class ProfileReader
 {
     /**
-     * @param list<string> $fields from ProfilePolicy::fields()
+     * The only way to read a profile: null means "not visible", so callers answer 404.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function forViewer(User $viewer, int $subjectId): ?array
+    {
+        $context = (new ProfileContextResolver())->for($viewer, $subjectId);
+        if ($context === null) {
+            return null;
+        }
+        $policy = new ProfilePolicy();
+        $fields = $policy->fields($context);
+
+        return $fields === [] ? null : $this->build($subjectId, $fields, $policy->roles($context));
+    }
+
+    /**
+     * @param list<string> $fields       from ProfilePolicy::fields()
+     * @param list<string> $visibleRoles from ProfilePolicy::roles()
      *
      * @return array<string, mixed>
      */
-    public function build(int $subjectId, array $fields): array
+    private function build(int $subjectId, array $fields, array $visibleRoles): array
     {
         $db  = db_connect();
         $row = $db->table('user_profiles up')
@@ -31,17 +50,17 @@ class ProfileReader
         $last  = (string) ($row['last_name'] ?? '');
         $has   = static fn (string $k): bool => in_array($k, $fields, true);
 
-        $m = [
-            'id'           => $subjectId,
-            'display_name' => trim($first . ' ' . $last),
-            'legal_name'   => implode(' ', array_filter([$row['first_name'] ?? '', $row['middle_name'] ?? '', $last, $row['suffix'] ?? ''], static fn ($p): bool => trim((string) $p) !== '')),
-            'pronouns'     => $has('pronouns') ? ($row['pronouns'] ?? null) : null,
-        ];
+        $m = ['id' => $subjectId];
+        if ($has('names')) {
+            $m['display_name'] = trim($first . ' ' . $last);
+            $m['legal_name']   = implode(' ', array_filter([$row['first_name'] ?? '', $row['middle_name'] ?? '', $last, $row['suffix'] ?? ''], static fn ($p): bool => trim((string) $p) !== ''));
+        }
+        $m['pronouns'] = $has('pronouns') ? ($row['pronouns'] ?? null) : null;
 
         $roles = RoleRank::sort(array_column($db->table('auth_groups_users')->select('group')->where('user_id', $subjectId)->get()->getResultArray(), 'group'));
 
         if ($has('roles')) {
-            $m['roles'] = array_map(fn (string $r): array => ['role' => $r, 'detail' => $this->detail($r, $subjectId, $row)], $roles);
+            $m['roles'] = array_map(fn (string $r): array => ['role' => $r, 'detail' => $this->detail($r, $subjectId, $row)], $visibleRoles);
         }
         if ($has('bio')) {
             $m['bio'] = $row['bio'] ?? null;
@@ -99,9 +118,10 @@ class ProfileReader
         return match ($role) {
             'instructor'  => $this->instructorDetail($userId, $row['home_department_id'] ?? null),
             'chairperson' => $db->table('chairperson_assignments ca')->select('d.name')->join('departments d', 'd.id = ca.department_id')
-                ->where('ca.chairperson_user_id', $userId)->where('ca.status', 'active')->get()->getRow('name'),
+                ->where('ca.chairperson_user_id', $userId)->where('ca.status', 'active')->orderBy('d.name')->limit(1)->get()->getRow('name'),
             'dean'        => $db->table('dean_assignments da')->select('c.name')->join('colleges c', 'c.id = da.college_id')
-                ->where('da.dean_user_id', $userId)->where('da.status', 'active')->get()->getRow('name'),
+                ->where('da.dean_user_id', $userId)->where('da.status', 'active')->orderBy('c.name')->limit(1)->get()->getRow('name'),
+            'institutional_admin' => $db->table('institutions')->select('name')->where('id', (new PlanLimits())->institutionOf($userId))->get()->getRow('name'),
             default       => null,
         };
     }

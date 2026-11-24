@@ -6,6 +6,7 @@ use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\ProfileContextResolver;
 use App\Services\Profiles\ProfileReader;
 use CodeIgniter\Events\Events;
+use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\DeanFactory;
@@ -24,6 +25,17 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->inst = PeopleFactory::institution('PR1');
     }
 
+    private function viewer(): User
+    {
+        return PeopleFactory::person('instructor', 'Vi', 'Ewer', null, $this->inst);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function read(int $subjectId, ?User $viewer = null): ?array
+    {
+        return (new ProfileReader())->forViewer($viewer ?? $this->viewer(), $subjectId);
+    }
+
     private function profile(int $id, array $set): void
     {
         db_connect()->table('user_profiles')->where('user_id', $id)->update($set);
@@ -39,16 +51,18 @@ final class ProfileReaderTest extends DatabaseTestCase
         $p = PeopleFactory::person('instructor', 'Ann', 'Lee', null, $this->inst);
         $this->profile((int) $p->id, ['bio' => 'Hello', 'office_location' => 'Rm 1', 'pronouns' => 'she/her']);
 
-        $m = (new ProfileReader())->build((int) $p->id, ['names']);
-        $this->assertSame(['id', 'display_name', 'legal_name', 'pronouns'], array_keys($m));
+        db_connect()->table('user_account_controls')->insert(['user_id' => $p->id, 'deactivated_at' => date('Y-m-d H:i:s')]);
+        $m = $this->read((int) $p->id);
+        $this->assertSame(['id', 'display_name', 'legal_name', 'pronouns', 'roles', 'photo', 'deactivated_badge'], array_keys($m));
         $this->assertNull($m['pronouns']);
+        db_connect()->table('user_account_controls')->where('user_id', $p->id)->delete();
 
-        $full = (new ProfileReader())->build((int) $p->id, ['names', 'pronouns', 'roles', 'bio', 'staff_info', 'email']);
+        $full = $this->read((int) $p->id);
         $this->assertSame('she/her', $full['pronouns']);
         $this->assertSame('Hello', $full['bio']);
         $this->assertSame('Rm 1', $full['staff_info']['office_location']);
         $this->assertSame($p->email, $full['email']);
-        foreach (['student_details', 'courses', 'children', 'parents', 'photo'] as $k) {
+        foreach (['student_details', 'children', 'parents', 'deactivated_badge', 'admin_actions'] as $k) {
             $this->assertArrayNotHasKey($k, $full);
         }
     }
@@ -58,7 +72,7 @@ final class ProfileReaderTest extends DatabaseTestCase
         $p = PeopleFactory::person('student', 'Robert', 'Reyes', null, $this->inst);
         $this->profile((int) $p->id, ['preferred_first_name' => 'Bob', 'middle_name' => 'Q', 'suffix' => 'Jr']);
 
-        $m = (new ProfileReader())->build((int) $p->id, ['names']);
+        $m = $this->read((int) $p->id);
         $this->assertSame('Bob Reyes', $m['display_name']);
         $this->assertSame('Robert Q Reyes Jr', $m['legal_name']);
     }
@@ -69,7 +83,7 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->addGroup((int) $p->id, 'instructor');
         $this->addGroup((int) $p->id, 'parent');
 
-        $roles = (new ProfileReader())->build((int) $p->id, ['roles'])['roles'];
+        $roles = $this->read((int) $p->id)['roles'];
         $this->assertSame(['instructor', 'student', 'parent'], array_column($roles, 'role'));
     }
 
@@ -86,14 +100,14 @@ final class ProfileReaderTest extends DatabaseTestCase
         CourseFactory::assignInstructor(DeanFactory::offering($prog2, $term, 'B1'), $teacher);
         CourseFactory::assignInstructor(DeanFactory::offering($prog2, $term, 'B2'), $teacher);
 
-        $detail = static fn () => (new ProfileReader())->build((int) $teacher->id, ['roles'])['roles'][0]['detail'];
+        $detail = fn () => $this->read((int) $teacher->id)['roles'][0]['detail'];
         $this->assertSame('Teaches in Department PR2', $detail());
 
         $this->profile((int) $teacher->id, ['home_department_id' => $d1]);
         $this->assertSame('Department PR1', $detail());
 
         $none = PeopleFactory::person('instructor', 'No', 'Class', null, $this->inst);
-        $this->assertNull((new ProfileReader())->build((int) $none->id, ['roles'])['roles'][0]['detail']);
+        $this->assertNull($this->read((int) $none->id)['roles'][0]['detail']);
     }
 
     public function testResolverBuildsContext(): void
@@ -185,7 +199,7 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->profile((int) $s->id, ['program_id' => $prog, 'student_number' => '2026-0001']);
 
         $db = db_connect();
-        $d  = (new ProfileReader())->build((int) $s->id, ['student_details'])['student_details'];
+        $d  = $this->read((int) $s->id)['student_details'];
         $this->assertSame(['program', 'year', 'section', 'college'], array_keys($d));
         $this->assertNull($d['year']);
         $this->assertNull($d['section']);
@@ -193,7 +207,7 @@ final class ProfileReaderTest extends DatabaseTestCase
 
         $db->table('class_sections')->insert(['institution_id' => $this->inst, 'term_id' => $term, 'program_id' => $prog, 'year_level' => 3, 'code' => 'BSIT-3A']);
         $db->table('class_section_students')->insert(['class_section_id' => $db->insertID(), 'student_user_id' => $s->id]);
-        $d = (new ProfileReader())->build((int) $s->id, ['student_details'])['student_details'];
+        $d = $this->read((int) $s->id)['student_details'];
         $this->assertSame(3, $d['year']);
         $this->assertSame('BSIT-3A', $d['section']);
         $this->assertSame('College SD', $d['college']);
@@ -213,10 +227,81 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->assertFalse($resolver->for($parent, (int) $child->id)->viewerIsParentOfSubject);
         $this->assertFalse($resolver->for($child, (int) $parent->id)->viewerIsChildOfSubject);
 
-        db_connect()->table('parent_student_links')->truncate();
+        db_connect()->table('parent_student_links')->emptyTable();
         db_connect()->table('parent_student_links')->insert(['institution_id' => $this->inst, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
         $this->assertTrue($resolver->for($parent, (int) $child->id)->viewerIsParentOfSubject);
         $this->assertTrue($resolver->for($child, (int) $parent->id)->viewerIsChildOfSubject);
         $this->assertFalse($resolver->for($child, (int) $parent->id)->viewerIsParentOfSubject);
+    }
+
+    private function link(User $parent, User $child): void
+    {
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->inst, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+    }
+
+    /** @return list<string> */
+    private function roleNames(?array $m): array
+    {
+        return array_column($m['roles'] ?? [], 'role');
+    }
+
+    public function testForViewerReturnsNullWhenNotVisible(): void
+    {
+        $parent  = PeopleFactory::person('parent', 'Un', 'Linked', null, $this->inst);
+        $student = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->inst);
+        $this->assertNull($this->read((int) $student->id, $parent));
+        $this->assertNull($this->read((int) $student->id, PeopleFactory::person('instructor', 'Far', 'Away', null, PeopleFactory::institution('PR2'))));
+        $this->assertNull($this->read((int) PeopleFactory::person('admin', 'Sys', 'Admin', null, $this->inst)->id));
+        $this->assertNull($this->read(999999));
+        $m = $this->read((int) $student->id);
+        $this->assertSame(['id', 'display_name', 'legal_name', 'pronouns', 'roles', 'bio', 'email', 'student_details', 'courses', 'photo'], array_keys($m));
+    }
+
+    public function testRolesShownPerViewer(): void
+    {
+        $studentParent = PeopleFactory::person('student', 'Sp', 'One', null, $this->inst);
+        $this->addGroup((int) $studentParent->id, 'parent');
+        $peer = PeopleFactory::person('student', 'Pe', 'Er', null, $this->inst);
+        $this->assertSame(['student'], $this->roleNames($this->read((int) $studentParent->id, $peer)));
+        $this->assertSame(['student', 'parent'], $this->roleNames($this->read((int) $studentParent->id)));
+
+        $teacherParent = PeopleFactory::person('instructor', 'Tp', 'Two', null, $this->inst);
+        $this->addGroup((int) $teacherParent->id, 'parent');
+        $parent = PeopleFactory::person('parent', 'Pa', 'Rent', null, $this->inst);
+        $this->assertSame(['instructor'], $this->roleNames($this->read((int) $teacherParent->id, $parent)));
+
+        $teacherStudent = PeopleFactory::person('instructor', 'Ts', 'Three', null, $this->inst);
+        $this->addGroup((int) $teacherStudent->id, 'student');
+        $this->assertSame(['instructor'], $this->roleNames($this->read((int) $teacherStudent->id, $parent)));
+        $this->link($parent, $teacherStudent);
+        $this->assertSame(['instructor', 'student'], $this->roleNames($this->read((int) $teacherStudent->id, $parent)));
+
+        // A child sees the parent role of their own parent; a deactivated subject keeps the same filter.
+        $kid = PeopleFactory::person('student', 'Ki', 'Dd', null, $this->inst);
+        $this->link($teacherParent, $kid);
+        $this->assertSame(['instructor', 'parent'], $this->roleNames($this->read((int) $teacherParent->id, $kid)));
+        db_connect()->table('user_account_controls')->insert(['user_id' => $studentParent->id, 'deactivated_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame(['student'], $this->roleNames($this->read((int) $studentParent->id, $peer)));
+    }
+
+    public function testRoleDetailsForAdminChairDeanAndSystemAdmin(): void
+    {
+        $admin = PeopleFactory::person('institutional_admin', 'Ad', 'Min', null, $this->inst);
+        $this->assertSame('Institution PR1', $this->read((int) $admin->id)['roles'][0]['detail']);
+
+        ['college' => $c] = DeanFactory::college('MC', $this->inst);
+        $dB    = DeanFactory::department($c, 'MB');
+        $dA    = DeanFactory::department($c, 'MA');
+        $chair = DeanFactory::chair($dB);
+        db_connect()->table('chairperson_assignments')->insert(['department_id' => $dA, 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame('Department MA', $this->read((int) $chair->id)['roles'][0]['detail']);
+
+        $c2   = DeanFactory::college('MD', $this->inst)['college'];
+        $dean = DeanFactory::dean($this->inst, $c2);
+        db_connect()->table('dean_assignments')->insert(['college_id' => $c, 'dean_user_id' => $dean->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame('College MC', $this->read((int) $dean->id)['roles'][0]['detail']);
+
+        $sys = PeopleFactory::person('admin', 'Sys', 'Admin', null, $this->inst);
+        $this->assertSame([['role' => 'admin', 'detail' => null]], $this->read((int) $sys->id, $sys)['roles']);
     }
 }
