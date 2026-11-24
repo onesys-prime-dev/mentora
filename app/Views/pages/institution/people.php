@@ -350,6 +350,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         'confirmLabel' => 'Confirm',
         'tone'         => 'danger',
         'ajax'         => true,
+        // Read only by the photo removal: it comes back to this list, not to the person's page.
+        'fields'       => '<input type="hidden" name="return" value="institution/people">',
     ], ['saveData' => false]) ?>
 <?php endif; ?>
 

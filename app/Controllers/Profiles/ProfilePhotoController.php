@@ -57,12 +57,18 @@ class ProfilePhotoController extends BaseController
     /** An institution administrator adds a photo for someone in their institution (people.manage; another institution is a 404). */
     public function adminUpload(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->answer("people/{$id}", 'Photo saved', fn () => (new ProfileModeration())->uploadPhoto($id, $this->request->getFile('photo') ?? throw new ProfileEditException('Choose an image file.', 'photo'), auth()->user()));
+        return $this->answer($this->returnTo($id), 'Photo saved', fn () => (new ProfileModeration())->uploadPhoto($id, $this->request->getFile('photo') ?? throw new ProfileEditException('Choose an image file.', 'photo'), auth()->user()));
     }
 
     public function adminRemove(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->answer("people/{$id}", 'Photo removed', fn () => (new ProfileModeration())->removePhoto($id, auth()->user()));
+        return $this->answer($this->returnTo($id), 'Photo removed', fn () => (new ProfileModeration())->removePhoto($id, auth()->user()));
+    }
+
+    /** Back to the People list when the request came from it, else the person's page; no other posted path is followed. */
+    private function returnTo(int $id): string
+    {
+        return $this->request->getPost('return') === 'institution/people' ? 'institution/people' : "people/{$id}";
     }
 
     /** Runs a photo change and answers the dialog's JSON (or a redirect without JavaScript). */

@@ -15,7 +15,7 @@ use CodeIgniter\Shield\Entities\User;
  * What an institution's administrator may do to someone else's profile (D6): remove their photo, or
  * add one on their behalf. The subject must belong to the administrator's institution (anyone else is a
  * 404, so ids cannot be probed). The owner is told in the app and by email; the audit row is the
- * activity Settings shows them. Whether the caller may manage people is the route's filter.
+ * activity Settings shows them. Whether the caller may manage people is the route's filter. Changing their own photo tells them nothing.
  */
 class ProfileModeration
 {
@@ -32,7 +32,7 @@ class ProfileModeration
         }
 
         $this->photos()->remove($subjectId, $admin);
-        $this->tell($subjectId, 'removed', 'Your photo was removed by your school', 'Your school removed your profile photo.');
+        $subjectId === (int) $admin->id || $this->tell($subjectId, 'removed', 'Your photo was removed by your school', 'Your school removed your profile photo.');
     }
 
     /**
@@ -44,7 +44,7 @@ class ProfileModeration
         $this->guard($subjectId, $admin);
 
         $this->photos()->upload($subjectId, $file, $admin);
-        $this->tell($subjectId, 'added', 'Your school added a profile photo for you', 'You can change or remove it on your profile.');
+        $subjectId === (int) $admin->id || $this->tell($subjectId, 'added', 'Your school added a profile photo for you', 'You can change or remove it on your profile.');
     }
 
     private function guard(int $subjectId, User $admin): void

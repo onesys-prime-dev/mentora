@@ -98,7 +98,8 @@ class PersonProfileController extends BaseController
             'p'          => $p,
             'avatar'     => (new AvatarData())->forMany([$id])[$id] ?? ['id' => $id, 'name' => $p['display_name']],
             'canMessage' => $this->canMessage($viewer, $id, $p),
-            'photo'      => array_key_exists('admin_actions', $p) ? (new ProfilePhotoService())->state($id) : null,
+            // Admin actions need people.manage as well as the role, as the People routes do; null hides them.
+            'photo'      => array_key_exists('admin_actions', $p) && (new \App\Services\Auth\RolePermissions())->allows($viewer, 'people.manage') ? (new ProfilePhotoService())->state($id) : null,
         ];
     }
 

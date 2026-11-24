@@ -340,4 +340,61 @@ final class ProfilePhotoFlowTest extends RouteTestCase
 
         $this->assertNotNull($this->photoId());
     }
+
+    // Phase 4 close ------------------------------------------------------------------------------------------------
+
+    public function testTheRemovalReturnsToThePeopleListOnlyForAKnownInternalPath(): void
+    {
+        $this->givePhoto($this->student);
+        $this->signIn($this->admin);
+
+        $this->step('POST', "institution/people/{$this->student->id}/photo/remove", ['return' => 'https://evil.example/x'])->assertRedirectTo(site_url("people/{$this->student->id}"));
+
+        $this->givePhoto($this->student);
+        $this->step('POST', "institution/people/{$this->student->id}/photo/remove", ['return' => 'institution/people'])->assertRedirectTo(site_url('institution/people'));
+    }
+
+    public function testAnAdminWithoutPeopleManageSeesNoPhotoControlsOrOpenInPeople(): void
+    {
+        $this->givePhoto($this->student);
+        db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'institutional_admin', 'permission' => 'people.manage', 'granted' => 0]);
+        \App\Services\Auth\RolePermissions::flush();
+
+        $page = $this->body($this->admin, "/people/{$this->student->id}");
+        $this->assertStringNotContainsString('person-photo-upload', $page);
+        $this->assertStringNotContainsString('Open in People', $page);
+        $this->assertStringNotContainsString('data-admin-photo-link', $this->body($this->admin, "/people/{$this->student->id}/panel"));
+    }
+
+    public function testTheModalLinkSaysUploadWhenThereIsNoPhoto(): void
+    {
+        $panel = $this->body($this->admin, "/people/{$this->student->id}/panel");
+        $this->assertStringContainsString('Upload photo</a>', $panel);
+        $this->assertStringNotContainsString('Change photo', $panel);
+
+        $this->givePhoto($this->student);
+        $this->assertStringContainsString('Change photo</a>', $this->body($this->admin, "/people/{$this->student->id}/panel"));
+    }
+
+    public function testThePeopleRowMenuOffersRemovePhotoOnlyWhilePhotosAreOn(): void
+    {
+        $this->givePhoto($this->student);
+        $this->assertStringContainsString('data-dialog-label="Remove photo"', $this->body($this->admin, '/institution/people'));
+
+        $this->photosEnabled(false);
+        $this->assertStringNotContainsString('data-dialog-label="Remove photo"', $this->body($this->admin, '/institution/people'));
+    }
+
+    public function testAnAdminChangingTheirOwnPhotoIsNotToldAboutIt(): void
+    {
+        (new ProfileModeration())->uploadPhoto((int) $this->admin->id, $this->file(), $this->admin);
+        (new ProfileModeration())->removePhoto((int) $this->admin->id, $this->admin);
+
+        $this->assertSame(0, db_connect()->table('notifications')->where('user_id', $this->admin->id)->where('type', 'profile.photo')->countAllResults());
+        $this->assertSame(0, db_connect()->table('mail_outbox')->where('user_id', $this->admin->id)->where('kind', 'photo')->countAllResults());
+        $storage = new StorageService();
+        foreach (db_connect()->table('files')->where('owner_user_id', $this->admin->id)->get()->getResultArray() as $f) {
+            $storage->delete($f['storage_key']);
+        }
+    }
 }

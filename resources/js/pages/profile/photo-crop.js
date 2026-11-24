@@ -76,6 +76,7 @@ export function bindPhotoCrop(root = document) {
         let img = null;
         let state = null;
         let drag = null;
+        let generation = 0; // a late toBlob of an earlier crop or image must not replace the current one
 
         const fail = (message) => {
             problem.textContent = message;
@@ -83,6 +84,7 @@ export function bindPhotoCrop(root = document) {
         };
 
         const clear = () => {
+            generation++;
             img = null;
             stage.hidden = true;
             save.disabled = true;
@@ -93,8 +95,10 @@ export function bindPhotoCrop(root = document) {
             draw(canvas, img, state);
 
             // Keep the form's file current, so a submit at any moment posts what is shown.
+            const mine = ++generation;
+
             exportBlob(img, state).then((blob) => {
-                if (!blob || !img) {
+                if (!blob || !img || mine !== generation) {
                     return;
                 }
 

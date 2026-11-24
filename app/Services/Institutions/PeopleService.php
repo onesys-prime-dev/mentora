@@ -503,6 +503,8 @@ class PeopleService
         $admins    = $this->activeAdministrators($institutionId);
         $withPhoto = $rows === [] ? [] : array_map('intval', array_column(db_connect()->table('user_profiles')->select('user_id')
             ->whereIn('user_id', array_map(static fn (array $r): int => (int) $r['id'], $rows))->where('photo_file_id IS NOT NULL', null, false)->get()->getResultArray(), 'user_id'));
+        // Photos are kept while the school has them off, but nothing can be removed then (as on the person page).
+        $photosOn  = (int) db_connect()->table('institutions')->select('profile_photos_enabled')->where('id', $institutionId)->get()->getRow('profile_photos_enabled') === 1;
         $shaped    = [];
 
         foreach ($rows as $r) {
@@ -524,7 +526,7 @@ class PeopleService
                 // What view-as accepts: a live account of this institution alone that is not an administrator's.
                 'viewable'       => $active && $id !== $actorId && ! $isAdmin,
                 'last_admin'     => $isAdmin && $active && $admins <= 1,
-                'has_photo'      => in_array($id, $withPhoto, true),
+                'has_photo'      => $photosOn && in_array($id, $withPhoto, true),
             ];
         }
 
