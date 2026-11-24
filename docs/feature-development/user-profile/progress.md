@@ -34,8 +34,10 @@ User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages
 
 - **Phase 2 complete** 2026-11-24 on `feat/user-profile-p2-my-profile` (7c4c7938..98af4cd4).
 
+- **Phase 3 complete** 2026-11-24 on `feat/user-profile-p3-people` (4708d5db..8328869b).
+
 ## Next action
-Phase 3 on `feat/user-profile-p3-people` (from p2).
+Phase 4 on `feat/user-profile-p4-photos` (from p3). Carry: gate photo_url in AvatarData::rows() on the photos switch and on the viewer's `photo` field; add the photo checklist item.
 
 ## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
 Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.

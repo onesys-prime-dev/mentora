@@ -56,3 +56,10 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - RED runs shown for 2.1, 2.3 and the fix wave; Task 2.2's tests were written after the code (no RED) — mutation reasoning in review showed the rules are pinned.
 - Reviews: three task reviews (+ fix rounds) and a whole-phase review; fixes: parent page kept until Phase 5, header-name memo flushed between test classes, Studies/Contact/Official split, avatar overlap, section codes, empty fields hidden from viewers.
 - Known limits: parent/profile old page and its notification/password forms remain until Phase 5; photo checklist item arrives in Phase 4; responsive snapshot baseline for student-profile is stale until the next responsive run.
+
+### Phase 3 (2026-11-24) — feat/user-profile-p3-people
+- phpunit (in parts): unit 1270, database 4381, feature 4678 — all OK at 3d8ae0f3; after the review fix wave (8328869b) feature 1458+3220 and `--filter "Profile|AvatarData"` 235 OK.
+- vitest 1273 OK (person-card.test.js 19+). Playwright: profile.spec + profile-card.spec 15/15 incl. axe on the card, the announcement card and the dialog.
+- New: PersonProfileRoutesTest (AC2 matrix through HTTP for page/card/panel with absence asserts; 404s for other institution, unlinked parent/child, missing id, system admin; deactivated; Message gating incl. two shared children and read-only); ProfileContextResolverTest (visibleIds agreement matrix 16 viewers x 17 subjects; ≤8 queries for 40 ids); AvatarData forViewer hides preferred name/photo of hidden people.
+- Reviews caught: Message button promising a refused conversation (shared resolveDirectStart), popover unreachable by keyboard, Escape reopening the card, hidden people's preferred names in avatar labels (Critical, fixed), expired-session login page cached into the card.
+- Known limits: no e2e on discussion avatars; popover name read from the avatar's aria-label; deactivated avatars keep their colour.
