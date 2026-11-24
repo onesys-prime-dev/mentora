@@ -74,10 +74,12 @@ class PasswordResetService
             throw new InvalidArgumentException('This account has no email address to send the link to.');
         }
 
+        $actor ??= auth()->user();
         $hours  = (int) (new PlatformSettings())->get('passwordResetValidityHours');
-        $issued = $this->issue($userId, $email, $actor ?? auth()->user(), $now, $hours, 'user.password_reset_sent');
+        $issued = $this->issue($userId, $email, $actor, $now, $hours, 'user.password_reset_sent');
+        $own    = $actor !== null && (int) $actor->id === $userId; // asked for from their own Settings
 
-        return ['email' => $email, 'expires_at' => $issued['expires'], 'email_error' => $this->deliver($issued['id'], $email, $issued['token'], $issued['expires'], $now)];
+        return ['email' => $email, 'expires_at' => $issued['expires'], 'email_error' => $this->deliver($issued['id'], $email, $issued['token'], $issued['expires'], $now, $own)];
     }
 
     /**
@@ -272,7 +274,7 @@ class PasswordResetService
         return ENVIRONMENT === 'development';
     }
 
-    private function deliver(int $resetId, string $to, string $token, string $expires, DateTimeImmutable $now): ?string
+    private function deliver(int $resetId, string $to, string $token, string $expires, DateTimeImmutable $now, bool $own = false): ?string
     {
         $link = site_url('reset-password/' . $token);
 
@@ -290,7 +292,7 @@ class PasswordResetService
             $email->setSubject('Reset your Mentora password');
             $email->setMessage(
                 "Hello,\n\n"
-                . "An administrator has sent you a link to choose a new password for your Mentora account:\n{$link}\n\n"
+                . ($own ? 'You asked for' : 'An administrator has sent you') . " a link to choose a new password for your Mentora account:\n{$link}\n\n"
                 . 'The link works once and expires on ' . substr($expires, 0, 16) . ".\n\n"
                 . "If you were not expecting this, you can ignore this email: your password stays as it is unless the link is used.\n",
             );

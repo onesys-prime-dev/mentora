@@ -60,6 +60,10 @@ $routes->get('people/(:num)/panel', 'Profiles\PersonProfileController::panel/$1'
 $routes->get('people/(:num)/photo/(64|256)', 'Profiles\ProfilePhotoController::show/$1/$2', ['filter' => 'session']);
 $routes->post('profile/photo', 'Profiles\ProfilePhotoController::upload', ['filter' => ['session', 'readonly']]);
 $routes->post('profile/photo/remove', 'Profiles\ProfilePhotoController::remove', ['filter' => ['session', 'readonly']]);
+// Account settings, for every role (D21). No `readonly`: your own security stays yours in a read-only institution (D29-C3).
+$routes->get('settings', 'Profiles\AccountSettingsController::index', ['filter' => 'session']);
+$routes->post('settings/password', 'Profiles\AccountSettingsController::changePassword', ['filter' => 'session']);
+$routes->post('settings/password-link', 'Profiles\AccountSettingsController::sendPasswordLink', ['filter' => 'session']);
 $routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

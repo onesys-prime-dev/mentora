@@ -29,11 +29,10 @@ $avatarPerson = (new \App\Services\Profiles\AvatarData())->forMany([(int) $user-
 // The Apps menu and the phone block draw the same tiles; work them (and their badges) out once.
 $headerApps = $userRole === 'institutional_admin' ? [] : global_apps($userRole);
 
-// "My Profile" is real for every role. Settings stays inert until the settings page exists (Phase 5);
-// Help & Support is not built.
+// "My Profile" and Settings are real for every role; Help & Support is not built.
 $accountLinks = [
     ['label' => 'My Profile', 'icon' => 'user', 'url' => site_url('profile')],
-    ['label' => 'Settings', 'icon' => 'settings'],
+    ['label' => 'Settings', 'icon' => 'settings', 'url' => site_url('settings')],
     ['label' => 'Help & Support', 'icon' => 'help', 'soon' => 'Coming soon'],
 ];
 ?>
