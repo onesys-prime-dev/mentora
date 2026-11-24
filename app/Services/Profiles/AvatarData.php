@@ -13,9 +13,15 @@ final class AvatarData
     public const COLOURS = ['#B91C1C', '#C2410C', '#A16207', '#15803D', '#0F766E', '#1D4ED8', '#6D28D9', '#BE185D'];
 
     /**
+     * Warning: this does not check the viewer may see these people. Use it only for the viewer
+     * themself or for subjects ProfilePolicy has already cleared; anything else goes through forViewer().
+     *
+     * photo_url is the 64 px photo, photo_url_lg the 256 px one (components/avatar picks by size);
+     * both are null without a photo or while the person's institution has photos off.
+     *
      * @param list<int> $userIds
      *
-     * @return array<int, array{id:int, name:string, initials:string, colour:string, photo_url:?string}>
+     * @return array<int, array{id:int, name:string, initials:string, colour:string, photo_url:?string, photo_url_lg:?string}>
      */
     public function forMany(array $userIds): array
     {
@@ -26,7 +32,7 @@ final class AvatarData
      * @param list<int>             $userIds
      * @param array<int, mixed>|null $public ids whose public profile fields (preferred name, photo) may be used; null = all
      *
-     * @return array<int, array{id:int, name:string, initials:string, colour:string, photo_url:?string}>
+     * @return array<int, array{id:int, name:string, initials:string, colour:string, photo_url:?string, photo_url_lg:?string}>
      */
     private function rows(array $userIds, ?array $public): array
     {
@@ -35,9 +41,9 @@ final class AvatarData
             return [];
         }
 
-        $rows = db_connect()->table('user_profiles')
-            ->select('user_id, first_name, last_name, preferred_first_name')
-            ->whereIn('user_id', $ids)->get()->getResultArray();
+        $rows = db_connect()->table('user_profiles up')
+            ->select('up.user_id, up.first_name, up.last_name, up.preferred_first_name, up.photo_file_id, ' . ProfilePhotoService::ENABLED_SQL . ' AS photos_on', false)
+            ->whereIn('up.user_id', $ids)->get()->getResultArray();
 
         $out = [];
         foreach ($rows as $r) {
@@ -52,7 +58,8 @@ final class AvatarData
                 'name'      => trim($first . ' ' . $last),
                 'initials'  => mb_strtoupper(mb_substr($first, 0, 1) . mb_substr($last, 0, 1)),
                 'colour'    => self::COLOURS[$id % 8],
-                'photo_url' => null,
+                'photo_url'    => $shown ? ProfilePhotoService::urlFor($id, $r['photo_file_id'], $r['photos_on'], 64) : null,
+                'photo_url_lg' => $shown ? ProfilePhotoService::urlFor($id, $r['photo_file_id'], $r['photos_on'], 256) : null,
             ];
         }
 
@@ -65,7 +72,7 @@ final class AvatarData
      *
      * @param list<int> $userIds
      *
-     * @return array<int, array{person: array{id:int, name:string, initials:string, colour:string, photo_url:?string}, interactive: bool}>
+     * @return array<int, array{person: array{id:int, name:string, initials:string, colour:string, photo_url:?string, photo_url_lg:?string}, interactive: bool}>
      */
     public function forViewer(User $viewer, array $userIds): array
     {

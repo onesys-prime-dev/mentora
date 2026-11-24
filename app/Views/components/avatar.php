@@ -24,7 +24,8 @@ $initials = $person['initials']
     ?? mb_strtoupper(mb_substr($words[0] ?? '', 0, 1) . (count($words) > 1 ? mb_substr(end($words), 0, 1) : ''));
 // Only the fixed set is ever written into style="", so a stray value cannot inject CSS.
 $colour   = in_array($person['colour'] ?? null, AvatarData::COLOURS, true) ? $person['colour'] : AvatarData::COLOURS[$id % 8];
-$photoUrl = $person['photo_url'] ?? null;
+// Large avatars use the 256 px photo, small ones the 64 px one (AvatarData fills both).
+$photoUrl = (in_array($size, ['lg', 'xl'], true) ? ($person['photo_url_lg'] ?? null) : null) ?? $person['photo_url'] ?? null;
 
 $sizeClasses = [
     'xs' => 'h-6 w-6 text-[10px]',

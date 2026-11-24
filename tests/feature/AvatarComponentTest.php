@@ -62,6 +62,18 @@ final class AvatarComponentTest extends RouteTestCase
         $this->assertStringNotContainsString('alt=""', $with);
     }
 
+    public function testSmallAvatarsUseThe64PhotoAndLargeOnesThe256Photo(): void
+    {
+        $person = ['id' => 4, 'name' => 'Ana Reyes', 'photo_url' => '/people/4/photo/64?v=9', 'photo_url_lg' => '/people/4/photo/256?v=9'];
+
+        foreach (['xs', 'sm', 'md'] as $size) {
+            $this->assertStringContainsString('src="' . esc('/people/4/photo/64?v=9', 'attr') . '"', $this->avatar($person, $size), $size);
+        }
+        foreach (['lg', 'xl'] as $size) {
+            $this->assertStringContainsString('src="' . esc('/people/4/photo/256?v=9', 'attr') . '"', $this->avatar($person, $size), $size);
+        }
+    }
+
     public function testSizeClassesAndInteractiveHooks(): void
     {
         $person = ['id' => 4, 'name' => 'Ana Reyes'];

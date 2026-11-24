@@ -57,6 +57,7 @@ $routes->post('profile/(identity|about|staff)', 'Profiles\ProfileController::upd
 $routes->get('people/(:num)', 'Profiles\PersonProfileController::show/$1', ['filter' => 'session']);
 $routes->get('people/(:num)/card', 'Profiles\PersonProfileController::card/$1', ['filter' => 'session']);
 $routes->get('people/(:num)/panel', 'Profiles\PersonProfileController::panel/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/photo/(64|256)', 'Profiles\ProfilePhotoController::show/$1/$2', ['filter' => 'session']);
 $routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

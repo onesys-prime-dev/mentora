@@ -104,7 +104,7 @@ class ProfileReader
             $m['parents'] = array_values(array_map(static fn (array $a): array => ['id' => $a['id'], 'name' => $a['name']], (new AvatarData())->forMany($ids)));
         }
         if ($has('photo')) {
-            $m['photo'] = null; // Phase 4
+            $m['photo'] = (new ProfilePhotoService())->url($subjectId, 256);
         }
         if ($has('admin_actions')) {
             $m['admin_actions'] = true;
