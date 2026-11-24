@@ -64,6 +64,8 @@ $routes->post('profile/photo/remove', 'Profiles\ProfilePhotoController::remove',
 $routes->get('settings', 'Profiles\AccountSettingsController::index', ['filter' => 'session']);
 $routes->post('settings/password', 'Profiles\AccountSettingsController::changePassword', ['filter' => 'session']);
 $routes->post('settings/password-link', 'Profiles\AccountSettingsController::sendPasswordLink', ['filter' => 'session']);
+$routes->post('settings/two-factor', 'Profiles\AccountSettingsController::twoFactor', ['filter' => 'session']);
+$routes->post('settings/sign-out-others', 'Profiles\AccountSettingsController::signOutOthers', ['filter' => 'session']);
 $routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

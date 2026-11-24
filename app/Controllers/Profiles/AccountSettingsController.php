@@ -9,6 +9,9 @@ use App\Filters\AccountStateFilter;
 use App\Services\Institutions\InstitutionSecurity;
 use App\Services\Profiles\PasswordChangeService;
 use App\Services\Profiles\ProfileEditException;
+use App\Services\Profiles\SecurityNotice;
+use App\Services\Profiles\TwoFactorPreference;
+use App\Services\Users\AccountControl;
 use App\Services\Users\PasswordResetService;
 use CodeIgniter\HTTP\RedirectResponse;
 use InvalidArgumentException;
@@ -37,7 +40,10 @@ class AccountSettingsController extends BaseController
             'minLength'   => (int) (new InstitutionSecurity())->forUser($user)['passwordMinLength'],
             'sections'    => [
                 ['id' => 'password', 'label' => 'Password', 'view' => 'pages/settings/partials/password'],
+                ['id' => 'two-step', 'label' => 'Two-step sign-in', 'view' => 'pages/settings/partials/two-step'],
+                ['id' => 'devices', 'label' => 'Signed-in devices', 'view' => 'pages/settings/partials/devices'],
             ],
+            'twoFactor'   => (new TwoFactorPreference())->status($user),
         ]);
     }
 
@@ -79,5 +85,44 @@ class AccountSettingsController extends BaseController
         }
 
         return $back->with('message', 'We emailed you a link to set a new password.');
+    }
+
+    /** Turns emailed two-step sign-in on (action=on) or off (action=off, with the password) (D14). */
+    public function twoFactor(): RedirectResponse
+    {
+        $user    = auth()->user();
+        $service = new TwoFactorPreference();
+
+        if ($this->request->getPost('action') === 'on') {
+            $service->optIn($user);
+
+            return redirect()->to(site_url(self::PAGE))->with('message', 'Two-step sign-in turned on');
+        }
+
+        try {
+            $service->optOut($user, (string) $this->request->getPost('password'));
+        } catch (ProfileEditException $e) {
+            return redirect()->to(site_url(self::PAGE) . '#two-step')->with('errors', [$e->field => $e->getMessage()]);
+        }
+
+        return redirect()->to(site_url(self::PAGE))->with('message', 'Two-step sign-in turned off');
+    }
+
+    /** Ends every other session the account has; this one began "after" it, so it stays (D14). */
+    public function signOutOthers(): RedirectResponse
+    {
+        $user = auth()->user();
+
+        (new AccountControl())->signOutEverywhere((int) $user->id);
+        session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
+
+        service('auditLogger')->log('profile.signed_out_others', $user, ['target_type' => 'user', 'target_id' => (int) $user->id]);
+        SecurityNotice::send(
+            $user,
+            'Your Mentora account was signed out on your other devices',
+            "Every other device signed in to your Mentora account ({$user->email}) was signed out on " . date('M j, Y \a\t g:i A') . ".\n\n" . SecurityNotice::ifNotYou(),
+        );
+
+        return redirect()->to(site_url(self::PAGE))->with('message', 'Signed out of all other devices');
     }
 }

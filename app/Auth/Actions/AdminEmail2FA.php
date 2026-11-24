@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Auth\Actions;
 
-use App\Services\Institutions\InstitutionSecurity;
+use App\Services\Profiles\TwoFactorPreference;
 use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\Shield\Authentication\Actions\ConditionalActionInterface;
 use CodeIgniter\Shield\Authentication\Actions\Email2FA;
@@ -15,7 +15,7 @@ use CodeIgniter\Shield\Models\UserIdentityModel;
 
 /**
  * Shield's email two-factor step, but only for the roles chosen in the security
- * settings (system administrators always).
+ * settings (system administrators always) and for anyone who turned it on in Settings.
  *
  * Shield applies a login action to everyone, and the other roles must keep
  * signing in with a password alone. Until the emailed code is entered the
@@ -30,8 +30,8 @@ class AdminEmail2FA extends Email2FA implements ConditionalActionInterface
 {
     public function appliesTo(User $user): bool
     {
-        // The platform's roles, and any the person's institution asked for as well.
-        return $user->inGroup(...(new InstitutionSecurity())->forUser($user)['twoFactorRoles']);
+        // The platform's roles, any the person's institution asked for as well, and anyone who opted in (D14).
+        return (new TwoFactorPreference())->applies($user);
     }
 
     public function handle(IncomingRequest $request)

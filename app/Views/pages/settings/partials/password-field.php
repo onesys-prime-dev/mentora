@@ -9,10 +9,11 @@
  * @var string $error
  * @var string $help         optional, already-escaped HTML
  * @var string $attrs        optional extra, already-escaped attributes
+ * @var string $id           optional, when the name is already used on the page
  */
 $help  ??= '';
 $attrs ??= '';
-$id       = 'settings-' . str_replace('_', '-', $name);
+$id     ??= 'settings-' . str_replace('_', '-', $name);
 $describe = trim(($help !== '' ? $id . '-help ' : '') . $id . '-error');
 ?>
 <div class="flex flex-col gap-1" data-field="<?= esc($name, 'attr') ?>">

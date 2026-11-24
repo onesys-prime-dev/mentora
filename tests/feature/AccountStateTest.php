@@ -87,7 +87,7 @@ final class AccountStateTest extends RouteTestCase
         $old = $this->openDashboard();
 
         $this->assertStringEndsWith('login', $old->response()->getHeaderLine('Location'));
-        $this->assertStringContainsString('signed out by an administrator', (string) session('error'));
+        $this->assertSame('You were signed out. Please sign in again.', session('error'));
 
         $this->signedInSince(time() - 60);
 

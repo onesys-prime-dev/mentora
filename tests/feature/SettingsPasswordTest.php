@@ -151,7 +151,7 @@ final class SettingsPasswordTest extends RouteTestCase
         }
         $this->change();
 
-        $this->assertSame('Too many attempts. Try again in 15 minutes.', session('errors')['current_password'] ?? null);
+        $this->assertSame('Too many attempts. Try again in a few minutes.', session('errors')['current_password'] ?? null);
         $this->assertTrue(password_verify(self::CURRENT, $this->hash()));
     }
 
@@ -169,7 +169,7 @@ final class SettingsPasswordTest extends RouteTestCase
         $this->step('POST', 'settings/password-link');
         $this->step('POST', 'settings/password-link');
 
-        $this->assertSame('Too many attempts. Try again in 15 minutes.', session('error'));
+        $this->assertSame('Too many attempts. Try again in a few minutes.', session('error'));
         $this->assertCount(3, $this->mailer->sent, 'three links per 15 minutes');
     }
 

@@ -9,7 +9,6 @@ use App\Services\Security\PasswordPolicy;
 use App\Services\Users\AccountControl;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
-use Config\Email as EmailConfig;
 use RuntimeException;
 use Throwable;
 
@@ -30,13 +29,13 @@ class PasswordChangeService
 
     public const WINDOW = 900;
 
-    public const TOO_MANY = 'Too many attempts. Try again in 15 minutes.';
+    public const TOO_MANY = 'Too many attempts. Try again in a few minutes.';
 
     /**
      * @throws ProfileEditException
      * @throws Throwable           whatever stopped the save or the audit entry; nothing is changed then
      */
-    public function change(User $user, string $current, string $new, string $confirm): void
+    public function change(User $user, #[\SensitiveParameter] string $current, #[\SensitiveParameter] string $new, #[\SensitiveParameter] string $confirm): void
     {
         if (! service('throttler')->check('password-change-' . $user->id, self::ATTEMPTS, self::WINDOW)) {
             throw new ProfileEditException(self::TOO_MANY, 'current_password');
@@ -76,35 +75,13 @@ class PasswordChangeService
         $this->notify($user);
     }
 
-    /** Tells the owner by email. A failed email is logged and never undoes the change. */
+    /** Tells the owner by email (D16). */
     private function notify(User $user): void
     {
-        $to = (string) $user->email;
-
-        if ($to === '') {
-            return;
-        }
-
-        try {
-            $config = config(EmailConfig::class);
-            $email  = service('email');
-
-            $email->clear();
-            $email->setFrom($config->fromEmail, $config->fromName);
-            $email->setTo($to);
-            $email->setSubject('Your Mentora password was changed');
-            $email->setMessage(
-                "Hello,\n\n"
-                . "The password for your Mentora account ({$to}) was changed on " . date('M j, Y \a\t g:i A') . ". Every other device signed in to your account was signed out.\n\n"
-                . "If this was you, there is nothing else to do.\n\n"
-                . "If this wasn't you, reset your password straight away: ask your administrator to send you a reset link, then sign in at " . site_url('login') . ".\n",
-            );
-
-            if ($email->send() !== true) {
-                log_message('error', 'Password change notice to user {user} was not accepted by the mail server.', ['user' => $user->id]);
-            }
-        } catch (Throwable $e) {
-            log_message('error', 'Password change notice to user {user} failed: {message}', ['user' => $user->id, 'message' => $e->getMessage()]);
-        }
+        SecurityNotice::send(
+            $user,
+            'Your Mentora password was changed',
+            "The password for your Mentora account ({$user->email}) was changed on " . date('M j, Y \a\t g:i A') . ". Every other device signed in to your account was signed out.\n\n" . SecurityNotice::ifNotYou(),
+        );
     }
 }

@@ -5,6 +5,7 @@
  *
  * @var list<array{id: string, label: string, view: string}> $sections
  * @var int $minLength
+ * @var array{on: bool, required: bool, email_masked: string} $twoFactor
  */
 $errors = (array) (session('errors') ?? []);
 $link   = 'block rounded-lg px-3 py-2 text-sm text-[#374151] transition hover:bg-brand-tint hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11';
@@ -45,7 +46,7 @@ $link   = 'block rounded-lg px-3 py-2 text-sm text-[#374151] transition hover:bg
         <div class="flex min-w-0 flex-col gap-4">
             <?php foreach ($sections as $s): ?>
                 <section id="<?= esc($s['id'], 'attr') ?>" class="flex scroll-mt-20 flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm sm:p-6">
-                    <?= view($s['view'], ['minLength' => $minLength, 'errors' => $errors], ['saveData' => false]) ?>
+                    <?= view($s['view'], ['minLength' => $minLength, 'errors' => $errors, 'twoFactor' => $twoFactor], ['saveData' => false]) ?>
                 </section>
             <?php endforeach; ?>
         </div>

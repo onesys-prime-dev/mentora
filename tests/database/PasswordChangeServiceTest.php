@@ -126,7 +126,7 @@ final class PasswordChangeServiceTest extends DatabaseTestCase
             $this->refused(fn () => $this->service->change($this->ivo, 'wrong-' . $i, self::NEW, self::NEW), 'current_password', 'current password');
         }
 
-        $this->refused(fn () => $this->service->change($this->ivo, self::CURRENT, self::NEW, self::NEW), 'current_password', 'Too many attempts. Try again in 15 minutes.');
+        $this->refused(fn () => $this->service->change($this->ivo, self::CURRENT, self::NEW, self::NEW), 'current_password', 'Too many attempts. Try again in a few minutes.');
 
         $this->assertTrue(password_verify(self::CURRENT, $this->hash($this->ivo)), 'still the old password');
     }

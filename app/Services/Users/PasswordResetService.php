@@ -218,7 +218,7 @@ class PasswordResetService
      * @throws InvalidArgumentException a bad link, or a password that is not accepted (the link stays usable then)
      * @throws Throwable                whatever else stopped it; nothing is saved then
      */
-    public function complete(string $token, string $password, ?DateTimeImmutable $now = null): User
+    public function complete(string $token, #[\SensitiveParameter] string $password, ?DateTimeImmutable $now = null): User
     {
         $now ??= new DateTimeImmutable();
 
