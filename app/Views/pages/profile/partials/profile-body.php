@@ -34,7 +34,7 @@ $isOwner   = array_key_exists('official', $own); // only the owner's own page ca
         <div class="rounded-full ring-4 ring-white">
             <?= view('components/avatar', ['person' => $avatar, 'size' => 'xl'], ['saveData' => false]) ?>
         </div>
-        <div class="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+        <div class="flex min-w-0 flex-1 basis-56 flex-col gap-1 sm:pt-14">
             <p class="font-display text-xl font-bold leading-tight text-[#1A1C1E] sm:text-2xl" data-profile-name>
                 <?= esc($p['display_name']) ?>
                 <?php if (! empty($p['pronouns'])): ?>
