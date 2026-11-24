@@ -70,3 +70,10 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - New: ProfilePhotoServiceTest (content sniffing, 5 MB, pixel cap, EXIF stripped, orientation, 256/64 squares, replace/remove, audit), ProfilePhotoRoutesTest (Review Focus 3: 404 after off/removal/forbidden viewer, same photo after on, no-cache + ETag/304), ProfilePhotoFlowTest (owner/admin flows, institution switch, checklist, cross-institution 404), photo-crop.test.js.
 - Migration 2026-12-02-000004 widens mail_outbox.kind with `photo` (additive, reversible).
 - Known limits: route-level upload success is covered by e2e only (is_uploaded_file); no-JS upload not possible; a person in two institutions follows their first institution's photo switch (same as the existing resolver).
+
+### Phase 5 (2026-11-25) — feat/user-profile-p5-settings
+- phpunit (8 parts + unit; tests need `-d memory_limit=2G` because AdminTwoFactorPagesTest reads the day's log file): 10422 OK. vitest 126 files / 1282 OK (a few timing-sensitive tests fail only under load, pass on rerun).
+- Playwright: TC-PRT-06 (parent email choices now in Settings) and TC-MSG-12 pass; TC-PRT-02 known pre-existing. responsive.spec `parent-profile` now redirects to /profile — its committed CI baseline will differ until regenerated on CI.
+- New: PasswordChangeServiceTest, SettingsPasswordTest (all 7 roles, Review Focus 5 two-session test, throttles, read-only, CSRF), TwoFactorPreferenceTest, SettingsSecurityTest, SettingsNotificationsTest (AC8 byte-identical preferences, forged child id ignored, redirects), SecurityActivityTest, SecurityNoticeTest.
+- Retired: ParentProfileController + view, Messaging PreferenceController (GETs 301, old POSTs 303 without acting).
+- Known limits: remember-me stops working after any sign-out-everywhere (secure; Phase 8); no email notice for a reset done through a link; jump list has no current-section highlight.
