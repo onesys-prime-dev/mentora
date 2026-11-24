@@ -18,8 +18,11 @@ final class RouteAccessTest extends RouteTestCase
 {
     private const VERBS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
 
-    /** Top-level route prefixes that may exist: public pages, Shield's auth pages, and the role areas. */
-    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'invitation', 'reset-password', 'impersonation', 'notifications', 'profile', 'files', 'student', 'instructor', 'chairperson', 'dean', 'parent', 'institution', 'reauth', 'ui-kit', 'admin', 'role', 'internal', 'messages'];
+    /**
+     * Top-level route prefixes that may exist: public pages, Shield's auth pages, and the role areas.
+     * `people`: other people's profiles, for signed-in users of any role; every read goes through ProfilePolicy, invisible = 404.
+     */
+    private const KNOWN_PREFIXES = ['', 'register', 'login', 'logout', 'auth', 'health', 'invitation', 'reset-password', 'impersonation', 'notifications', 'profile', 'people', 'files', 'student', 'instructor', 'chairperson', 'dean', 'parent', 'institution', 'reauth', 'ui-kit', 'admin', 'role', 'internal', 'messages'];
 
     /**
      * Every registered route as [verb, example URL, role area].
