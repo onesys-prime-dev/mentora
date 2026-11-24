@@ -120,6 +120,14 @@ class CorrectionRequestService
         return array_column($rows, 'routed_to', 'field');
     }
 
+    /** How many open requests this admin may decide (the tab badge): one COUNT on pendingFor's scope. */
+    public function countFor(User $admin): int
+    {
+        $query = db_connect()->table('profile_correction_requests r')->where('r.status', 'pending')->where('r.user_id !=', (int) $admin->id);
+
+        return $this->scope($query, $admin) ? $query->countAllResults() : 0;
+    }
+
     /**
      * The open requests this admin may decide, oldest first. Never their own.
      *
@@ -247,28 +255,39 @@ class CorrectionRequestService
             throw PageNotFoundException::forPageNotFound();
         }
 
+        // The same rules as a correction; the error is named by the dialog's own field.
+        $check = function (string $field) use ($input, $id): string {
+            try {
+                return $this->checked($field, (string) ($input[$field] ?? ''), $id, null);
+            } catch (ProfileEditException $e) {
+                throw new ProfileEditException($e->getMessage(), $field);
+            }
+        };
+
         $names = [];
         foreach (array_keys(self::NAME_LENGTHS) as $field) {
-            $names[$field] = $this->checked($field, (string) ($input[$field] ?? ''), $id, null);
+            $names[$field] = $check($field);
         }
-        $email = $this->checked('email', (string) ($input['email'] ?? ''), $id, null);
+        $email = $check('email');
 
         $changed = array_keys(array_filter($names, fn (string $v, string $f): bool => $v !== (string) $this->current($id, $f), ARRAY_FILTER_USE_BOTH));
         $newMail = $email !== strtolower((string) $this->current($id, 'email'));
 
-        if ($changed !== []) {
-            $db  = db_connect();
-            $set = array_map(static fn (string $v): ?string => $v === '' ? null : $v, $names) + ['updated_at' => date('Y-m-d H:i:s')];
+        $this->inTransaction(function () use ($admin, $id, $names, $changed, $newMail): void {
+            if ($changed !== []) {
+                $db  = db_connect();
+                $set = array_map(static fn (string $v): ?string => $v === '' ? null : $v, $names) + ['updated_at' => date('Y-m-d H:i:s')];
 
-            // A system administrator may have no profile row yet: the first edit makes it.
-            $db->table('user_profiles')->where('user_id', $id)->countAllResults() > 0
-                ? $db->table('user_profiles')->where('user_id', $id)->update($set)
-                : $db->table('user_profiles')->insert($set + ['user_id' => $id, 'created_at' => $set['updated_at']]);
-        }
+                // A system administrator may have no profile row yet: the first edit makes it.
+                $db->table('user_profiles')->where('user_id', $id)->countAllResults() > 0
+                    ? $db->table('user_profiles')->where('user_id', $id)->update($set)
+                    : $db->table('user_profiles')->insert($set + ['user_id' => $id, 'created_at' => $set['updated_at']]);
+            }
 
-        if ($changed !== [] || $newMail) {
-            service('auditLogger')->log('profile.official_updated', $admin, ['target_type' => 'user', 'target_id' => $id, 'new' => ['fields' => $newMail ? [...$changed, 'email'] : $changed]]);
-        }
+            if ($changed !== [] || $newMail) {
+                service('auditLogger')->log('profile.official_updated', $admin, ['target_type' => 'user', 'target_id' => $id, 'new' => ['fields' => $newMail ? [...$changed, 'email'] : $changed]]);
+            }
+        });
 
         if ($changed !== []) {
             $labels = implode(', ', array_map(static fn (string $f): string => strtolower(self::LABELS[$f]), $changed));

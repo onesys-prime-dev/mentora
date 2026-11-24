@@ -230,8 +230,16 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
                 <dd class="<?= $dd ?>"><?= $own['student_number'] !== '' ? esc($own['student_number']) : '<span class="text-[#646464]">Not set</span>' ?><?= $waiting('student_number') ?></dd>
             <?php endif; ?>
         </dl>
-        <?php if (($own['correction'] ?? null) !== null): ?>
-            <p><button type="button" data-dialog-open="profile-correction" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Request a correction</button></p>
+        <?php $correction = $own['correction'] ?? null; ?>
+        <?php if ($correction !== null && ! $correction['writable']): ?>
+            <?= view('components/lock-note', ['kind' => 'read_only'], ['saveData' => false]) ?>
+        <?php elseif ($correction !== null): ?>
+            <?php $outline = 'inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11'; ?>
+            <?php if (array_diff_key($correction['now'], $correction['open']) === []): ?>
+                <p><button type="button" disabled class="<?= $outline ?> cursor-not-allowed opacity-60">All your requests are waiting</button></p>
+            <?php else: ?>
+                <p><button type="button" data-dialog-open="profile-correction" class="<?= $outline ?> hover:bg-brand-tint">Request a correction</button></p>
+            <?php endif; ?>
         <?php endif; ?>
     </section>
 <?php endif; ?>

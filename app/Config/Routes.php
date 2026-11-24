@@ -1297,7 +1297,8 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->post('users', 'Admin\UsersController::invite', ['filter' => 'permission:users.manage']);
     $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => ['permission:users.manage', 'reauth']]);
     // Correction requests that reach the platform (no institution, or no other institutional admin there).
-    $routes->post('users/requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => 'permission:users.manage']);
+    // Approving changes a name or email, so it asks for the password as a Users edit does.
+    $routes->post('users/requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/requests/(:num)/reject', 'Institution\ProfileRequestsController::decide/$1/reject', ['filter' => 'permission:users.manage']);
     $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
     $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);

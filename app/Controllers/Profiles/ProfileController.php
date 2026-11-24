@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers\Profiles;
 
 use App\Controllers\BaseController;
+use App\Services\Institutions\InstitutionAccess;
 use App\Services\Parents\ParentAccessService;
 use App\Services\Parents\ParentPortal;
 use App\Services\Profiles\AvatarData;
@@ -46,7 +47,7 @@ class ProfileController extends BaseController
         if ($user->inGroup('student')) {
             $now['student_number'] = $row['student_number'] ?? '';
         }
-        $own['correction'] = $own['managed'] ? ['now' => $now, 'open' => (new CorrectionRequestService())->openFor($user)] : null;
+        $own['correction'] = $own['managed'] ? ['now' => $now, 'open' => (new CorrectionRequestService())->openFor($user), 'writable' => (new InstitutionAccess())->canWrite($id)] : null;
         $own['official_edit'] = $own['managed'] ? null : $now;
 
         // The student's own number comes from their own row, not from student_details.
@@ -63,8 +64,8 @@ class ProfileController extends BaseController
             $p['children']    = $own['portal_on'] ? $p['children'] : [];
         }
 
-        // A system administrator has no profile row, so nothing to edit.
-        $edit = $this->hasProfile($id) ? [
+        // A system administrator's profile is name, email and role only (D29-C5), even once their official edit made a row.
+        $edit = $this->hasProfile($id) && ! $user->inGroup('admin') ? [
             'preferred_first_name' => (string) ($row['preferred_first_name'] ?? ''),
             'pronouns'             => (string) ($row['pronouns'] ?? ''),
             'staff'                => $user->inGroup('dean', 'chairperson', 'instructor', 'institutional_admin'),
@@ -134,6 +135,8 @@ class ProfileController extends BaseController
     /** Hides the checklist card for good, for the signed-in person only. */
     public function dismissChecklist(): RedirectResponse
     {
+        $this->refuseSystemAdmin();
+
         db_connect()->table('user_profiles')->where('user_id', (int) auth()->id())->update(['checklist_dismissed_at' => date('Y-m-d H:i:s')]);
 
         return redirect()->to(site_url('profile'));
@@ -148,6 +151,8 @@ class ProfileController extends BaseController
     /** Saves one section of the signed-in person's own profile; the route only ever edits them. */
     public function update(string $section): ResponseInterface|RedirectResponse
     {
+        $this->refuseSystemAdmin();
+
         $wantsJson = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
         $back      = site_url('profile');
         $input     = (array) $this->request->getPost();
@@ -182,10 +187,7 @@ class ProfileController extends BaseController
     public function requestCorrection(): ResponseInterface|RedirectResponse
     {
         $user = auth()->user();
-
-        if ($user->inGroup('admin')) {
-            throw PageNotFoundException::forPageNotFound(); // they edit their own directly
-        }
+        $this->refuseSystemAdmin(); // they edit their own directly
 
         $post = $this->request;
 
@@ -221,6 +223,18 @@ class ProfileController extends BaseController
         }
 
         return redirect()->to($back)->with('message', $message);
+    }
+
+    /**
+     * The owner's self-service edits are not for a system administrator (D29-C5): name, email and role only.
+     *
+     * @throws PageNotFoundException
+     */
+    public static function refuseSystemAdmin(): void
+    {
+        if (auth()->user()?->inGroup('admin')) {
+            throw PageNotFoundException::forPageNotFound();
+        }
     }
 
     private function hasProfile(int $id): bool

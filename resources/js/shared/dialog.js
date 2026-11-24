@@ -436,6 +436,15 @@ function bindDialogForm(form) {
 
         event.preventDefault();
 
+        // A button that needs a field only it uses (Reject needs a note, Approve does not): asked here, refused by the server too.
+        const needs = event.submitter?.dataset?.requires;
+
+        if (needs && String(form.elements.namedItem(needs)?.value ?? "").trim() === "") {
+            applyFieldErrors(form, { [needs]: event.submitter.dataset.requiresMessage ?? "Fill this in." });
+
+            return;
+        }
+
         // form.elements also holds submit buttons outside the form linked by form="..." (a full-screen dialog's top action).
         const buttons = Array.from(form.elements).filter((el) => el.type === "submit");
 

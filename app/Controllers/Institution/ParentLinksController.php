@@ -52,7 +52,7 @@ class ParentLinksController extends BaseController
             'parentFilters'  => $filters,
             'parentOpen'     => (new PeopleService())->openInvitations($institutionId),
             'parentCanEdit'  => (new InstitutionAccess())->canWrite((int) auth()->id()),
-            'parentRequests' => count((new CorrectionRequestService())->pendingFor(auth()->user())),
+            'parentRequests' => (new CorrectionRequestService())->countFor(auth()->user()),
         ]);
     }
 

@@ -58,7 +58,7 @@
             <?= view('pages/profile/partials/dialogs/staff', ['p' => $p], ['saveData' => false]) ?>
         <?php endif; ?>
     <?php endif; ?>
-    <?php if (($own['correction'] ?? null) !== null): ?>
+    <?php if (($own['correction'] ?? null) !== null && $own['correction']['writable'] && array_diff_key($own['correction']['now'], $own['correction']['open']) !== []): ?>
         <?= view('pages/profile/partials/dialogs/correction', ['correction' => $own['correction']], ['saveData' => false]) ?>
     <?php elseif (($own['official_edit'] ?? null) !== null): ?>
         <?= view('pages/profile/partials/dialogs/official', ['now' => $own['official_edit']], ['saveData' => false]) ?>

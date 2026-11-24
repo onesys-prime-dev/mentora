@@ -49,6 +49,7 @@ class ProfilePhotoController extends BaseController
     public function upload(): ResponseInterface|RedirectResponse
     {
         $user = auth()->user();
+        ProfileController::refuseSystemAdmin();
 
         return $this->answer('profile', 'Photo saved', fn () => (new ProfilePhotoService())->upload((int) $user->id, $this->request->getFile('photo') ?? throw new ProfileEditException('Choose an image file.', 'photo'), $user));
     }
@@ -56,6 +57,7 @@ class ProfilePhotoController extends BaseController
     public function remove(): ResponseInterface|RedirectResponse
     {
         $user = auth()->user();
+        ProfileController::refuseSystemAdmin();
 
         return $this->answer('profile', 'Photo removed', fn () => (new ProfilePhotoService())->remove((int) $user->id, $user));
     }

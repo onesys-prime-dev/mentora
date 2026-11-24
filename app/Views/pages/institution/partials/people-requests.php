@@ -50,13 +50,13 @@ foreach ($requests as $r) {
         . '<p class="text-sm text-[#3D3D3D]">' . $change($r) . '.'
         . ($r['reason'] !== null && $r['reason'] !== '' ? ' Reason given: &ldquo;' . esc($r['reason']) . '&rdquo;' : '') . '</p>'
         . ($r['sis_linked'] ? view('components/alert', ['tone' => 'warning', 'text' => 'This person is synced from your SIS. The next sync will undo this change unless it is fixed in the SIS too.'], ['saveData' => false]) : '')
-        . view('components/form-field', ['name' => 'note', 'label' => 'Note to ' . $name . ' (needed if you reject)', 'type' => 'textarea', 'required' => true, 'maxlength' => CorrectionRequestService::TEXT_MAX, 'placeholder' => 'Optional when approving'], ['saveData' => false])
+        . view('components/form-field', ['name' => 'note', 'label' => 'Note to ' . $name . ' (needed if you reject)', 'type' => 'textarea', 'maxlength' => CorrectionRequestService::TEXT_MAX, 'placeholder' => 'Optional when approving'], ['saveData' => false])
         . '<p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>'
         . '<div class="flex flex-wrap items-center justify-end gap-3">'
         . '<button type="button" data-dialog-close class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-semibold text-[#3D3D3D] transition hover:bg-gray-50">Cancel</button>'
-        // Reject posts elsewhere and needs the note; Approve skips the browser's check (the note is optional there).
-        . '<button type="submit" formaction="' . $url('reject') . '" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-[#C33939] bg-white px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Reject</button>'
-        . '<button type="submit" formnovalidate class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Approve change</button>'
+        // Reject posts elsewhere and needs the note (dialog.js asks before sending; the server refuses without it).
+        . '<button type="submit" formaction="' . $url('reject') . '" data-requires="note" data-requires-message="Give a reason for rejecting the request." class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full border border-[#C33939] bg-white px-5 py-2 text-sm font-semibold text-[#C33939] transition hover:bg-[#FDEDEC]">Reject</button>'
+        . '<button type="submit" class="inline-flex items-center justify-center pointer-coarse:min-h-11 rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark">Approve change</button>'
         . '</div></form>';
 
     $dialogs .= view('components/dialog', ['id' => $dialog, 'title' => "Change {$name}'s " . strtolower($label) . '?', 'body' => $body, 'size' => 'md'], ['saveData' => false]);

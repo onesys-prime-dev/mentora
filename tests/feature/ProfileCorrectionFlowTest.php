@@ -243,7 +243,10 @@ final class ProfileCorrectionFlowTest extends RouteTestCase
         $id = $this->submitAsAnn();
         $this->loggedInAs($this->admin);
 
-        $this->assertMatchesRegularExpression('#<textarea[^>]*name="note"[^>]*required#', $this->body('institution/people/requests'), 'the browser asks for the note too');
+        $queue = $this->body('institution/people/requests');
+        $this->assertDoesNotMatchRegularExpression('#<textarea[^>]*name="note"[^>]*required#', $queue, 'approving needs no note');
+        $this->assertStringContainsString('(needed if you reject)', $queue);
+        $this->assertMatchesRegularExpression('#<button[^>]*data-requires="note"[^>]*>Reject</button>#', $queue, 'the script asks for the note on Reject');
 
         $bad = $this->withHeaders($this->json())->step('POST', "institution/people/requests/{$id}/reject", ['note' => '  ']);
         $bad->assertStatus(422);
@@ -284,8 +287,13 @@ final class ProfileCorrectionFlowTest extends RouteTestCase
         $this->assertStringContainsString(site_url("admin/users/requests/{$mine}/approve"), $users);
         $this->assertStringNotContainsString("requests/{$school}/approve", $users, 'a school request stays with the school');
 
-        $this->notFound("admin/users/requests/{$school}/approve", ['note' => '']);
+        $this->step('POST', "admin/users/requests/{$mine}/approve", ['note' => '']);
+        $this->assertSame('Lone', $this->profile($loner, 'first_name'), 'approving a name change asks for the password first');
 
+        $_SESSION['reauth'] = ['user' => $sys->id, 'at' => time()];
+        $this->withSession();
+        $this->notFound("admin/users/requests/{$school}/approve", ['note' => '']);
+        $this->notFound("admin/users/requests/{$school}/reject", ['note' => 'No.']);
         $this->step('POST', "admin/users/requests/{$mine}/approve", ['note' => ''])->assertRedirectTo(site_url('admin/users'));
         $this->assertSame('Change approved', session('message'));
         $this->assertSame('Lonny', $this->profile($loner, 'first_name'));
@@ -338,5 +346,71 @@ final class ProfileCorrectionFlowTest extends RouteTestCase
         $this->loggedInAs($this->admin);
         $this->call('POST', "institution/people/requests/{$id}/approve", ['note' => '']);
         $this->assertSame('pending', $this->request($id)['status']);
+    }
+
+    public function testASystemAdminWithAProfileRowGetsNoSelfServiceEditing(): void
+    {
+        $sys = PeopleFactory::person('admin', 'Sys', 'Admin', 'sys@example.com');
+        db_connect()->table('user_profiles')->insert(['user_id' => $sys->id, 'first_name' => 'Sys', 'last_name' => 'Admin', 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->loggedInAs($sys);
+        $page = $this->body('profile');
+        foreach (['data-profile-checklist', 'profile-photo', 'profile-edit-identity', 'profile-edit-about', 'profile-edit-staff'] as $marker) {
+            $this->assertStringNotContainsString($marker, $page, $marker);
+        }
+        $this->assertStringContainsString('data-dialog-open="profile-official"', $page);
+
+        foreach (['profile/identity' => ['preferred_first_name' => 'Syl'], 'profile/about' => ['bio' => 'Hi'], 'profile/staff' => ['office_location' => 'X'], 'profile/photo' => [], 'profile/photo/remove' => [], 'profile/checklist/dismiss' => []] as $uri => $data) {
+            $this->notFound($uri, $data);
+        }
+        $this->assertNull($this->profile($sys, 'bio'));
+        $this->assertNull($this->profile($sys, 'checklist_dismissed_at'));
+    }
+
+    public function testTheBadgeCountMatchesTheQueue(): void
+    {
+        $this->submitAsAnn();
+        $this->submitAsAnn('first_name', 'Anne');
+        $service = new CorrectionRequestService();
+
+        $this->assertSame(2, $service->countFor($this->admin));
+        $this->assertSame(count($service->pendingFor($this->admin)), $service->countFor($this->admin));
+        $this->assertSame(0, $service->countFor($this->ann), 'not an admin: nothing to decide');
+    }
+
+    public function testAReadOnlyInstitutionHidesTheCorrectionButton(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->school)->update(['status' => 'read_only']);
+
+        $this->loggedInAs($this->ann);
+        $page = $this->body('profile');
+        $this->assertStringNotContainsString('data-dialog-open="profile-correction"', $page);
+        $this->assertStringContainsString('This institution is read-only', $page);
+    }
+
+    public function testWhenEveryDetailIsWaitingTheButtonSaysSo(): void
+    {
+        $service = new CorrectionRequestService();
+        foreach (['first_name' => 'Anne', 'middle_name' => 'Mae', 'last_name' => 'Santos', 'suffix' => 'Jr.', 'email' => 'ann2@example.com', 'student_number' => '2026-1'] as $field => $value) {
+            $service->submit($this->ann, $field, $value, 'Fix.');
+        }
+
+        $this->loggedInAs($this->ann);
+        $page = $this->body('profile');
+        $this->assertMatchesRegularExpression('#<button[^>]*disabled[^>]*>All your requests are waiting</button>#', $page);
+        $this->assertStringNotContainsString('id="profile-correction"', $page);
+    }
+
+    public function testTheOfficialDialogShowsAnErrorBesideItsField(): void
+    {
+        $sys = PeopleFactory::person('admin', 'Sys', 'Admin', 'sys@example.com');
+        $this->loggedInAs($sys);
+
+        $bad = $this->withHeaders($this->json())->step('POST', 'profile/identity-official', ['first_name' => 'S', 'last_name' => 'Admin', 'email' => 'sys@example.com']);
+        $bad->assertStatus(422);
+        $this->assertArrayHasKey('first_name', json_decode($bad->getJSON(), true)['errors']);
+
+        $bad = $this->withHeaders($this->json())->step('POST', 'profile/identity-official', ['first_name' => 'Sys', 'last_name' => 'Admin', 'email' => 'nope']);
+        $this->assertArrayHasKey('email', json_decode($bad->getJSON(), true)['errors']);
     }
 }

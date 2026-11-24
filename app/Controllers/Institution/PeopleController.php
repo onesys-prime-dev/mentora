@@ -64,7 +64,7 @@ class PeopleController extends BaseController
             'peopleSeats'        => (new PlanLimits())->report($institutionId)['seats'],
             'peopleCanEdit'      => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'peopleCanViewAs'    => (bool) auth()->user()->can('institution.impersonate'),
-            'peopleRequests'     => count((new CorrectionRequestService())->pendingFor(auth()->user())),
+            'peopleRequests'     => (new CorrectionRequestService())->countFor(auth()->user()),
         ]);
     }
 
