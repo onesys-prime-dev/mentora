@@ -11,7 +11,7 @@ use App\Services\Sis\SisOwnership;
 use App\Services\Sis\StudentNumbers;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
-use RuntimeException;
+use App\Services\Users\AccountControl;
 
 /**
  * Requests to correct an official identity field (FR7, D17): the owner asks, an administrator decides. A request
@@ -28,6 +28,8 @@ class CorrectionRequestService
     public const LABELS = ['first_name' => 'First name', 'middle_name' => 'Middle name', 'last_name' => 'Last name', 'suffix' => 'Suffix', 'email' => 'Email', 'student_number' => 'Student number'];
 
     public const TEXT_MAX = 500;
+
+    public const ALREADY_DECIDED = 'This request was already decided.';
 
     /** field => [min length, max length]; a minimum of 0 means the value may be cleared */
     private const NAME_LENGTHS = ['first_name' => [2, 100], 'middle_name' => [0, 100], 'last_name' => [2, 100], 'suffix' => [0, 20]];
@@ -50,7 +52,7 @@ class CorrectionRequestService
         $reason = $this->text($reason, 'reason', 'Give a reason for the correction.');
         $old    = $this->current($ownerId, $field);
 
-        if ($value === (string) $old) {
+        if ($value === ($field === 'email' ? strtolower((string) $old) : (string) $old)) {
             throw new ProfileEditException('That is already the current value.', 'new_value');
         }
 
@@ -159,6 +161,11 @@ class CorrectionRequestService
             throw new ProfileEditException('An account with that email already exists now.', 'new_value');
         }
 
+        // An update of a missing row "succeeds" with nothing written, so refuse before anything is decided.
+        if ($field !== 'email' && db_connect()->table('user_profiles')->where('user_id', $userId)->countAllResults() === 0) {
+            throw new ProfileEditException('This person has no profile to correct. Add their details from People first.', 'new_value');
+        }
+
         $this->inTransaction(function () use ($id, $admin, $note, $request, $userId, $field, $value): void {
             $this->decide($id, $admin, 'approved', $note);
             $this->audit('profile.correction_approved', $admin, $request);
@@ -202,24 +209,44 @@ class CorrectionRequestService
     }
 
     /**
-     * The open request, when this admin may decide it; otherwise not found, so ids cannot be probed.
+     * The open request, when this admin may decide it; otherwise not found, so ids cannot be probed. A request
+     * the admin decides but that is no longer open is refused as already decided.
      *
      * @return array<string, mixed>
+     *
+     * @throws PageNotFoundException
+     * @throws ProfileEditException
      */
     private function decidable(int $id, User $admin): array
     {
         $query = db_connect()->table('profile_correction_requests r')
-            ->where('r.id', $id)->where('r.status', 'pending')->where('r.user_id !=', (int) $admin->id);
+            ->where('r.id', $id)->where('r.user_id !=', (int) $admin->id);
 
         $row = $this->scope($query, $admin) ? $query->get()->getRowArray() : null;
 
-        return $row ?? throw PageNotFoundException::forPageNotFound();
+        if ($row === null) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        if ($row['status'] !== 'pending') {
+            throw new ProfileEditException(self::ALREADY_DECIDED, 'status');
+        }
+
+        return $row;
     }
 
     /** Limits a request query to what this admin decides; false when they decide nothing. */
     private function scope(\CodeIgniter\Database\BaseBuilder $query, User $admin): bool
     {
         $adminId = (int) $admin->id;
+
+        // A deactivated or deleted admin decides nothing, even with a session left over.
+        $active = db_connect()->table('users')->where(['id' => $adminId, 'active' => 1])->where('deleted_at IS NULL', null, false)->countAllResults() > 0;
+
+        if (! $active || (new AccountControl())->isDeactivated($adminId)) {
+            return false;
+        }
+
         $system  = $this->inGroup($adminId, 'admin');
         $schools = $this->inGroup($adminId, 'institutional_admin')
             ? array_map('intval', array_column(db_connect()->table('institution_users')->select('institution_id')->where('user_id', $adminId)->get()->getResultArray(), 'institution_id'))
@@ -252,7 +279,7 @@ class CorrectionRequestService
             ->update(['status' => $status, 'decided_by' => (int) $admin->id, 'decision_note' => $note, 'decided_at' => $stamp, 'updated_at' => $stamp]);
 
         if (db_connect()->affectedRows() !== 1) {
-            throw new RuntimeException('The correction request was decided twice at once.');
+            throw new ProfileEditException(self::ALREADY_DECIDED, 'status'); // another admin decided it a moment ago
         }
     }
 
@@ -325,8 +352,9 @@ class CorrectionRequestService
             throw new ProfileEditException("{$label} must be " . max(1, $min) . " to {$max} characters.", 'new_value');
         }
 
-        if (preg_match('/^[\p{L}][\p{L} .\'\-]*$/u', $value) !== 1) {
-            throw new ProfileEditException("{$label} can use letters, spaces, periods, apostrophes and hyphens, and must start with a letter.", 'new_value');
+        // The admin rule for legal names (InvitationInput): real names vary too much for a letter whitelist; only control and format characters are refused.
+        if (preg_match('/[\p{Cc}\p{Cf}]/u', $value) === 1) {
+            throw new ProfileEditException("{$label} contains characters that are not allowed.", 'new_value');
         }
 
         return $value;

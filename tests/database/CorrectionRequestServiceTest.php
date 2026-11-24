@@ -125,6 +125,9 @@ final class CorrectionRequestServiceTest extends DatabaseTestCase
     {
         $this->refused(fn () => $this->service->submit($this->ann, 'first_name', 'Ann', 'Same.'), 'new_value', 'already');
         $this->refused(fn () => $this->service->submit($this->ann, 'email', 'ANN@example.com', 'Same.'), 'new_value', 'already');
+
+        db_connect()->table('auth_identities')->where(['user_id' => $this->ann->id, 'type' => 'email_password'])->update(['secret' => 'Ann@Example.com']);
+        $this->refused(fn () => $this->service->submit($this->ann, 'email', 'ann@example.com', 'Same.'), 'new_value', 'already');
     }
 
     public function testTheReasonIsRequiredAndAtMost500Characters(): void
@@ -138,7 +141,9 @@ final class CorrectionRequestServiceTest extends DatabaseTestCase
     public function testValuesAreChecked(): void
     {
         $this->refused(fn () => $this->service->submit($this->ann, 'password', 'x', 'Why not.'), 'field', 'cannot');
-        $this->refused(fn () => $this->service->submit($this->ann, 'first_name', 'A1!', 'Typo.'), 'new_value', 'letters');
+        $this->refused(fn () => $this->service->submit($this->ann, 'first_name', "An\u{200B}n", 'Typo.'), 'new_value', 'not allowed');
+        $this->refused(fn () => $this->service->submit($this->ann, 'first_name', "An\nn", 'Typo.'), 'new_value', 'not allowed');
+        $this->refused(fn () => $this->service->submit($this->ann, 'last_name', str_repeat('a', 101), 'Typo.'), 'new_value', '100');
         $this->refused(fn () => $this->service->submit($this->ann, 'last_name', '', 'Typo.'), 'new_value', 'characters');
         $this->refused(fn () => $this->service->submit($this->ann, 'email', 'not-an-email', 'Typo.'), 'new_value', 'valid email');
         $this->refused(fn () => $this->service->submit($this->ann, 'email', 'ida@example.com', 'Mine.'), 'new_value', 'already exists');
@@ -313,7 +318,58 @@ final class CorrectionRequestServiceTest extends DatabaseTestCase
         $this->assertSame([], $this->service->pendingFor($sys));
 
         $this->service->approve($id, $this->admin, null);
-        $this->notFound(fn () => $this->service->approve($id, $this->admin, null)); // decided already
+    }
+
+    public function testADecidedRequestCannotBeDecidedAgain(): void
+    {
+        $id = $this->service->submit($this->ann, 'first_name', 'Anne', 'Spelling.');
+        $this->service->approve($id, $this->admin, null);
+
+        $this->refused(fn () => $this->service->approve($id, $this->admin, null), 'status', 'already decided');
+        $this->refused(fn () => $this->service->reject($id, $this->admin, 'No.'), 'status', 'already decided');
+        $this->assertSame('approved', $this->request($id)['status']);
+        $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'profile.correction_approved')->countAllResults());
+    }
+
+    public function testRealNamesWithTypographicApostrophesCombiningMarksAndOrdinalsAreAccepted(): void
+    {
+        $last   = $this->service->submit($this->ann, 'last_name', "O\u{2019}Brien", 'Spelling.');
+        $first  = $this->service->submit($this->ann, 'first_name', "Jose\u{0301}", 'Accent.');
+        $suffix = $this->service->submit($this->ann, 'suffix', '3rd', 'Missing.');
+
+        foreach ([$last, $first, $suffix] as $id) {
+            $this->service->approve($id, $this->admin, null);
+        }
+
+        $this->assertSame(["Jose\u{0301}", "O\u{2019}Brien", '3rd'], [$this->profile($this->ann, 'first_name'), $this->profile($this->ann, 'last_name'), $this->profile($this->ann, 'suffix')]);
+    }
+
+    public function testADeactivatedOrDeletedAdminCannotDecide(): void
+    {
+        $id = $this->service->submit($this->ann, 'first_name', 'Anne', 'Spelling.');
+        $db = db_connect();
+
+        $db->table('user_account_controls')->insert(['user_id' => $this->admin->id, 'deactivated_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame([], $this->service->pendingFor($this->admin));
+        $this->notFound(fn () => $this->service->approve($id, $this->admin, null));
+
+        $db->table('user_account_controls')->where('user_id', $this->admin->id)->delete();
+        $db->table('users')->where('id', $this->admin->id)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        $this->notFound(fn () => $this->service->reject($id, $this->admin, 'No.'));
+
+        $this->assertSame('pending', $this->request($id)['status']);
+    }
+
+    public function testApprovingForSomeoneWithNoProfileRowIsRefusedAndStaysPending(): void
+    {
+        $id = $this->service->submit($this->ann, 'last_name', 'Santos', 'Married name.');
+        db_connect()->table('user_profiles')->where('user_id', $this->ann->id)->delete();
+
+        $this->refused(fn () => $this->service->approve($id, $this->admin, null), 'new_value', 'no profile');
+
+        $this->assertSame('pending', $this->request($id)['status']);
+        $this->assertSame(0, db_connect()->table('audit_logs')->where('action', 'profile.correction_approved')->countAllResults());
+        $this->assertSame(0, $this->bells($this->ann));
     }
 
     public function testDecisionsAreAuditedWithTheActorAndNoValues(): void

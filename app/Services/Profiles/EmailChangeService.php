@@ -8,7 +8,7 @@ use App\Services\Concerns\InTransaction;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use InvalidArgumentException;
-use RuntimeException;
+use CodeIgniter\Database\Exceptions\DatabaseException;
 
 /**
  * A verified change of sign-in email (D17): the new address gets a link good for 48 hours, the old address is told,
@@ -20,6 +20,8 @@ class EmailChangeService
     use InTransaction;
 
     public const HOURS = 48;
+
+    public const IN_USE = 'That email address is already in use.';
 
     /** Whether another account already signs in with this address. */
     public static function taken(string $email, int $userId): bool
@@ -65,7 +67,11 @@ class EmailChangeService
             . "If this wasn't you, contact your school.\n");
     }
 
-    /** @return bool true when the email was changed; false for a link that is wrong, used, expired, someone else's, or whose address is taken now */
+    /**
+     * @return bool true when the email was changed; false for a link that is wrong, used, expired, someone else's, or whose address is taken now
+     *
+     * @throws ProfileEditException only when another request wins a race at the same moment (the link opened twice, or the address taken)
+     */
     public function confirm(string $token, ?User $signedIn): bool
     {
         if (preg_match('/^[0-9a-f]{64}$/', $token) !== 1) {
@@ -106,11 +112,20 @@ class EmailChangeService
             $db->table('pending_email_changes')->where('id', $row['id'])->where('confirmed_at IS NULL', null, false)->update(['confirmed_at' => $stamp]);
 
             if ($db->affectedRows() !== 1) {
-                throw new RuntimeException('The email change was confirmed twice at once.');
+                throw new ProfileEditException('This link was already used.'); // opened twice at once
             }
 
-            // The same write the People and Users screens use for a sign-in email.
-            $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $row['new_email'], 'updated_at' => $stamp]);
+            // The same write the People and Users screens use for a sign-in email. The unique (type, secret) key
+            // refuses an address someone took after the check above.
+            try {
+                $saved = $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $row['new_email'], 'updated_at' => $stamp]);
+            } catch (DatabaseException) {
+                $saved = false;
+            }
+
+            if ($saved === false) {
+                throw new ProfileEditException(self::IN_USE, 'new_email');
+            }
 
             service('auditLogger')->log('profile.email_changed', $owner, ['target_type' => 'user', 'target_id' => $userId, 'new' => ['request_id' => $row['request_id'] === null ? null : (int) $row['request_id']]]);
         });
