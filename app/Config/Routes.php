@@ -50,6 +50,7 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 
 // Everyone's own profile, for every role. The old student/profile and parent/profile GETs (kept in their groups) redirect here.
 $routes->get('profile', 'Profiles\ProfileController::index', ['filter' => 'session']);
+$routes->post('profile/checklist/dismiss', 'Profiles\ProfileController::dismissChecklist', ['filter' => ['session', 'readonly']]);
 $routes->post('profile/(identity|about|staff)', 'Profiles\ProfileController::update/$1', ['filter' => ['session', 'readonly']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served

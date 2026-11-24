@@ -190,4 +190,135 @@ final class ProfilePageTest extends RouteTestCase
             $this->assertMatchesRegularExpression('#aria-disabled="true"(?:(?!</nav>).)*Help &amp; Support(?:(?!</nav>).)*Coming soon#s', $body, $role);
         }
     }
+
+    private function staffUser(string $role = 'instructor'): User
+    {
+        return PeopleFactory::person($role, 'Ivy', 'Teach', null, $this->institution);
+    }
+
+    /** @param array<string, mixed> $set */
+    private function profileUpdate(User $u, array $set): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $u->id)->update($set);
+    }
+
+    /** @return list<string> */
+    private function checklist(string $body): array
+    {
+        preg_match_all('/data-checklist-item="([a-z]+)"/', $body, $m);
+
+        return $m[1];
+    }
+
+    public function testTheStaffChecklistListsWhatIsMissingAndDropsWhatIsFilled(): void
+    {
+        $ivy = $this->staffUser();
+
+        $this->assertEqualsCanonicalizing(['consultation', 'office', 'pronouns', 'bio'], $this->checklist($this->body($ivy)));
+
+        $this->profileUpdate($ivy, ['office_location' => 'CS 204', 'bio' => 'Hello']);
+        $this->assertEqualsCanonicalizing(['consultation', 'pronouns'], $this->checklist($this->body($ivy)));
+    }
+
+    public function testAStudentAndAParentOnlyGetPronounsAndBio(): void
+    {
+        $this->assertEqualsCanonicalizing(['pronouns', 'bio'], $this->checklist($this->body($this->ann)));
+        $this->assertEqualsCanonicalizing(['pronouns', 'bio'], $this->checklist($this->body($this->pam)));
+    }
+
+    public function testTheChecklistCardIsHiddenWhenEverythingIsFilled(): void
+    {
+        $this->profileUpdate($this->ann, ['pronouns' => 'she/her', 'bio' => 'Hi']);
+
+        $this->assertStringNotContainsString('data-profile-checklist', $this->body($this->ann));
+    }
+
+    public function testTheSystemAdminHasNoChecklistAndNoToggle(): void
+    {
+        $body = $this->body(PeopleFactory::person('admin', 'Sys', 'Admin', 'sys@mentora.example'));
+
+        $this->assertStringNotContainsString('data-profile-checklist', $body);
+        $this->assertStringNotContainsString('data-profile-preview-toggle', $body);
+    }
+
+    public function testDismissingTheChecklistKeepsItHiddenAfterReload(): void
+    {
+        $ivy = $this->staffUser();
+
+        $this->assertStringContainsString('data-profile-checklist', $this->body($ivy));
+        $this->step('POST', 'profile/checklist/dismiss')->assertRedirectTo(site_url('profile'));
+
+        $this->assertNotNull(db_connect()->table('user_profiles')->where('user_id', $ivy->id)->get()->getRow()->checklist_dismissed_at);
+        $this->assertStringNotContainsString('data-profile-checklist', $this->body($ivy));
+    }
+
+    public function testDismissOnlyEverTouchesTheSignedInPerson(): void
+    {
+        $this->loggedInAs($this->ann);
+        $this->step('POST', 'profile/checklist/dismiss', ['user_id' => $this->pam->id]);
+
+        $this->assertNull(db_connect()->table('user_profiles')->where('user_id', $this->pam->id)->get()->getRow()->checklist_dismissed_at);
+        $this->assertNotNull(db_connect()->table('user_profiles')->where('user_id', $this->ann->id)->get()->getRow()->checklist_dismissed_at);
+    }
+
+    public function testAReadOnlyInstitutionRefusesTheDismiss(): void
+    {
+        $ro = PeopleFactory::person('instructor', 'Ro', 'Teach', null, PeopleFactory::institution('PRRO', 'read_only'));
+        $this->loggedInAs($ro);
+        $this->step('POST', 'profile/checklist/dismiss');
+
+        $this->assertNull(db_connect()->table('user_profiles')->where('user_id', $ro->id)->get()->getRow()->checklist_dismissed_at);
+    }
+
+    public function testAStudentPreviewingHidesEmailCoursesOfficialDetailsAndPencils(): void
+    {
+        $body = $this->body($this->ann, '/profile?preview=student');
+        $body = substr($body, (int) strpos($body, 'data-profile-preview-toggle')); // the account menu above shows the signed-in person's own email
+
+        $this->assertStringContainsString('Ann Lee', $body);
+        $this->assertStringNotContainsString('ann@school.example', $body);
+        $this->assertStringNotContainsString('data-profile-official', $body);
+        $this->assertStringNotContainsString('2026-001', $body);
+        $this->assertStringNotContainsString('data-dialog-open="profile-edit', $body);
+        $this->assertStringNotContainsString('data-profile-checklist', $body);
+        $this->assertStringNotContainsString('data-profile-parents', $body);
+    }
+
+    public function testAnInstructorPreviewShowsOfficeAndConsultation(): void
+    {
+        $ivy = $this->staffUser();
+        $this->profileUpdate($ivy, ['office_location' => 'CS 204', 'consultation_hours' => 'Mon 1-3']);
+        $body = $this->body($ivy, '/profile?preview=student');
+
+        $this->assertStringContainsString('CS 204', $body);
+        $this->assertStringContainsString('Mon 1-3', $body);
+        $this->assertStringNotContainsString('data-dialog-open="profile-edit', $body);
+    }
+
+    public function testAParentOnlyPreviewSaysStudentsCannotSeeThem(): void
+    {
+        $body = $this->body($this->pam, '/profile?preview=student');
+
+        $this->assertStringContainsString("Students in your school can't see your profile.", html_entity_decode($body, ENT_QUOTES));
+        $this->assertStringNotContainsString('data-profile-band', $body);
+    }
+
+    public function testTheToggleIsAPairOfLinks(): void
+    {
+        $body = $this->body($this->ann);
+
+        $this->assertStringContainsString('data-profile-preview-toggle', $body);
+        $this->assertMatchesRegularExpression('#href="[^"]*/profile\?preview=student"#', html_entity_decode($body));
+        $this->assertStringContainsString('data-profile-band', $body);
+    }
+
+    public function testPreferNotToSayIsStoredButNeverShown(): void
+    {
+        $this->profileUpdate($this->ann, ['pronouns' => 'prefer not to say']);
+
+        $own = $this->body($this->ann);
+        $this->assertStringNotContainsString('prefer not to say', strtolower(preg_replace('#<select.*?</select>#s', '', $own)));
+        $this->assertMatchesRegularExpression('#<option value="prefer not to say" selected#', html_entity_decode($own));
+        $this->assertStringNotContainsString('prefer not to say', strtolower($this->body($this->ann, '/profile?preview=student')));
+    }
 }

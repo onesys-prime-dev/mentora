@@ -41,6 +41,17 @@ describe("the custom pronouns box", () => {
 
 describe("the character count", () => {
 
+    it("keeps the custom pronoun hint inside the custom box", () => {
+
+        document.body.innerHTML = `<form data-profile-form><div data-field="pronouns">
+            <select data-pronoun-select><option value="custom">Custom</option></select>
+            <div data-pronoun-custom><input maxlength="30"></div><p data-field-error hidden></p></div></form>`;
+        bindProfileDialogs();
+
+        expect(document.querySelector("[data-pronoun-custom] p")?.textContent).toBe("0 / 30");
+
+    });
+
     it("counts up to the limit and then says how far over", () => {
 
         expect(countText(12, 300)).toBe("12 / 300");

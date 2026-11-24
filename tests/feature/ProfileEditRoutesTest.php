@@ -77,6 +77,8 @@ final class ProfileEditRoutesTest extends RouteTestCase
         $ok = $this->withHeaders($this->json())->step('POST', 'profile/about', ['bio' => 'Hi']);
         $ok->assertStatus(200);
         $this->assertSame('Profile updated', json_decode($ok->getJSON(), true)['message']);
+        $this->assertSame(site_url('profile'), json_decode($ok->getJSON(), true)['redirect']);
+        $this->assertSame('Profile updated', session()->getFlashdata('message'));
 
         $bad = $this->withHeaders($this->json())->step('POST', 'profile/identity', ['preferred_first_name' => 'Mary$', 'pronouns_choice' => '']);
         $bad->assertStatus(422);

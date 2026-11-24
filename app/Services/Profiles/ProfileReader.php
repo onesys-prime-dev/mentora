@@ -30,6 +30,22 @@ class ProfileReader
     }
 
     /**
+     * What a student of the owner's school, with no tie to them, would see of the owner.
+     *
+     * @return array<string, mixed>|null null when that student would see nothing
+     */
+    public function forPreview(User $owner): ?array
+    {
+        $id    = (int) $owner->id;
+        $roles = RoleRank::sort(array_column(db_connect()->table('auth_groups_users')->select('group')->where('user_id', $id)->get()->getResultArray(), 'group'));
+        $c      = new ViewContext(false, true, 'student', $roles, true, false, false, false, $owner->inGroup('admin'));
+        $policy = new ProfilePolicy();
+        $fields = $policy->fields($c);
+
+        return $fields === [] ? null : $this->build($id, $fields, $policy->roles($c));
+    }
+
+    /**
      * @param list<string> $fields       from ProfilePolicy::fields()
      * @param list<string> $visibleRoles from ProfilePolicy::roles()
      *
@@ -55,7 +71,8 @@ class ProfileReader
             $m['display_name'] = trim($first . ' ' . $last);
             $m['legal_name']   = implode(' ', array_filter([$row['first_name'] ?? '', $row['middle_name'] ?? '', $last, $row['suffix'] ?? ''], static fn ($p): bool => trim((string) $p) !== ''));
         }
-        $m['pronouns'] = $has('pronouns') ? ($row['pronouns'] ?? null) : null;
+        // "prefer not to say" is kept for the owner's dialog but shown as nothing.
+        $m['pronouns'] = $has('pronouns') && ($row['pronouns'] ?? null) !== 'prefer not to say' ? ($row['pronouns'] ?? null) : null;
 
         $roles = RoleRank::sort(array_column($db->table('auth_groups_users')->select('group')->where('user_id', $subjectId)->get()->getResultArray(), 'group'));
 

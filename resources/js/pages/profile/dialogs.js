@@ -50,7 +50,13 @@ export function bindProfileDialogs(root = document) {
 
         hint.className = "text-right text-xs text-[#646464]";
         hint.setAttribute("aria-live", "off");
-        input.closest("[data-field]")?.querySelector("[data-field-error]")?.before(hint);
+
+        // The custom-pronoun hint lives in (and hides with) its box.
+        if (input.closest("[data-pronoun-custom]")) {
+            input.after(hint);
+        } else {
+            input.closest("[data-field]")?.querySelector("[data-field-error]")?.before(hint);
+        }
 
         const update = () => {
             hint.textContent = countText(input.value.length, max);

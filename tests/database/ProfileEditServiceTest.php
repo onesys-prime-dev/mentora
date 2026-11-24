@@ -112,6 +112,18 @@ final class ProfileEditServiceTest extends DatabaseTestCase
         $this->refused('identity', ['preferred_first_name' => 'Dee']);
     }
 
+    public function testAnotherPersonsRecentNameChangesDoNotCountAgainstTheOwner(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Otto', 'Other', null, $this->inst);
+        foreach (['Ann', 'Bea', 'Cat'] as $n) {
+            $this->edit('identity', ['preferred_first_name' => $n], $other);
+        }
+        foreach (['Dan', 'Eve', 'Fay'] as $n) {
+            $this->edit('identity', ['preferred_first_name' => $n]);
+        }
+        $this->assertSame('Fay', $this->row($this->teacher)['preferred_first_name']);
+    }
+
     public function testEmptyClearsEveryField(): void
     {
         $this->edit('identity', ['preferred_first_name' => 'Ann', 'pronouns' => 'she/her']);

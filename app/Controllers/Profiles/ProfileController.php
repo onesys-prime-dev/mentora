@@ -28,7 +28,7 @@ class ProfileController extends BaseController
         $id   = (int) $user->id;
         $p    = (new ProfileReader())->forViewer($user, $id) ?? throw PageNotFoundException::forPageNotFound();
 
-        $row = db_connect()->table('user_profiles')->select('first_name, middle_name, last_name, suffix, student_number, preferred_first_name, pronouns')->where('user_id', $id)->get()->getRowArray() ?? [];
+        $row = db_connect()->table('user_profiles')->select('first_name, middle_name, last_name, suffix, student_number, preferred_first_name, pronouns, bio, office_location, consultation_hours, checklist_dismissed_at')->where('user_id', $id)->get()->getRowArray() ?? [];
         if (($p['display_name'] ?? '') === '') {
             $p['display_name'] = (string) $user->username; // a system administrator has no profile row
         }
@@ -58,7 +58,18 @@ class ProfileController extends BaseController
             'staff'                => $user->inGroup('dean', 'chairperson', 'instructor', 'institutional_admin'),
         ] : null;
 
+        $canPreview = ! $user->inGroup('admin');
+        $preview    = $canPreview && $this->request->getGet('preview') === 'student';
+        $previewP   = $preview ? (new ProfileReader())->forPreview($user) : null;
+        if ($previewP !== null) {
+            $previewP['display_name'] = ($previewP['display_name'] ?? '') !== '' ? $previewP['display_name'] : (string) $user->username;
+        }
+
         return view('pages/profile/index', [
+            'canPreview' => $canPreview,
+            'preview'    => $preview,
+            'previewP'   => $previewP,
+            'checklist'  => $edit === null ? [] : $this->checklist($edit['staff'], $row),
             'title'  => 'My profile',
             'page'   => 'profile',
             'user'   => $user,
@@ -67,6 +78,45 @@ class ProfileController extends BaseController
             'edit'   => $edit,
             'avatar' => (new AvatarData())->forMany([$id])[$id] ?? ['id' => $id, 'name' => $p['display_name']],
         ]);
+    }
+
+    /**
+     * What is still empty on the owner's own profile, unless they dismissed the card.
+     *
+     * @param array<string, mixed> $row
+     *
+     * @return array<string, array{label: string, dialog: string}>
+     */
+    private function checklist(bool $staff, array $row): array
+    {
+        if (($row['checklist_dismissed_at'] ?? null) !== null) {
+            return [];
+        }
+        $empty = static fn (string $k): bool => trim((string) ($row[$k] ?? '')) === '';
+        // Phase 4 adds the photo item here, first in the list.
+        $items = [];
+        if ($staff && $empty('consultation_hours')) {
+            $items['consultation'] = ['label' => 'Add your consultation hours', 'dialog' => 'profile-edit-staff'];
+        }
+        if ($staff && $empty('office_location')) {
+            $items['office'] = ['label' => 'Add your office', 'dialog' => 'profile-edit-staff'];
+        }
+        if ($empty('pronouns')) {
+            $items['pronouns'] = ['label' => 'Add your pronouns', 'dialog' => 'profile-edit-identity'];
+        }
+        if ($empty('bio')) {
+            $items['bio'] = ['label' => 'Write a short bio', 'dialog' => 'profile-edit-about'];
+        }
+
+        return $items;
+    }
+
+    /** Hides the checklist card for good, for the signed-in person only. */
+    public function dismissChecklist(): RedirectResponse
+    {
+        db_connect()->table('user_profiles')->where('user_id', (int) auth()->id())->update(['checklist_dismissed_at' => date('Y-m-d H:i:s')]);
+
+        return redirect()->to(site_url('profile'));
     }
 
     /** The old student/profile and parent/profile addresses: moved for good. */
@@ -98,9 +148,14 @@ class ProfileController extends BaseController
                 : redirect()->to($back)->with('error', $e->getMessage());
         }
 
-        return $wantsJson
-            ? $this->response->setJSON(['message' => 'Profile updated'])
-            : redirect()->to($back)->with('message', 'Profile updated');
+        if ($wantsJson) {
+            // The dialog's script reloads the page; the message is waiting there.
+            session()->setFlashdata('message', 'Profile updated');
+
+            return $this->response->setJSON(['message' => 'Profile updated', 'redirect' => $back]);
+        }
+
+        return redirect()->to($back)->with('message', 'Profile updated');
     }
 
     private function hasProfile(int $id): bool
