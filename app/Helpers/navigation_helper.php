@@ -266,10 +266,17 @@ if (! function_exists('current_user_profile')) {
     /**
      * Name, student number, program and email for the header's account
      * menu. Cached per request — the header renders on every page.
+     * Pass $flush = true to empty the cache (tests reuse user ids between classes).
      */
-    function current_user_profile(User $user): array
+    function current_user_profile(?User $user, bool $flush = false): array
     {
         static $profiles = [];
+
+        if ($flush) {
+            $profiles = [];
+
+            return [];
+        }
 
         return $profiles[$user->id] ??= (new UserProfileModel())->retrieveUserProfile($user) ?? [];
     }
