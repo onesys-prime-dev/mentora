@@ -186,7 +186,7 @@ class ProfileReader
     /**
      * @param list<string> $roles
      *
-     * @return list<array{offering_id:int, code:string, title:string}>
+     * @return list<array{offering_id:int, code:string, section:string, title:string, origin:string}>
      */
     private function courses(int $userId, array $roles): array
     {
@@ -201,15 +201,17 @@ class ProfileReader
             if (! in_array($role, $roles, true)) {
                 continue;
             }
-            $q = $db->table("{$table} x")->select('o.id AS offering_id, c.course_code AS code, c.course_title AS title')
+            $q = $db->table("{$table} x")->select('o.id AS offering_id, c.course_code AS code, o.section_code AS section, c.course_title AS title')
                 ->join('course_offerings o', 'o.id = x.offering_id')->join('courses c', 'c.id = o.course_id')
                 ->where("x.{$col}", $userId)->where('o.term_id', $termId);
             if ($role === 'student') {
                 $q->where('x.status', 'enrolled');
             }
-            $rows = [...$rows, ...$q->get()->getResultArray()];
+            foreach ($q->get()->getResultArray() as $row) {
+                $rows[] = $row + ['origin' => $role === 'instructor' ? 'teaching' : 'enrolled'];
+            }
         }
 
-        return array_values(array_map(static fn (array $r): array => ['offering_id' => (int) $r['offering_id'], 'code' => (string) $r['code'], 'title' => (string) $r['title']], $rows));
+        return array_values(array_map(static fn (array $r): array => ['offering_id' => (int) $r['offering_id'], 'code' => (string) $r['code'], 'section' => (string) $r['section'], 'title' => (string) $r['title'], 'origin' => $r['origin']], $rows));
     }
 }

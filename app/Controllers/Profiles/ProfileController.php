@@ -37,6 +37,8 @@ class ProfileController extends BaseController
             'official' => array_filter(['First name' => $row['first_name'] ?? '', 'Middle name' => $row['middle_name'] ?? '', 'Last name' => $row['last_name'] ?? '', 'Suffix' => $row['suffix'] ?? ''], static fn ($v): bool => trim((string) $v) !== ''),
         ];
 
+        $own['managed'] = ! $user->inGroup('admin'); // a system administrator's account is not school-managed
+
         // The student's own number comes from their own row, not from student_details.
         if (array_key_exists('student_details', $p)) {
             $own['student_number'] = trim((string) ($row['student_number'] ?? ''));

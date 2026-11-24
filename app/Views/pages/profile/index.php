@@ -22,7 +22,7 @@
     <?= view('components/page-head', [
         'title'       => 'My profile',
         'icon'        => 'user',
-        'description' => 'This is what people in your school see when they open your profile.',
+        'description' => $user->inGroup('admin') ? "This is your account's profile." : 'This is what people in your school see when they open your profile.',
     ], ['saveData' => false]) ?>
 
     <?php if ($canPreview): ?>

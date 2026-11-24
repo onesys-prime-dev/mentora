@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Parents\ParentPortal;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
+use Tests\Support\CourseFactory;
 use Tests\Support\DeanFactory;
 use Tests\Support\FakeEmail;
 use Tests\Support\PeopleFactory;
@@ -63,7 +64,7 @@ final class ProfilePageTest extends RouteTestCase
             $body = $this->body($user);
 
             $this->assertStringContainsString('My profile', $body, $role);
-            $this->assertStringContainsString('This is what people in your school see when they open your profile.', $body, $role);
+            $this->assertStringContainsString($role === 'admin' ? 'This is your account&#039;s profile.' : 'This is what people in your school see when they open your profile.', $body, $role);
         }
     }
 
@@ -318,6 +319,52 @@ final class ProfilePageTest extends RouteTestCase
         $this->assertStringContainsString('Managed by your school', $body);
         $this->assertStringContainsString('2026-001', $body);
         $this->assertStringNotContainsString('data-profile-contact', $body);
+    }
+
+    public function testThisTermShowsSectionCodesAndSplitsTeachingFromEnrolled(): void
+    {
+        ['college' => $c] = DeanFactory::college('TT', $this->institution);
+        $prog = DeanFactory::program(DeanFactory::department($c, 'TT'), 'TT');
+        $term = DeanFactory::term($this->institution, 'Now', date('Y-m-d', strtotime('-10 days')));
+        $ivy  = $this->staffUser();
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $ivy->id, 'group' => 'student', 'created_at' => date('Y-m-d H:i:s')]);
+        CourseFactory::assignInstructor(DeanFactory::offering($prog, $term, 'IT101', 'A', 'active', 'Intro'), $ivy);
+        CourseFactory::assignInstructor(DeanFactory::offering($prog, $term, 'IT101', 'B', 'active', 'Intro'), $ivy);
+        CourseFactory::enroll(DeanFactory::offering($prog, $term, 'IT200', 'C', 'active', 'Data'), $ivy);
+        $body = $this->body($ivy);
+
+        $this->assertStringContainsString('IT101 A', $body);
+        $this->assertStringContainsString('IT101 B', $body);
+        $this->assertStringContainsString('IT200 C', $body);
+        $this->assertStringContainsString('>Teaching<', $body);
+        $this->assertStringContainsString('>Enrolled<', $body);
+    }
+
+    public function testAViewerNeverSeesNotAddedYet(): void
+    {
+        $ivy  = $this->staffUser();
+        $this->profileUpdate($ivy, ['office_location' => 'CS 204']);
+        $body = $this->body($ivy, '/profile?preview=student');
+        $body = substr($body, (int) strpos($body, 'data-profile-preview-toggle'));
+
+        $this->assertStringContainsString('CS 204', $body);
+        $this->assertStringNotContainsString('Work phone', $body);
+        $this->assertStringNotContainsString('Consultation', $body);
+        $this->assertStringNotContainsString('Not added yet', $body);
+        $this->assertStringNotContainsString('data-profile-about', $body);
+
+        $this->profileUpdate($ivy, ['office_location' => '']);
+        $body = $this->body($ivy, '/profile?preview=student');
+        $this->assertStringNotContainsString('data-profile-office', $body);
+        $this->assertStringContainsString('Not added yet', $this->body($ivy), 'the owner still sees it');
+    }
+
+    public function testTheSystemAdminPageHasNoLockLine(): void
+    {
+        $body = $this->body(PeopleFactory::person('admin', 'Sys', 'Admin', 'sys@mentora.example'));
+
+        $this->assertStringNotContainsString('Managed by your school', $body);
+        $this->assertStringNotContainsString('people in your school', $body);
     }
 
     public function testAnInstructorPreviewShowsOfficeAndConsultation(): void

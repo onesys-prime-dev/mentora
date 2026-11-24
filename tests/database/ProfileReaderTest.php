@@ -87,6 +87,26 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->assertSame(['instructor', 'student', 'parent'], array_column($roles, 'role'));
     }
 
+    public function testCoursesCarrySectionCodeAndOriginForADualRoleSubject(): void
+    {
+        ['college' => $c] = DeanFactory::college('CS', $this->inst);
+        $prog = DeanFactory::program(DeanFactory::department($c, 'CS'), 'CS');
+        $term = DeanFactory::term($this->inst, 'Now', date('Y-m-d', strtotime('-10 days')));
+        $subj = PeopleFactory::person('instructor', 'Duo', 'Role', null, $this->inst);
+        $this->addGroup((int) $subj->id, 'student');
+        $a = DeanFactory::offering($prog, $term, 'IT101', 'A');
+        $b = DeanFactory::offering($prog, $term, 'IT101', 'B');
+        $e = DeanFactory::offering($prog, $term, 'IT200', 'C');
+        CourseFactory::assignInstructor($a, $subj);
+        CourseFactory::assignInstructor($b, $subj);
+        CourseFactory::enroll($e, $subj);
+
+        $rows = $this->read((int) $subj->id, $subj)['courses'];
+        $got  = array_map(static fn (array $r): string => $r['origin'] . ':' . $r['code'] . ' ' . $r['section'], $rows);
+        sort($got);
+        $this->assertSame(['enrolled:IT200 C', 'teaching:IT101 A', 'teaching:IT101 B'], $got);
+    }
+
     public function testInstructorDetailIsHomeDepartmentElseTeachesIn(): void
     {
         ['college' => $c] = DeanFactory::college('PR', $this->inst);

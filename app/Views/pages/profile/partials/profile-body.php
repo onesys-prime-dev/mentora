@@ -31,7 +31,7 @@ $isOwner   = array_key_exists('official', $own); // only the owner's own page ca
 <section class="overflow-hidden rounded-2xl bg-white shadow-sm" aria-label="<?= esc($p['display_name'], 'attr') ?>" data-profile-band>
     <div class="h-20 bg-linear-to-r from-brand-dark to-brand sm:h-24" aria-hidden="true"></div>
     <div class="-mt-10 flex flex-wrap items-end gap-x-5 gap-y-3 px-4 pb-5 sm:-mt-12 sm:px-6">
-        <div class="rounded-full ring-4 ring-white">
+        <div class="self-start rounded-full ring-4 ring-white">
             <?= view('components/avatar', ['person' => $avatar, 'size' => 'xl'], ['saveData' => false]) ?>
         </div>
         <div class="flex min-w-0 flex-1 basis-56 flex-col gap-1 sm:pt-14">
@@ -60,10 +60,19 @@ $isOwner   = array_key_exists('official', $own); // only the owner's own page ca
     </div>
 </section>
 
-<?php if (array_key_exists('bio', $p) || $staffInfo !== null): ?>
-    <div class="grid grid-cols-1 gap-4 <?= array_key_exists('bio', $p) && $staffInfo !== null ? 'lg:grid-cols-2' : '' ?>">
+<?php
+// A viewer never sees "Not added yet": empty cards and rows are left out; the owner keeps them (with the pencil).
+$showBio    = array_key_exists('bio', $p) && ($edit !== null || trim((string) $p['bio']) !== '');
+$officeRows = ['Office' => 'office_location', 'Consultation' => 'consultation_hours', 'Work phone' => 'work_phone'];
+if ($staffInfo !== null && $edit === null) {
+    $officeRows = array_filter($officeRows, static fn (string $k): bool => trim((string) $staffInfo[$k]) !== '');
+}
+$showOffice = $staffInfo !== null && $officeRows !== [];
+?>
+<?php if ($showBio || $showOffice): ?>
+    <div class="grid grid-cols-1 gap-4 <?= $showBio && $showOffice ? 'lg:grid-cols-2' : '' ?>">
 
-        <?php if (array_key_exists('bio', $p)): ?>
+        <?php if ($showBio): ?>
             <section class="<?= $card ?>" aria-labelledby="profile-about" data-profile-about>
                 <h2 id="profile-about" class="<?= $heading ?>">About<?= $pencil('profile-edit-about', 'Edit about') ?></h2>
                 <?php if (trim((string) $p['bio']) !== ''): ?>
@@ -74,16 +83,14 @@ $isOwner   = array_key_exists('official', $own); // only the owner's own page ca
             </section>
         <?php endif; ?>
 
-        <?php if ($staffInfo !== null): ?>
+        <?php if ($showOffice): ?>
             <section class="<?= $card ?>" aria-labelledby="profile-office" data-profile-office>
                 <h2 id="profile-office" class="<?= $heading ?>">Office &amp; consultation<?= ($edit['staff'] ?? false) ? $pencil('profile-edit-staff', 'Edit office and consultation') : '' ?></h2>
                 <dl class="<?= $dl ?>">
-                    <dt class="<?= $dt ?>">Office</dt>
-                    <dd class="<?= $dd ?>"><?= trim((string) $staffInfo['office_location']) !== '' ? esc($staffInfo['office_location']) : $empty ?></dd>
-                    <dt class="<?= $dt ?>">Consultation</dt>
-                    <dd class="<?= $dd ?>"><?= trim((string) $staffInfo['consultation_hours']) !== '' ? esc($staffInfo['consultation_hours']) : $empty ?></dd>
-                    <dt class="<?= $dt ?>">Work phone</dt>
-                    <dd class="<?= $dd ?>"><?= trim((string) $staffInfo['work_phone']) !== '' ? esc($staffInfo['work_phone']) : $empty ?></dd>
+                    <?php foreach ($officeRows as $label => $key): ?>
+                        <dt class="<?= $dt ?>"><?= $label ?></dt>
+                        <dd class="<?= $dd ?>"><?= trim((string) $staffInfo[$key]) !== '' ? esc($staffInfo[$key]) : $empty ?></dd>
+                    <?php endforeach; ?>
                 </dl>
             </section>
         <?php endif; ?>
@@ -155,11 +162,19 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
         <?php if ($p['courses'] === []): ?>
             <p class="text-sm text-[#646464]">No courses this term.</p>
         <?php else: ?>
-            <ul class="flex flex-col divide-y divide-gray-100">
-                <?php foreach ($p['courses'] as $course): ?>
-                    <li class="py-2 text-sm text-[#1A1C1E]"><span class="font-semibold"><?= esc($course['code']) ?></span> <?= esc($course['title']) ?></li>
-                <?php endforeach; ?>
-            </ul>
+            <?php $groups = ['teaching' => 'Teaching', 'enrolled' => 'Enrolled']; ?>
+            <?php foreach ($groups as $origin => $groupLabel): ?>
+                <?php $inGroup = array_filter($p['courses'], static fn (array $c): bool => $c['origin'] === $origin); ?>
+                <?php if ($inGroup === []) { continue; } ?>
+                <?php if (count(array_unique(array_column($p['courses'], 'origin'))) > 1): ?>
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-[#646464]"><?= $groupLabel ?></h3>
+                <?php endif; ?>
+                <ul class="flex flex-col divide-y divide-gray-100">
+                    <?php foreach ($inGroup as $course): ?>
+                        <li class="py-2 text-sm text-[#1A1C1E]"><span class="font-semibold"><?= esc(trim($course['code'] . ' ' . $course['section'])) ?></span> &middot; <?= esc($course['title']) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endforeach; ?>
         <?php endif; ?>
     </section>
 <?php endif; ?>
@@ -168,7 +183,9 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
     <section class="<?= $card ?>" aria-labelledby="profile-official" data-profile-official>
         <h2 id="profile-official" class="<?= $heading ?>">
             <span>Official details</span>
-            <span class="inline-flex items-center gap-1.5 text-xs font-normal text-[#646464]"><?= icon('lock', 'h-3.5 w-3.5 text-[#646464]') ?>Managed by your school</span>
+            <?php if ($own['managed'] ?? true): ?>
+                <span class="inline-flex items-center gap-1.5 text-xs font-normal text-[#646464]"><?= icon('lock', 'h-3.5 w-3.5 text-[#646464]') ?>Managed by your school</span>
+            <?php endif; ?>
         </h2>
         <dl class="<?= $dl ?>">
             <?php foreach ($official as $label => $value): ?>
