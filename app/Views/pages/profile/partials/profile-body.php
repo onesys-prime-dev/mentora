@@ -24,6 +24,7 @@ $roles     = array_column($p['roles'] ?? [], 'role');
 $isStaff   = array_intersect($roles, ['dean', 'chairperson', 'instructor', 'institutional_admin']) !== [];
 $legal     = (string) ($p['legal_name'] ?? '');
 $official  = $own['official'] ?? [];
+$isOwner   = array_key_exists('official', $own); // only the owner's own page carries the school-managed block
 ?>
 
 <?php // Header band: the one bold element. ?>
@@ -90,30 +91,26 @@ $official  = $own['official'] ?? [];
     </div>
 <?php endif; ?>
 
-<?php if (array_key_exists('email', $p) || $official !== []): ?>
-    <section class="<?= $card ?>" aria-labelledby="profile-official" data-profile-official>
-        <h2 id="profile-official" class="<?= $heading ?>">
-            <span>Official details</span>
-            <span class="inline-flex items-center gap-1.5 text-xs font-normal text-[#646464]"><?= icon('lock', 'h-3.5 w-3.5 text-[#646464]') ?>Managed by your school</span>
-        </h2>
+<?php if (array_key_exists('email', $p) && ! $isOwner && trim((string) $p['email']) !== ''): ?>
+    <section class="<?= $card ?>" aria-labelledby="profile-contact" data-profile-contact>
+        <h2 id="profile-contact" class="<?= $heading ?>">Contact</h2>
         <dl class="<?= $dl ?>">
-            <?php foreach ($official as $label => $value): ?>
-                <dt class="<?= $dt ?>"><?= esc($label) ?></dt>
+            <dt class="<?= $dt ?>">Email</dt>
+            <dd class="<?= $dd ?>"><?= esc($p['email']) ?></dd>
+        </dl>
+    </section>
+<?php endif; ?>
+
+<?php
+$studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Year' => $p['student_details']['year'] ?? '', 'Section' => $p['student_details']['section'] ?? '', 'College' => $p['student_details']['college'] ?? ''], static fn ($v): bool => trim((string) $v) !== '');
+?>
+<?php if (array_key_exists('student_details', $p) && $studies !== []): ?>
+    <section class="<?= $card ?>" aria-labelledby="profile-studies" data-profile-studies>
+        <h2 id="profile-studies" class="<?= $heading ?>">Studies</h2>
+        <dl class="<?= $dl ?>">
+            <?php foreach ($studies as $label => $value): ?>
+                <dt class="<?= $dt ?>"><?= $label ?></dt>
                 <dd class="<?= $dd ?>"><?= esc($value) ?></dd>
-            <?php endforeach; ?>
-            <?php if (array_key_exists('email', $p)): ?>
-                <dt class="<?= $dt ?>">Email</dt>
-                <dd class="<?= $dd ?>"><?= esc($p['email']) ?></dd>
-            <?php endif; ?>
-            <?php if (array_key_exists('student_number', $own)): ?>
-                <dt class="<?= $dt ?>">Student number</dt>
-                <dd class="<?= $dd ?>"><?= $own['student_number'] !== '' ? esc($own['student_number']) : '<span class="text-[#646464]">Not set</span>' ?></dd>
-            <?php endif; ?>
-            <?php foreach (['program' => 'Program', 'year' => 'Year', 'section' => 'Section'] as $key => $label): ?>
-                <?php if (($p['student_details'][$key] ?? '') !== ''): ?>
-                    <dt class="<?= $dt ?>"><?= $label ?></dt>
-                    <dd class="<?= $dd ?>"><?= esc($p['student_details'][$key]) ?></dd>
-                <?php endif; ?>
             <?php endforeach; ?>
         </dl>
     </section>
@@ -164,5 +161,28 @@ $official  = $own['official'] ?? [];
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
+    </section>
+<?php endif; ?>
+
+<?php if ($isOwner && (array_key_exists('email', $p) || $official !== [] || array_key_exists('student_number', $own))): ?>
+    <section class="<?= $card ?>" aria-labelledby="profile-official" data-profile-official>
+        <h2 id="profile-official" class="<?= $heading ?>">
+            <span>Official details</span>
+            <span class="inline-flex items-center gap-1.5 text-xs font-normal text-[#646464]"><?= icon('lock', 'h-3.5 w-3.5 text-[#646464]') ?>Managed by your school</span>
+        </h2>
+        <dl class="<?= $dl ?>">
+            <?php foreach ($official as $label => $value): ?>
+                <dt class="<?= $dt ?>"><?= esc($label) ?></dt>
+                <dd class="<?= $dd ?>"><?= esc($value) ?></dd>
+            <?php endforeach; ?>
+            <?php if (array_key_exists('email', $p)): ?>
+                <dt class="<?= $dt ?>">Email</dt>
+                <dd class="<?= $dd ?>"><?= esc($p['email']) ?></dd>
+            <?php endif; ?>
+            <?php if (array_key_exists('student_number', $own)): ?>
+                <dt class="<?= $dt ?>">Student number</dt>
+                <dd class="<?= $dd ?>"><?= $own['student_number'] !== '' ? esc($own['student_number']) : '<span class="text-[#646464]">Not set</span>' ?></dd>
+            <?php endif; ?>
+        </dl>
     </section>
 <?php endif; ?>

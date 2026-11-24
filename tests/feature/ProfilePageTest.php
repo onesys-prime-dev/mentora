@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Services\Parents\ParentPortal;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
+use Tests\Support\DeanFactory;
 use Tests\Support\FakeEmail;
 use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
@@ -278,10 +279,45 @@ final class ProfilePageTest extends RouteTestCase
         $this->assertStringContainsString('Ann Lee', $body);
         $this->assertStringNotContainsString('ann@school.example', $body);
         $this->assertStringNotContainsString('data-profile-official', $body);
+        $this->assertStringNotContainsString('Managed by your school', $body);
+        $this->assertStringNotContainsString('Student number', $body);
+        $this->assertStringNotContainsString('data-profile-contact', $body);
         $this->assertStringNotContainsString('2026-001', $body);
         $this->assertStringNotContainsString('data-dialog-open="profile-edit', $body);
         $this->assertStringNotContainsString('data-profile-checklist', $body);
         $this->assertStringNotContainsString('data-profile-parents', $body);
+    }
+
+    public function testAStudentPreviewShowsProgramYearSectionAndCollege(): void
+    {
+        ['college' => $c] = DeanFactory::college('SD', $this->institution);
+        $prog = DeanFactory::program(DeanFactory::department($c, 'SD'), 'SD');
+        $term = DeanFactory::term($this->institution, 'Now', date('Y-m-d', strtotime('-10 days')));
+        $this->profileUpdate($this->ann, ['program_id' => $prog]);
+        $db = db_connect();
+        $db->table('class_sections')->insert(['institution_id' => $this->institution, 'term_id' => $term, 'program_id' => $prog, 'year_level' => 3, 'code' => 'BSIT-3A']);
+        $db->table('class_section_students')->insert(['class_section_id' => $db->insertID(), 'student_user_id' => $this->ann->id]);
+
+        $body = $this->body($this->ann, '/profile?preview=student');
+        $body = substr($body, (int) strpos($body, 'data-profile-preview-toggle'));
+
+        $this->assertStringContainsString('data-profile-studies', $body);
+        foreach (['Program SD', 'BSIT-3A'] as $text) {
+            $this->assertStringContainsString($text, $body);
+        }
+        $this->assertMatchesRegularExpression('#Year</dt>\s*<dd[^>]*>\s*3\s*<#', $body);
+        $this->assertStringContainsString('College</dt>', $body);
+        $this->assertStringNotContainsString('data-profile-official', $body);
+    }
+
+    public function testOwnerPageKeepsOfficialDetailsWithTheStudentNumber(): void
+    {
+        $body = $this->body($this->ann);
+
+        $this->assertStringContainsString('data-profile-official', $body);
+        $this->assertStringContainsString('Managed by your school', $body);
+        $this->assertStringContainsString('2026-001', $body);
+        $this->assertStringNotContainsString('data-profile-contact', $body);
     }
 
     public function testAnInstructorPreviewShowsOfficeAndConsultation(): void
@@ -292,6 +328,9 @@ final class ProfilePageTest extends RouteTestCase
 
         $this->assertStringContainsString('CS 204', $body);
         $this->assertStringContainsString('Mon 1-3', $body);
+        $this->assertStringContainsString('data-profile-contact', $body);
+        $this->assertStringNotContainsString('Managed by your school', $body);
+        $this->assertStringNotContainsString('data-profile-official', $body);
         $this->assertStringNotContainsString('data-dialog-open="profile-edit', $body);
     }
 
