@@ -186,10 +186,10 @@ class ParentCourseTabs
     }
 
     /** The course facts: what it is, who teaches it, when and where, the term. */
-    public function overview(int $offeringId): array
+    public function overview(User $parent, int $offeringId): array
     {
         return ['html' => view('pages/parent/course/overview', [
-            'overview' => (new CourseOfferingModel())->getCourseOverviewData($offeringId),
+            'overview' => OverviewService::withInstructorAvatar($parent, (new CourseOfferingModel())->getCourseOverviewData($offeringId)),
             'schedule' => (new OverviewService())->scheduleBlocks($offeringId),
             // The course-info partial is the one the student's Overview uses; for a parent it shows
             // the same four facts, with no class size.

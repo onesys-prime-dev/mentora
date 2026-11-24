@@ -82,7 +82,7 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
     <div class="px-4 py-5 sm:px-6 flex flex-col gap-3">
 
         <div class="flex items-center gap-3">
-            <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-10 w-10 rounded-full" alt="">
+            <?= view('components/avatar', ($announcement['author_avatar'] ?? ['person' => ['id' => (int) ($announcement['author_id'] ?? 0), 'name' => trim((string) $announcement['author_name'])], 'interactive' => false]) + ['size' => 'md'], ['saveData' => false]) ?>
             <div class="flex flex-col">
                 <div class="flex items-center gap-2">
                     <span class="font-bold text-[#1A1C1E]"><?= esc(trim((string) $announcement['author_name'])) ?></span>

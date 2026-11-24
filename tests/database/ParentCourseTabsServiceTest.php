@@ -428,7 +428,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
         $this->schedule('mon', '09:00:00', '10:30:00', 'Room 4');
         $this->schedule('wed', '09:00:00', '10:30:00', 'Room 4');
 
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->child, $this->offering)['html'];
 
         $this->assertStringContainsString('We learn how computers work.', $html);
         $this->assertStringContainsString('Tina Tan', $html);
@@ -440,7 +440,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
 
     public function testTheOverviewHasNothingOfTheStudentsOwnProgress(): void
     {
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->child, $this->offering)['html'];
 
         $this->assertStringNotContainsStringIgnoringCase('continue where you left off', $html);
         $this->assertStringNotContainsString('/modules', $html);
@@ -452,7 +452,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
     {
         db_connect()->table('instructor_assignments')->where('offering_id', $this->offering)->delete();
 
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->child, $this->offering)['html'];
 
         $this->assertStringContainsString('Not assigned yet', $html);
         $this->assertStringContainsString('Not scheduled yet', $html);

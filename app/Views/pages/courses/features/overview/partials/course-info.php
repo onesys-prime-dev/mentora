@@ -19,9 +19,15 @@ $cards = [];
 
 if ($role === 'student') {
 
+    $instructorId = (int) ($overview['instructor_id'] ?? 0);
+
     $cards[] = [
         'label'  => 'Instructor',
-        'avatar' => true,
+        // Built for this viewer by OverviewService::withInstructorAvatar; plain when they may not see the instructor.
+        'avatar' => $instructorId > 0
+            ? ($overview['instructor_avatar'] ?? ['person' => ['id' => $instructorId, 'name' => (string) ($overview['instructor_name'] ?? '')], 'interactive' => false])
+            : null,
+        'icon'   => 'user',
         'lines'  => array_filter([
             $overview['instructor_name'] ?? null,
             $overview['instructor_email'] ?? null,
@@ -100,10 +106,8 @@ $cards[] = [
 
             <?php if (! empty($card['avatar'])): ?>
 
-                <div class="w-13 h-13 mt-1 shrink-0">
-                    <img
-                        class="w-full h-full"
-                        src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
+                <div class="mt-1 shrink-0">
+                    <?= view('components/avatar', $card['avatar'] + ['size' => 'lg'], ['saveData' => false]) ?>
                 </div>
 
             <?php else: ?>

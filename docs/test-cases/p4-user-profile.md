@@ -1,10 +1,12 @@
 # P4 test cases: My profile
 
-5 cases, added with Phase 2 of the User Profile rebuild (2026-11-24). Read
-[README.md](README.md) first. All are `Draft` (see the README).
+9 cases: TC-PRF-01 to 05 added with Phase 2 of the User Profile rebuild, TC-PRF-06 to 09
+with Phase 3 (2026-11-24). Read [README.md](README.md) first. All are `Draft` (see the README).
 
 **Data:** `instructor1@mentora.test` and `student5@mentora.test`. The edit case
-changes instructor1's preferred name and pronouns and puts them back.
+changes instructor1's preferred name and pronouns and puts them back. The avatar
+cases use `student1@mentora.test` on IT101-A's Announcements, which has
+instructor1's demo announcements.
 
 | ID | Case | Role | Priority | QA status |
 |---|---|---|---|---|
@@ -13,6 +15,10 @@ changes instructor1's preferred name and pronouns and puts them back.
 | TC-PRF-03 | A student's profile shows Studies and Official details with the lock | Student | P1 | None |
 | TC-PRF-04 | "As a student sees it" hides Official details and the edit pencils | Student | P2 | None |
 | TC-PRF-05 | Help & Support in the account menu is disabled | Instructor | P3 | None |
+| TC-PRF-06 | Hovering an author's avatar shows their profile card | Student | P1 | None |
+| TC-PRF-07 | Clicking an author's avatar opens their profile | Student | P1 | None |
+| TC-PRF-08 | The avatar works from the keyboard | Student | P1 | None |
+| TC-PRF-09 | On a phone a tap opens the profile | Student | P2 | None |
 
 ### TC-PRF-01 An instructor opens My Profile from the account menu
 
@@ -61,5 +67,45 @@ changes instructor1's preferred name and pronouns and puts them back.
 - **Steps:** open the account menu.
 - **Expected:** Help & Support is shown as "Coming soon", is not a link and is marked disabled.
 - **Playwright:** `tests/e2e/profile.spec.js` (untagged)
+- **QA status:** None
+- **Review:** Draft
+
+### TC-PRF-06 Hovering an author's avatar shows their profile card
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student1`, IT101-A
+- **Steps:** sign in; open IT101-A; open Announcements; rest the pointer on the author's avatar of the first announcement.
+- **Expected:** after a moment a small card appears by the avatar with the author's name; the card and the announcement have no WCAG 2 A/AA violations (axe).
+- **Playwright:** `tests/e2e/profile-card.spec.js` (untagged)
+- **QA status:** None
+- **Review:** Draft
+
+### TC-PRF-07 Clicking an author's avatar opens their profile
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student1`, IT101-A
+- **Steps:** on IT101-A's Announcements, click the author's avatar.
+- **Expected:** the Profile dialog opens with the author's profile and name; it has no WCAG 2 A/AA violations (axe).
+- **Playwright:** `tests/e2e/profile-card.spec.js` (untagged)
+- **QA status:** None
+- **Review:** Draft
+
+### TC-PRF-08 The avatar works from the keyboard
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student1`, IT101-A
+- **Steps:** on IT101-A's Announcements, press Tab until the author's avatar has focus; press Enter; press Escape.
+- **Expected:** with focus on the avatar the card appears; Enter opens the Profile dialog; Escape closes it and focus is back on the avatar.
+- **Playwright:** `tests/e2e/profile-card.spec.js` (untagged)
+- **QA status:** None
+- **Review:** Draft
+
+### TC-PRF-09 On a phone a tap opens the profile
+
+- **Role:** Student. **Priority:** P2
+- **Data:** `student1`, IT101-A, a 360 x 800 touch screen
+- **Steps:** on IT101-A's Announcements, tap the author's avatar.
+- **Expected:** the Profile dialog opens with the author's name; no hover card is shown.
+- **Playwright:** `tests/e2e/profile-card.spec.js` (untagged)
 - **QA status:** None
 - **Review:** Draft

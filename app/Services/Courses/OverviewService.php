@@ -9,6 +9,7 @@ use App\Models\Courses\CourseScheduleModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Assessments\AssessmentScopeService;
+use App\Services\Profiles\AvatarData;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -80,6 +81,11 @@ class OverviewService
 
         $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
+        // Only the student's course info names the instructor.
+        if (! $isInstructor) {
+            $info = self::withInstructorAvatar($user, $info);
+        }
+
         $viewData = [
             'user'     => $user,
             'role'     => $isInstructor ? 'instructor' : 'student',
@@ -106,6 +112,14 @@ class OverviewService
 
         ];
 
+    }
+
+    /** Adds the course-info avatar of the instructor for this viewer (FR3); also used by the parent's Overview. */
+    public static function withInstructorAvatar(User $viewer, array $info): array
+    {
+        $id = (int) ($info['instructor_id'] ?? 0);
+
+        return $info + ['instructor_avatar' => $id > 0 ? (new AvatarData())->forViewer($viewer, [$id])[$id] ?? null : null];
     }
 
     /*

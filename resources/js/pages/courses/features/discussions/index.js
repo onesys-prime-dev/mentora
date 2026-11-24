@@ -200,7 +200,12 @@ function bindRows(root) {
             new CustomEvent("discussions:open-thread", { detail: { id: row.dataset.threadOpen } })
         );
 
-        row.addEventListener("click", open);
+        // The author's avatar opens their profile, not the thread.
+        row.addEventListener("click", (event) => {
+            if (!event.target.closest("[data-person-avatar]")) {
+                open();
+            }
+        });
 
         row.addEventListener("keydown", (event) => {
             if (event.target === row && (event.key === "Enter" || event.key === " ")) {

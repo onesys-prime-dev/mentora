@@ -27,6 +27,7 @@ $isAnswer = !empty($reply['is_answer']);
 
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
 
+        <?= view('components/avatar', ($reply['author_avatar'] ?? ['person' => ['id' => (int) ($reply['author_id'] ?? 0), 'name' => $authorName], 'interactive' => false]) + ['size' => 'sm'], ['saveData' => false]) ?>
         <span class="font-semibold text-[#1A1C1E]"><?= esc($authorName) ?></span>
 
         <?php if ($reply['author_role'] === 'instructor'): ?>

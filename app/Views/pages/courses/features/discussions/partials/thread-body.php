@@ -71,6 +71,7 @@ $replyCount = count($replies);
         </div>
 
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[#767676]">
+            <?= view('components/avatar', ($thread['author_avatar'] ?? ['person' => ['id' => (int) ($thread['author_id'] ?? 0), 'name' => $authorName], 'interactive' => false]) + ['size' => 'sm'], ['saveData' => false]) ?>
             <span class="font-semibold text-[#646464]"><?= esc($authorName) ?></span>
             <?php if ($thread['author_role'] === 'instructor'): ?>
                 <?= view('components/status-badge', ['tone' => 'info', 'label' => 'Instructor'], ['saveData' => false]) ?>

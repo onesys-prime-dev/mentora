@@ -76,4 +76,29 @@ final class OverviewRoutesTest extends RouteTestCase
     {
         $this->assertContains($this->get("student/api/courses/{$this->offering}/overview")->response()->getStatusCode(), [301, 302, 303, 401, 403]);
     }
+
+    public function testTheStudentsInstructorAvatarOpensTheirProfile(): void
+    {
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        $html = fn (User $u): string => json_decode((string) $this->open($u)->getJSON(), true)['html'];
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->instructor->id . '"', $html($this->student));
+        $this->assertStringNotContainsString('placeholder/profile.png', $html($this->student));
+
+        // An instructor from another institution is not someone the student may see (FR2).
+        db_connect()->table('institution_users')->where('user_id', $this->instructor->id)->delete();
+        $this->assertStringNotContainsString('data-person-avatar', $html($this->student));
+        $this->assertStringContainsString('data-avatar', $html($this->student));
+    }
+
+    public function testASectionWithNoInstructorYetShowsNoAvatar(): void
+    {
+        $empty = CourseFactory::offering('C');
+        CourseFactory::enroll($empty, $this->student);
+
+        $html = json_decode((string) $this->open($this->student, $empty)->getJSON(), true)['html'];
+        $this->assertStringContainsString('Not assigned yet', $html);
+        $this->assertStringNotContainsString('data-avatar', $html);
+        $this->assertStringNotContainsString('placeholder/profile.png', $html);
+    }
 }

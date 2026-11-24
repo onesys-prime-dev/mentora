@@ -71,6 +71,7 @@ class CourseOfferingModel extends Model
                 'academic_terms.name AS term_name',
                 'academic_terms.academic_year',
 
+                'instructor_assignments.instructor_user_id AS instructor_id',
                 "CONCAT(user_profiles.first_name, ' ', user_profiles.last_name) AS instructor_name",
                 'auth_identities.secret AS instructor_email',
             ])

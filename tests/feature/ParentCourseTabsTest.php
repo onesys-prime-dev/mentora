@@ -153,4 +153,18 @@ final class ParentCourseTabsTest extends RouteTestCase
             $this->assertSame(404, $this->open($this->api($path))[0], $path);
         }
     }
+
+    public function testTheOverviewsInstructorAvatarOpensTheirProfileWhileTheParentMaySeeThem(): void
+    {
+        $this->loggedInAs($this->parent);
+        $html = fn (): string => json_decode($this->open($this->api('overview'))[1], true)['html'];
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->teacher->id . '"', $html());
+        $this->assertStringNotContainsString('placeholder/profile.png', $html());
+
+        // The instructor has left the parent's institution: a plain avatar, nothing to open.
+        db_connect()->table('institution_users')->where('user_id', $this->teacher->id)->delete();
+        $this->assertStringNotContainsString('data-person-avatar', $html());
+        $this->assertStringContainsString('data-avatar', $html());
+    }
 }

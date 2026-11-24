@@ -35,7 +35,7 @@ class ParentCourseController extends BaseController
     /** The Overview tab's fragment. */
     public function overview(int $studentId, int $offeringId): ResponseInterface
     {
-        return $this->response->setJSON((new ParentCourseTabs())->overview($offeringId));
+        return $this->response->setJSON((new ParentCourseTabs())->overview(auth()->user(), $offeringId));
     }
 
     /** The Announcements tab's fragment (the `focus` query a calendar link adds is not needed here). */

@@ -201,7 +201,8 @@ final class DashboardQueryBudgetTest extends DatabaseTestCase
         $student = $this->overview($this->student);
         $teacher = $this->overview($this->teacher);
 
-        $this->assertLessThanOrEqual(23, $student, "student overview: {$student} queries");
+        // The student's adds 6 for the instructor's avatar (AvatarData::forViewer), whatever the course size.
+        $this->assertLessThanOrEqual(29, $student, "student overview: {$student} queries");
         $this->assertLessThanOrEqual(23, $teacher, "instructor overview: {$teacher} queries");
     }
 

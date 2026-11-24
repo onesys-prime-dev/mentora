@@ -245,4 +245,30 @@ final class AnnouncementRoutesTest extends RouteTestCase
         $this->assertSame(422, $result->response()->getStatusCode());
         $this->assertSame(0, db_connect()->table('announcements')->countAllResults());
     }
+
+    public function testAuthorAvatarsOpenTheProfileOnlyForPeopleTheViewerMaySee(): void
+    {
+        // Someone still enrolled who has left the institution: a viewer there may no longer see them (FR2).
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        CourseFactory::members($this->offering, [$leaver], false);
+
+        $id = $this->announce('Avatars');
+        $this->api($leaver, 'post', "/{$id}/reply", ['message' => 'From someone who left']);
+        $own = $this->api($this->student, 'post', "/{$id}/reply", ['message' => 'Mine'])['html'];
+
+        $interactive = static fn (string $html, User $u): bool => str_contains($html, 'data-person-avatar="' . $u->id . '"');
+
+        foreach ([$this->api($this->student, 'get')['html'], $this->api($this->student, 'get', '/more?page=1')['html']] as $html) {
+            $this->assertTrue($interactive($html, $this->instructor), 'the author');
+            $this->assertTrue($interactive($html, $this->student), 'their own reply');
+            $this->assertFalse($interactive($html, $leaver));
+            $this->assertSame(3, substr_count($html, 'data-avatar'));
+            // Only the viewer's own reply composer keeps the placeholder (Phase 7).
+            $this->assertSame(2, substr_count($html, 'placeholder/profile.png'));
+        }
+
+        $this->assertTrue($interactive($own, $this->student), 'the reply just posted');
+    }
 }

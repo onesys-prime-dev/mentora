@@ -2,7 +2,7 @@
 
 <div class="group flex items-start gap-3" data-reply-row data-reply-id="<?= esc($reply['id']) ?>">
 
-    <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
+    <?= view('components/avatar', ($reply['author_avatar'] ?? ['person' => ['id' => (int) ($reply['author_id'] ?? 0), 'name' => trim((string) $reply['author_name'])], 'interactive' => false]) + ['size' => 'sm'], ['saveData' => false]) ?>
 
     <div class="flex flex-1 flex-col gap-0.5">
 

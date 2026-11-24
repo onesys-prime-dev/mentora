@@ -11,6 +11,7 @@ use App\Models\Courses\AnnouncementAttachmentModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Files\FileModel;
+use App\Services\Profiles\AvatarData;
 use App\Services\Storage\StorageService;
 
 use CodeIgniter\HTTP\Files\UploadedFile;
@@ -218,12 +219,23 @@ class AnnouncementService
         $ownReactions = $this->reactionModel->retrieveOwnReactions($ids, (int) $user->id);
         $attachmentsByAnnouncement = $this->attachmentModel->retrieveForAnnouncements($ids);
 
+        // Every author on the page at once: no profile query per avatar.
+        $authorIds = array_column($announcements, 'author_id');
+        foreach ($repliesByAnnouncement as $replies) {
+            array_push($authorIds, ...array_column($replies, 'author_id'));
+        }
+        $avatars = (new AvatarData())->forViewer($user, array_map('intval', $authorIds));
+
         foreach ($announcements as &$announcement) {
 
             $id = (int) $announcement['id'];
             $isOwner = (int) $announcement['author_id'] === (int) $user->id;
 
-            $announcement['replies'] = $repliesByAnnouncement[$id] ?? [];
+            $announcement['author_avatar'] = $avatars[(int) $announcement['author_id']] ?? null;
+            $announcement['replies'] = array_map(
+                fn (array $reply) => $reply + ['author_avatar' => $avatars[(int) $reply['author_id']] ?? null],
+                $repliesByAnnouncement[$id] ?? []
+            );
             $announcement['reaction_counts'] = $reactionCounts[$id] ?? [];
             $announcement['own_reaction'] = $ownReactions[$id] ?? null;
             $announcement['attachments'] = array_map(
@@ -463,7 +475,9 @@ class AnnouncementService
             'success' => true,
             'reply_id' => $replyId,
             'html' => view('pages/courses/features/announcements/partials/reply', [
-                'reply' => $this->replyModel->retrieveOne($replyId),
+                'reply' => $this->replyModel->retrieveOne($replyId) + [
+                    'author_avatar' => (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null,
+                ],
                 'userId' => (int) $user->id,
             ]),
         ];
