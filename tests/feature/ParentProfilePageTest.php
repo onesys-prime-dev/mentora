@@ -13,8 +13,8 @@ use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
- * The parent's own page: their account, a way to change the password, the
- * email choice for each child, and nothing else that a parent can change.
+ * The parent's own forms (the page itself moved to /profile; see ProfilePageTest): the email
+ * choice for each child and the password link, and nothing else that a parent can change.
  *
  * @internal
  */
@@ -80,23 +80,6 @@ final class ParentProfilePageTest extends RouteTestCase
         return preg_match('/<input[^>]*name="email\[\]"[^>]*value="' . $child->id . '"[^>]*checked/s', $body) === 1;
     }
 
-    public function testThePageShowsTheAccountAndEachChildWithTheEmailSwitchOn(): void
-    {
-        $this->loggedInAs($this->pam);
-
-        [$status, $body] = $this->visit('GET', '/parent/profile');
-
-        $this->assertSame(200, $status);
-        $this->assertStringContainsString('Pam Parent', $body);
-        $this->assertStringContainsString('pam@example.test', $body);
-        $this->assertStringContainsString('Email me a link to change my password', $body);
-        $this->assertStringContainsString('Ann Lee', $body);
-        $this->assertStringContainsString('Ben Lee', $body);
-        $this->assertTrue($this->checked($body, $this->ann));
-        $this->assertTrue($this->checked($body, $this->ben));
-        $this->assertDoesNotMatchRegularExpression('/<input[^>]*value="pam@example.test"/', $body, 'the email is shown, not editable');
-    }
-
     public function testSavingKeepsExactlyTheTickedChildren(): void
     {
         $this->loggedInAs($this->pam);
@@ -107,10 +90,6 @@ final class ParentProfilePageTest extends RouteTestCase
         $this->assertStringEndsWith('parent/profile', $location);
         $this->assertFalse((new ParentPreferences())->emailEnabled((int) $this->pam->id, (int) $this->ann->id));
         $this->assertTrue((new ParentPreferences())->emailEnabled((int) $this->pam->id, (int) $this->ben->id));
-
-        [, $body] = $this->visit('GET', '/parent/profile');
-        $this->assertFalse($this->checked($body, $this->ann));
-        $this->assertTrue($this->checked($body, $this->ben));
     }
 
     public function testSavingNothingTurnsEveryChildOff(): void
@@ -164,36 +143,16 @@ final class ParentProfilePageTest extends RouteTestCase
         $this->assertSame(1, db_connect()->table('password_resets')->where('user_id', $this->pam->id)->where('revoked_at IS NULL', null, false)->where('used_at IS NULL', null, false)->countAllResults(), 'only the latest link is open');
     }
 
-    public function testAParentWithNoChildrenStillHasTheirAccountAndASimpleMessage(): void
-    {
-        $this->loggedInAs(PeopleFactory::person('parent', 'Lone', 'Parent', 'lone@example.test', $this->institution));
-
-        [$status, $body] = $this->visit('GET', '/parent/profile');
-
-        $this->assertSame(200, $status);
-        $this->assertStringContainsString('lone@example.test', $body);
-        $this->assertStringContainsString('You are not linked to a student yet', $body);
-        $this->assertStringNotContainsString('name="email[]"', $body);
-    }
-
-    public function testWhilePortalIsOffTheAccountStaysAndTheChildrenGoAway(): void
+    public function testWhilePortalIsOffNothingIsSavedButThePasswordLinkStillWorks(): void
     {
         (new ParentPortal())->setInstitutionOn($this->institution, false);
         $this->loggedInAs($this->pam);
-
-        [$status, $body] = $this->visit('GET', '/parent/profile');
-
-        $this->assertSame(200, $status);
-        $this->assertStringContainsString('pam@example.test', $body);
-        $this->assertStringContainsString('parent portal is switched off', $body);
-        $this->assertStringNotContainsString('Ann Lee', $body);
-        $this->assertStringNotContainsString('name="email[]"', $body);
 
         $this->visit('POST', '/parent/profile/notifications', ['email' => [(string) $this->ben->id]]);
         $this->assertSame(0, db_connect()->table('parent_child_preferences')->countAllResults(), 'nothing is saved while the portal is off');
 
         $this->visit('POST', '/parent/profile/password-link');
-        $this->assertSame(['pam@example.test'], array_column($this->mailer->sent, 'to'), 'the password link is the parent\'s own account, so it still works');
+        $this->assertSame(['pam@example.test'], array_column($this->mailer->sent, 'to'));
     }
 
     public function testAPastInstitutionStillLetsTheParentKeepTheirOwnSettings(): void
@@ -201,7 +160,7 @@ final class ParentProfilePageTest extends RouteTestCase
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
         $this->loggedInAs($this->pam);
 
-        $this->assertSame(200, $this->visit('GET', '/parent/profile')[0]);
+        $this->assertSame(301, $this->visit('GET', '/parent/profile')[0], 'the page moved to /profile');
 
         $this->visit('POST', '/parent/profile/notifications', ['email' => [(string) $this->ben->id]]);
         $this->visit('POST', '/parent/profile/password-link');

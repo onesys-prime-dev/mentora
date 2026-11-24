@@ -62,7 +62,7 @@ final class StudentProfilePageTest extends RouteTestCase
     private function profile(): array
     {
         try {
-            $response = $this->call('GET', '/student/profile')->response();
+            $response = $this->call('GET', '/profile')->response();
 
             return [$response->getStatusCode(), (string) $response->getBody()];
         } catch (PageNotFoundException) {
@@ -151,15 +151,6 @@ final class StudentProfilePageTest extends RouteTestCase
         $this->assertStringContainsString('Not set', $body);
     }
 
-    public function testEveryOtherRoleIsTurnedAway(): void
-    {
-        foreach (['instructor', 'chairperson', 'institutional_admin', 'admin', 'parent'] as $role) {
-            $this->loggedInAs(CourseFactory::user($role));
-
-            $this->assertSame(302, $this->profile()[0], $role);
-        }
-    }
-
     public function testThereIsNothingToChangeOnIt(): void
     {
         foreach (['POST', 'PUT', 'PATCH', 'DELETE'] as $verb) {
@@ -167,27 +158,5 @@ final class StudentProfilePageTest extends RouteTestCase
 
             $this->assertSame([], array_values($routes), $verb);
         }
-    }
-
-    public function testTheMenuLinksStudentsAndParentsToTheirOwnProfile(): void
-    {
-        $this->loggedInAs($this->ann);
-        $student = (string) $this->call('GET', '/student/profile')->response()->getBody();
-
-        $this->assertMatchesRegularExpression('#href="[^"]*student/profile"[^>]*>(?:(?!</a>).)*My Profile#s', $student);
-
-        $this->loggedInAs($this->pam);
-        $parent = (string) $this->call('GET', '/parent/profile')->response()->getBody();
-
-        $this->assertMatchesRegularExpression('#href="[^"]*parent/profile"[^>]*>(?:(?!</a>).)*My Profile#s', $parent);
-    }
-
-    public function testOtherRolesKeepTheInertMenuItem(): void
-    {
-        $this->loggedInAs(CourseFactory::user('instructor'));
-
-        $body = (string) $this->call('GET', '/instructor/dashboard')->response()->getBody();
-
-        $this->assertDoesNotMatchRegularExpression('#href="[^"]*/profile"[^>]*>(?:(?!</a>).)*My Profile#s', $body);
     }
 }

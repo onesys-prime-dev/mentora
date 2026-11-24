@@ -10,7 +10,7 @@ use App\Services\Parents\ParentAccessService;
 /**
  * The student's own profile, to read: their name, email and student number,
  * and the parents who can see their progress (names only). Nothing on it can
- * be changed here.
+ * be changed here. The GET now redirects to /profile (ProfileController); retire this with the settings phase.
  */
 class StudentProfileController extends BaseController
 {

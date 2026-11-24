@@ -81,7 +81,8 @@ test("TC-PRT-05 The calendar is read-only", async ({ page }) => {
     await expect(page.getByText("Reminder", { exact: true })).toHaveCount(0);
 });
 
-test("TC-PRT-06 A parent chooses which child they are emailed about, and it is kept", async ({ page }) => {
+// The email choices leave /profile until Phase 5 puts them on /settings; switch this back on then.
+test.fixme("TC-PRT-06 A parent chooses which child they are emailed about, and it is kept", async ({ page }) => {
     await signInAs(page, accounts.parent, "parent");
     await page.goto("/parent/profile");
 
@@ -113,9 +114,9 @@ test("TC-PRT-08 Other roles cannot open the parent area", async ({ page }) => {
 
 test("TC-PRT-09 A student sees which parents can see their progress", async ({ page }) => {
     await signInAs(page, accounts.student, "student");
-    await page.goto("/student/profile");
+    await page.goto("/profile");
 
-    const parents = page.locator("[data-student-parents]");
+    const parents = page.locator("[data-profile-parents]");
     await expect(parents).toContainText("Roberto");
     await expect(parents).toContainText("cannot change anything");
 });

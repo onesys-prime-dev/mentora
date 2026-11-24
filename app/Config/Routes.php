@@ -48,6 +48,9 @@ $routes->get('notifications/latest', 'NotificationController::latest', ['filter'
 $routes->post('notifications/delete', 'NotificationController::delete', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
+// Everyone's own profile, for every role. The old student/profile and parent/profile GETs (kept in their groups) redirect here.
+$routes->get('profile', 'Profiles\ProfileController::index', ['filter' => 'session']);
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
@@ -58,8 +61,8 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
-    // The student's own profile, to read: their details and the parents who can see their progress.
-    $routes->get('profile', 'Students\StudentProfileController::index');
+    // The student's profile moved to /profile.
+    $routes->get('profile', 'Profiles\ProfileController::legacy');
 
     $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:student']]);
@@ -534,9 +537,10 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
     // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
     $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
-    // The parent's own page. These two forms are the only things a parent can post, and both are
-    // about their own account: the email choice for each child, and an emailed password link.
-    $routes->get('profile', 'Parents\ParentProfileController::index');
+    // The parent's own page is /profile now; the old GET redirects. These two
+    // forms are the only things a parent can post, both about their own account: the email choice for
+    // each child, and an emailed password link. Phase 5 moves them under /settings.
+    $routes->get('profile', 'Profiles\ProfileController::legacy');
     $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
     $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
 

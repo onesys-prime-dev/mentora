@@ -29,12 +29,12 @@ $avatarPerson = (new \App\Services\Profiles\AvatarData())->forMany([(int) $user-
 // The Apps menu and the phone block draw the same tiles; work them (and their badges) out once.
 $headerApps = $userRole === 'institutional_admin' ? [] : global_apps($userRole);
 
-// Not built yet — shown so the menu's shape is settled, but inert. "My Profile" is real for the
-// roles that have a profile page (a student's, to read; a parent's, with their email choices).
+// "My Profile" is real for every role. Settings stays inert until the settings page exists (Phase 5);
+// Help & Support is not built.
 $accountLinks = [
-    ['label' => 'My Profile', 'icon' => 'user', 'url' => in_array($userRole, ['student', 'parent'], true) ? site_url($userRole . '/profile') : null],
+    ['label' => 'My Profile', 'icon' => 'user', 'url' => site_url('profile')],
     ['label' => 'Settings', 'icon' => 'settings'],
-    ['label' => 'Help & Support', 'icon' => 'help'],
+    ['label' => 'Help & Support', 'icon' => 'help', 'soon' => 'Coming soon'],
 ];
 ?>
 <header
@@ -398,7 +398,7 @@ $accountLinks = [
 
                             <span class="flex-1"><?= esc($link['label']) ?></span>
 
-                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400">Soon</span>
+                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400"><?= esc($link['soon'] ?? 'Soon') ?></span>
 
                         </span>
 

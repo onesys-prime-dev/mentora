@@ -20,7 +20,7 @@ use InvalidArgumentException;
  * here touches a child's data. The password is changed through an emailed,
  * one-time link (the same one an administrator can send), so there is no
  * password form to get wrong; the link goes only to the signed-in parent's
- * own address.
+ * own address. The GET now redirects to /profile (ProfileController); Phase 5 retires this class.
  */
 class ParentProfileController extends BaseController
 {
