@@ -63,3 +63,10 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - New: PersonProfileRoutesTest (AC2 matrix through HTTP for page/card/panel with absence asserts; 404s for other institution, unlinked parent/child, missing id, system admin; deactivated; Message gating incl. two shared children and read-only); ProfileContextResolverTest (visibleIds agreement matrix 16 viewers x 17 subjects; ≤8 queries for 40 ids); AvatarData forViewer hides preferred name/photo of hidden people.
 - Reviews caught: Message button promising a refused conversation (shared resolveDirectStart), popover unreachable by keyboard, Escape reopening the card, hidden people's preferred names in avatar labels (Critical, fixed), expired-session login page cached into the card.
 - Known limits: no e2e on discussion avatars; popover name read from the avatar's aria-label; deactivated avatars keep their colour.
+
+### Phase 4 (2026-11-25) — feat/user-profile-p4-photos
+- phpunit (in parts): unit 1271, database 4395, feature 4710 — 10376 OK. vitest 125 files / 1283 OK.
+- Playwright: profile-photo.spec 3/3 (real upload through the dialog, photos off/on, admin removal + bell), profile + profile-card 15/15.
+- New: ProfilePhotoServiceTest (content sniffing, 5 MB, pixel cap, EXIF stripped, orientation, 256/64 squares, replace/remove, audit), ProfilePhotoRoutesTest (Review Focus 3: 404 after off/removal/forbidden viewer, same photo after on, no-cache + ETag/304), ProfilePhotoFlowTest (owner/admin flows, institution switch, checklist, cross-institution 404), photo-crop.test.js.
+- Migration 2026-12-02-000004 widens mail_outbox.kind with `photo` (additive, reversible).
+- Known limits: route-level upload success is covered by e2e only (is_uploaded_file); no-JS upload not possible; a person in two institutions follows their first institution's photo switch (same as the existing resolver).
