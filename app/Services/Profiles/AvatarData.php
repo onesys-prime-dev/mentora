@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Profiles;
 
+use CodeIgniter\Shield\Entities\User;
+
 /** Name, initials and colour for avatars, many people at once. Task 1.4's JS mirrors COLOURS. */
 final class AvatarData
 {
@@ -42,5 +44,20 @@ final class AvatarData
         }
 
         return $out;
+    }
+
+    /**
+     * forMany() plus whether each avatar may open the person's card for this viewer (FR2), for a page's
+     * whole list of people at once. People without a profile row are left out.
+     *
+     * @param list<int> $userIds
+     *
+     * @return array<int, array{person: array{id:int, name:string, initials:string, colour:string, photo_url:?string}, interactive: bool}>
+     */
+    public function forViewer(User $viewer, array $userIds): array
+    {
+        $visible = array_flip((new ProfileContextResolver())->visibleIds($viewer, $userIds));
+
+        return array_map(static fn (array $person): array => ['person' => $person, 'interactive' => isset($visible[$person['id']])], $this->forMany($userIds));
     }
 }
