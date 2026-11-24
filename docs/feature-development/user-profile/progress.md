@@ -25,5 +25,18 @@ Gate 2 → 3 approved by the user 2026-11-23: `requirements.md`, `workflows.md`,
 
 - `implementation-plan.md` (8 phases) and `test-strategy.md` written and self-reviewed 2026-11-23.
 
+## Stage 4 (started 2026-11-24)
+User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages-open-p1-parties` alone (its uncommitted messages-spec rewrite is in `git stash` "WIP feat/messages-open-p1-parties"), run every phase, Claude commits each phase, user pushes at the end.
+- Phase 1 branch `feat/user-profile-p1-foundation`. Baseline: phpunit 10152 OK, vitest 1243 OK.
+- Tasks 1.1-1.4 committed and task-reviewed (2141b6b2 .. d2ef3d85). Ledger: `.superpowers/sdd/implementation-plan/progress.md` (git-ignored).
+- Whole-phase review fixes done (64e659be). **Phase 1 complete** 2026-11-24.
+- 2026-11-24 user: "continue everything. decide everything for me. just tell me if you are done with all the phases." Claude rules on open decisions (ledger + decision register) and runs all phases; tests now use XAMPP MySQL :3306 (`vendor/bin/phpunit`).
+
 ## Next action
-Wait for the Stage 3 → 4 gate (user approval of the plan). Then: user commits the docs on `feat/user-profile`; Claude branches `feat/user-profile-p1-foundation` from it, verifies the branch, records the test baseline, and starts Phase 1 with `superpowers:subagent-driven-development` + TDD.
+Phase 2 on `feat/user-profile-p2-my-profile` (from p1).
+
+## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
+Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.
+
+## Next action
+Wait for the user to say to start Phase 1 (plan approval is still implicit; confirm it). Then the steps below. Original note: wait for the Stage 3 → 4 gate (user approval of the plan). Then: user commits the docs on `feat/user-profile`; Claude branches `feat/user-profile-p1-foundation` from it, verifies the branch, records the test baseline, and starts Phase 1 with `superpowers:subagent-driven-development` + TDD.

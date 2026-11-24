@@ -36,3 +36,15 @@ TC-DEAN-03/04, TC-GGR-04, TC-PRT-02, TC-MSG-06, TC-MSG-08 (e2e); a stale calenda
 
 ## Results log
 _Filled per phase: counts, red runs shown, NOT RUN items, known limits._
+
+### Baseline (2026-11-24, before Phase 1)
+phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The stale calendar Vitest failure listed below no longer fails.
+
+### Phase 1 (2026-11-24) — feat/user-profile-p1-foundation
+- phpunit full suite: 10229 tests / 40721 assertions OK (main MySQL :3306, `mentora_test`). New: ProfileSchemaTest 4, RoleRankTest + ProfilePolicyTest 54 (unit), ProfileReaderTest, AvatarComponentTest 7.
+- vitest: 122 files / 1247 tests OK (new tests/js/shared/avatar.test.js 4). eslint clean; phpstan on app/Services/Profiles + components/avatar.php: no errors.
+- RED runs shown for every task (class-missing errors; placeholder still rendered; new policy rows failing).
+- Data preservation: `testExistingProfileRowsSurviveMigration` seeds on the old schema, migrates, compares every old column (assertSame); rollback test passes.
+- Reviews: four task reviews + one whole-phase review (fix wave: roles shown per viewer, `ProfileReader::forViewer` single entry point, admin/chair/dean role details, system admin own role) + re-review, all addressed.
+- NOT RUN: Playwright (no UI journey yet in Phase 1); no browser screenshot of the header/dashboard avatar.
+- Known limits: a child opening their own deactivated parent gets 404 instead of basics (hides, not leaks); `pronouns` key is present as null when not granted (renderers must use the field list).
