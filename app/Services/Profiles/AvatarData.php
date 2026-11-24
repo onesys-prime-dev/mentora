@@ -19,6 +19,17 @@ final class AvatarData
      */
     public function forMany(array $userIds): array
     {
+        return $this->rows($userIds, null);
+    }
+
+    /**
+     * @param list<int>             $userIds
+     * @param array<int, mixed>|null $public ids whose public profile fields (preferred name, photo) may be used; null = all
+     *
+     * @return array<int, array{id:int, name:string, initials:string, colour:string, photo_url:?string}>
+     */
+    private function rows(array $userIds, ?array $public): array
+    {
         $ids = array_values(array_unique(array_map('intval', $userIds)));
         if ($ids === []) {
             return [];
@@ -31,7 +42,9 @@ final class AvatarData
         $out = [];
         foreach ($rows as $r) {
             $id    = (int) $r['user_id'];
-            $first = trim((string) ($r['preferred_first_name'] ?: $r['first_name']));
+            // Someone the viewer may not see keeps the legal name the page prints anyway, and no photo (FR2).
+            $shown = $public === null || isset($public[$id]);
+            $first = trim((string) (($shown ? $r['preferred_first_name'] : null) ?: $r['first_name']));
             $last  = trim((string) $r['last_name']);
 
             $out[$id] = [
@@ -58,6 +71,6 @@ final class AvatarData
     {
         $visible = array_flip((new ProfileContextResolver())->visibleIds($viewer, $userIds));
 
-        return array_map(static fn (array $person): array => ['person' => $person, 'interactive' => isset($visible[$person['id']])], $this->forMany($userIds));
+        return array_map(static fn (array $person): array => ['person' => $person, 'interactive' => isset($visible[$person['id']])], $this->rows($userIds, $visible));
     }
 }

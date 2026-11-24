@@ -140,11 +140,22 @@ final class ProfileContextResolverTest extends DatabaseTestCase
     public function testForViewerPairsAvatarRowsWithInteractivity(): void
     {
         $student = $this->people['student'];
-        $out     = (new AvatarData())->forViewer($student, [(int) $this->people['instructor']->id, (int) $this->people['parent']->id, (int) $student->id]);
+        foreach (['instructor' => 'Prof', 'parent' => 'Secret'] as $who => $preferred) {
+            db_connect()->table('user_profiles')->where('user_id', $this->people[$who]->id)->update(['preferred_first_name' => $preferred]);
+        }
+        $out = (new AvatarData())->forViewer($student, [(int) $this->people['instructor']->id, (int) $this->people['parent']->id, (int) $student->id]);
 
         $this->assertTrue($out[(int) $this->people['instructor']->id]['interactive']);
         $this->assertFalse($out[(int) $this->people['parent']->id]['interactive']);
         $this->assertTrue($out[(int) $student->id]['interactive'], 'their own avatar opens their card');
-        $this->assertSame('Ina Matrix', $out[(int) $this->people['instructor']->id]['person']['name']);
+        $this->assertSame('Prof Matrix', $out[(int) $this->people['instructor']->id]['person']['name']);
+        $this->assertSame('PM', $out[(int) $this->people['instructor']->id]['person']['initials']);
+
+        // Someone the viewer may not see: the legal name only (as the page prints it), never a hidden field.
+        $hidden = $out[(int) $this->people['parent']->id]['person'];
+        $this->assertSame('Pat Matrix', $hidden['name']);
+        $this->assertSame('PM', $hidden['initials']);
+        $this->assertNull($hidden['photo_url']);
+        $this->assertSame(AvatarData::COLOURS[$this->people['parent']->id % 8], $hidden['colour']);
     }
 }

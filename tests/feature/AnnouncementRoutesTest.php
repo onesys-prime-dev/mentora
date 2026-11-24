@@ -253,6 +253,8 @@ final class AnnouncementRoutesTest extends RouteTestCase
         CourseFactory::enroll($this->offering, $leaver);
         CourseFactory::members($this->offering, [$this->instructor, $this->student]);
         CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['preferred_first_name' => 'Hiddenname']);
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Shownname']);
 
         $id = $this->announce('Avatars');
         $this->api($leaver, 'post', "/{$id}/reply", ['message' => 'From someone who left']);
@@ -265,6 +267,8 @@ final class AnnouncementRoutesTest extends RouteTestCase
             $this->assertTrue($interactive($html, $this->student), 'their own reply');
             $this->assertFalse($interactive($html, $leaver));
             $this->assertSame(3, substr_count($html, 'data-avatar'));
+            $this->assertStringNotContainsString('Hiddenname', $html, 'a preferred name the viewer may not see');
+            $this->assertStringContainsString('Shownname', $html, 'a visible author keeps their preferred name');
             // Only the viewer's own reply composer keeps the placeholder (Phase 7).
             $this->assertSame(2, substr_count($html, 'placeholder/profile.png'));
         }
