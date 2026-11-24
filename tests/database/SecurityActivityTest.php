@@ -66,19 +66,32 @@ final class SecurityActivityTest extends DatabaseTestCase
             'Two-step sign-in turned off',
             'Signed out of all other devices',
             'Your photo was removed by your school',
-            'Your school added a profile photo',
+            'An administrator added a profile photo',
             'Your account was deactivated',
             'Your account was reactivated',
-            'Your school signed you out of every device',
-            'Your school sent you a password reset link',
+            'An administrator signed you out of every device',
+            'An administrator sent you a password reset link',
             'You asked for a password reset link',
             'Password reset with an emailed link',
             'Your roles were changed',
-            'Your school updated your name or email',
+            'An administrator updated your name or email',
         ], array_column((new SecurityActivity())->recent($this->me), 'label'));
 
         $first = (new SecurityActivity())->recent($this->me)[0];
-        $this->assertSame(['action' => 'profile.password_changed', 'label' => 'Password changed', 'at' => $latest], $first);
+        $this->assertSame(['action' => 'profile.password_changed', 'label' => 'Password changed', 'at' => $latest, 'by_admin' => false], $first);
+    }
+
+    public function testEachEntryKnowsWhetherAnAdministratorDidIt(): void
+    {
+        $this->entry('user.password_reset_sent', $this->admin, $this->me, $this->daysAgo(1));
+        $this->entry('user.password_reset_sent', $this->me, $this->me, $this->daysAgo(2));
+        $this->entry('user.password_reset', $this->me, $this->me, $this->daysAgo(3));
+        $this->entry('user.welcome_link_sent', $this->admin, $this->me, $this->daysAgo(4));
+
+        $rows = (new SecurityActivity())->recent($this->me);
+
+        $this->assertSame([true, false, false, true], array_column($rows, 'by_admin'));
+        $this->assertSame('An administrator sent you a welcome link', $rows[3]['label']);
     }
 
     public function testProfileEditsOwnPhotoChangesAndOtherPeoplesEntriesAreLeftOut(): void

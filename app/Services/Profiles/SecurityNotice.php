@@ -45,6 +45,6 @@ final class SecurityNotice
     public static function ifNotYou(): string
     {
         return "If this was you, there is nothing else to do.\n\n"
-            . "If this wasn't you, reset your password straight away: ask your administrator to send you a reset link, then sign in at " . site_url('login') . ".\n";
+            . "If this wasn't you, reset your password straight away: ask an administrator to send you a reset link, then sign in at " . site_url('login') . ".\n";
     }
 }

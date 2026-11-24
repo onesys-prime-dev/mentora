@@ -19,17 +19,18 @@ class SecurityActivity
         'profile.two_factor_off'          => 'Two-step sign-in turned off',
         'profile.signed_out_others'       => 'Signed out of all other devices',
         'profile.photo_removed_by_admin'  => 'Your photo was removed by your school',
-        'profile.photo_uploaded_by_admin' => 'Your school added a profile photo',
+        'profile.photo_uploaded_by_admin' => 'An administrator added a profile photo',
         'user.deactivated'                => 'Your account was deactivated',
         'user.reactivated'                => 'Your account was reactivated',
-        'user.signed_out'                 => 'Your school signed you out of every device',
-        'user.password_reset_sent'        => 'Your school sent you a password reset link',
+        'user.signed_out'                 => 'An administrator signed you out of every device',
+        'user.password_reset_sent'        => 'An administrator sent you a password reset link',
+        'user.welcome_link_sent'          => 'An administrator sent you a welcome link',
         'user.password_reset'             => 'Password reset with an emailed link',
         'user.roles_changed'              => 'Your roles were changed',
-        'user.updated'                    => 'Your school updated your name or email',
+        'user.updated'                    => 'An administrator updated your name or email',
     ];
 
-    /** @return list<array{action: string, label: string, at: string}> newest first */
+    /** @return list<array{action: string, label: string, at: string, by_admin: bool}> newest first */
     public function recent(int $userId, int $days = 90): array
     {
         $rows = db_connect()->table('audit_logs')
@@ -48,6 +49,7 @@ class SecurityActivity
                 ? 'You asked for a password reset link'
                 : self::LABELS[$row['action']],
             'at'     => $row['created_at'],
+            'by_admin' => (int) $row['actor_user_id'] !== $userId,
         ], $rows);
     }
 }

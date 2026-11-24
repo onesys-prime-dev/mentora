@@ -51,6 +51,7 @@ class AccountSettingsController extends BaseController
             'flashToasts' => true,
             'user'        => $user,
             'minLength'   => (int) (new InstitutionSecurity())->forUser($user)['passwordMinLength'],
+            'hasSchool'   => (new PlanLimits())->institutionOf((int) $user->id) !== null,
             'sections'    => [
                 ['id' => 'password', 'label' => 'Password', 'view' => 'pages/settings/partials/password'],
                 ['id' => 'two-step', 'label' => 'Two-step sign-in', 'view' => 'pages/settings/partials/two-step'],

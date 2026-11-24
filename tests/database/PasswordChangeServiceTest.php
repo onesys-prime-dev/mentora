@@ -170,7 +170,7 @@ final class PasswordChangeServiceTest extends DatabaseTestCase
         $this->assertCount(1, $this->mailer->sent);
         $this->assertSame('ivo@example.com', $this->mailer->sent[0]['to']);
         $this->assertSame('Your Mentora password was changed', $this->mailer->sent[0]['subject']);
-        $this->assertStringContainsString("If this wasn't you, reset your password", $this->mailer->sent[0]['message']);
+        $this->assertStringContainsString('ask an administrator to send you a reset link', $this->mailer->sent[0]['message']);
         $this->assertStringNotContainsString(self::NEW, $this->mailer->sent[0]['message']);
     }
 

@@ -19,7 +19,9 @@ $switch = 'role="switch" aria-checked="' . ($twoFactor['on'] ? 'true' : 'false')
     <div class="flex min-w-0 flex-col gap-0.5">
         <span id="two-step-label" class="text-sm font-semibold text-[#1A1C1E]">Email me a sign-in code</span>
         <span id="two-step-status" class="text-xs text-[#646464]">
-            <?= $twoFactor['on'] ? esc('On — we email a code to ' . $twoFactor['email_masked'] . ' when you sign in') : 'Off' ?>
+            <?= $twoFactor['on']
+                ? esc('On — we email a code to ' . $twoFactor['email_masked'] . ' when you sign in')
+                : esc('When on, we email a code to ' . $twoFactor['email_masked'] . ' each time you sign in.') ?>
         </span>
         <?php if ($twoFactor['required']): ?>
             <span class="text-xs font-medium text-brand">Required by your school</span>

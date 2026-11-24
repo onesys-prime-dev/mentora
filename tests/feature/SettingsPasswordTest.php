@@ -85,7 +85,7 @@ final class SettingsPasswordTest extends RouteTestCase
             $this->assertSame(200, $response->getStatusCode(), $role);
             $this->assertStringContainsString('Your password, sign-in and the emails Mentora sends you.', $body, $role);
             $this->assertStringContainsString('Change password', $body, $role);
-            $this->assertStringContainsString('Email me a reset link instead', $body, $role);
+            $this->assertStringContainsString('Forgot your current password? Email me a link', $body, $role);
             $this->assertStringContainsString('href="#password"', $body, $role);
         }
     }
@@ -95,7 +95,17 @@ final class SettingsPasswordTest extends RouteTestCase
         (new App\Services\Institutions\InstitutionSecurity())->save($this->institution, ['passwordMinLength' => '12']);
         $this->browserSignedInSince($this->ivo, time() - 60);
 
-        $this->assertStringContainsString('At least 12 characters.', (string) $this->call('GET', 'settings')->response()->getBody());
+        $this->assertStringContainsString("At least 12 characters (your school's rule).", (string) $this->call('GET', 'settings')->response()->getBody());
+    }
+
+    public function testTheSystemAdminsHintHasNoSchoolRule(): void
+    {
+        $this->browserSignedInSince(PeopleFactory::person('admin', 'Sy', 'Admin', null, null), time() - 60);
+
+        $body = (string) $this->call('GET', 'settings')->response()->getBody();
+
+        $this->assertStringContainsString('<span>At least ', $body);
+        $this->assertStringNotContainsString("school's rule", $body);
     }
 
     public function testTheHeaderSettingsItemLinksToSettings(): void

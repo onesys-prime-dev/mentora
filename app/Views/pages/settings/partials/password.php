@@ -3,11 +3,12 @@
  * Settings: the Password card (D13). The change form, and the emailed-link fallback for a forgotten password.
  *
  * @var int                   $minLength the shortest password in force for this person
+ * @var bool                  $hasSchool whether a school sets that rule (the system admin has none)
  * @var array<string, string> $errors    field => message, from the last refused attempt
  */
 $meter = '<div class="flex max-w-xs gap-1 pt-1" aria-hidden="true" data-password-meter>'
     . str_repeat('<i class="h-1 flex-1 rounded-full bg-gray-200"></i>', 4) . '</div>'
-    . '<span>At least ' . $minLength . ' characters.</span> <span data-password-strength aria-live="polite"></span>';
+    . '<span>At least ' . $minLength . ' characters' . ($hasSchool ? " (your school's rule)" : '') . '.</span> <span data-password-strength aria-live="polite"></span>';
 ?>
 <h2 class="text-lg font-bold text-brand">Password</h2>
 <p class="text-sm text-[#646464]">Changing it signs you out everywhere else and emails you a notice.</p>
@@ -21,7 +22,7 @@ $meter = '<div class="flex max-w-xs gap-1 pt-1" aria-hidden="true" data-password
 
     <div class="flex flex-wrap items-center gap-x-4 gap-y-2 max-sm:flex-col max-sm:items-stretch">
         <button type="submit" class="rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Change password</button>
-        <button type="submit" form="settings-password-link" formnovalidate class="rounded-full px-2 py-2 text-sm font-semibold text-brand underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Email me a reset link instead</button>
+        <button type="submit" form="settings-password-link" formnovalidate class="rounded-full px-2 py-2 text-sm font-semibold text-brand underline-offset-2 transition hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Forgot your current password? Email me a link</button>
     </div>
 </form>
 

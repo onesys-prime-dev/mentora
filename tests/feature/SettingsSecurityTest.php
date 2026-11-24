@@ -96,9 +96,26 @@ final class SettingsSecurityTest extends RouteTestCase
         $this->assertStringContainsString('Sign out of all other devices', $body);
     }
 
+    public function testActivityDatesShowTheYearOnlyWhenNotThisYearAndAdminEntriesAreAmber(): void
+    {
+        $lastYear = date('Y') - 1 . '-12-30 09:15:00';
+        $thisYear = date('Y') . '-01-02 10:00:00';
+        $html     = view('pages/settings/partials/activity', ['activity' => [
+            ['action' => 'user.signed_out', 'label' => 'An administrator signed you out of every device', 'at' => $thisYear, 'by_admin' => true],
+            ['action' => 'user.password_reset', 'label' => 'Password reset with an emailed link', 'at' => $lastYear, 'by_admin' => false],
+        ]], ['saveData' => false]);
+
+        $this->assertStringContainsString('Jan 2, 10:00 AM<', $html);
+        $this->assertStringContainsString('Dec 30, ' . (date('Y') - 1) . ', 9:15 AM<', $html);
+        $this->assertSame(1, substr_count($html, 'bg-amber-500'));
+        $this->assertSame(1, substr_count($html, 'bg-brand"'));
+    }
+
     public function testTurningItOnAndOff(): void
     {
         $this->browserSignedInSince($this->ivo, time() - 60);
+
+        $this->assertStringContainsString('When on, we email a code to i•••@example.com each time you sign in.', $this->page());
 
         $this->step('POST', 'settings/two-factor', ['action' => 'on']);
         $this->assertSame('Two-step sign-in turned on', session('message'));
