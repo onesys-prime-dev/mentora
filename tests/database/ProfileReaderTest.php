@@ -174,4 +174,49 @@ final class ProfileReaderTest extends DatabaseTestCase
         $this->assertNull($out[$ids[1]]['photo_url']);
         $this->assertCount(8, AvatarData::COLOURS);
     }
+
+    public function testStudentDetailsHasProgramYearSectionCollegeOnly(): void
+    {
+        ['college' => $c] = DeanFactory::college('SD', $this->inst);
+        $dept = DeanFactory::department($c, 'SD');
+        $prog = DeanFactory::program($dept, 'SD');
+        $term = DeanFactory::term($this->inst, 'Now', date('Y-m-d', strtotime('-10 days')));
+        $s    = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->inst);
+        $this->profile((int) $s->id, ['program_id' => $prog, 'student_number' => '2026-0001']);
+
+        $db = db_connect();
+        $d  = (new ProfileReader())->build((int) $s->id, ['student_details'])['student_details'];
+        $this->assertSame(['program', 'year', 'section', 'college'], array_keys($d));
+        $this->assertNull($d['year']);
+        $this->assertNull($d['section']);
+        $this->assertSame('Program SD', $d['program']);
+
+        $db->table('class_sections')->insert(['institution_id' => $this->inst, 'term_id' => $term, 'program_id' => $prog, 'year_level' => 3, 'code' => 'BSIT-3A']);
+        $db->table('class_section_students')->insert(['class_section_id' => $db->insertID(), 'student_user_id' => $s->id]);
+        $d = (new ProfileReader())->build((int) $s->id, ['student_details'])['student_details'];
+        $this->assertSame(3, $d['year']);
+        $this->assertSame('BSIT-3A', $d['section']);
+        $this->assertSame('College SD', $d['college']);
+    }
+
+    public function testParentLinkMustBeLiveInTheLinkInstitution(): void
+    {
+        $resolver = new ProfileContextResolver();
+        $other    = PeopleFactory::institution('PR3');
+        $parent   = PeopleFactory::person('parent', 'Pa', 'Rent', null, $this->inst);
+        $child    = PeopleFactory::person('student', 'Ch', 'Ild', null, $this->inst);
+
+        $this->assertFalse($resolver->for($parent, (int) $child->id)->viewerIsParentOfSubject);
+
+        // A link recorded against another institution than the memberships is stale.
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $other, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $this->assertFalse($resolver->for($parent, (int) $child->id)->viewerIsParentOfSubject);
+        $this->assertFalse($resolver->for($child, (int) $parent->id)->viewerIsChildOfSubject);
+
+        db_connect()->table('parent_student_links')->truncate();
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->inst, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $this->assertTrue($resolver->for($parent, (int) $child->id)->viewerIsParentOfSubject);
+        $this->assertTrue($resolver->for($child, (int) $parent->id)->viewerIsChildOfSubject);
+        $this->assertFalse($resolver->for($child, (int) $parent->id)->viewerIsParentOfSubject);
+    }
 }

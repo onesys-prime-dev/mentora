@@ -53,8 +53,8 @@ class ProfileReader
             $m['email'] = $row['email'] ?? null;
         }
         if ($has('student_details')) {
-            // Minimal for now: year and section arrive with the viewing-others phase.
-            $m['student_details'] = ['program' => $row['program_name'] ?? null, 'college' => $row['college_name'] ?? null, 'student_number' => $row['student_number'] ?? null];
+            $section = $this->section($subjectId);
+            $m['student_details'] = ['program' => $row['program_name'] ?? null, 'year' => $section['year'], 'section' => $section['section'], 'college' => $row['college_name'] ?? null];
         }
         if ($has('courses')) {
             $m['courses'] = $this->courses($subjectId, $roles);
@@ -78,6 +78,17 @@ class ProfileReader
         }
 
         return $m;
+    }
+
+    /** @return array{year:?int, section:?string} the student's class section in the current term */
+    private function section(int $userId): array
+    {
+        $termId = $this->currentTermId((new PlanLimits())->institutionOf($userId));
+        $row    = $termId === null ? null : db_connect()->table('class_section_students css')->select('cs.year_level, cs.code')
+            ->join('class_sections cs', 'cs.id = css.class_section_id')
+            ->where('css.student_user_id', $userId)->where('cs.term_id', $termId)->orderBy('cs.id')->limit(1)->get()->getRowArray();
+
+        return ['year' => $row === null ? null : (int) $row['year_level'], 'section' => $row['code'] ?? null];
     }
 
     /** @param array<string, mixed> $row */

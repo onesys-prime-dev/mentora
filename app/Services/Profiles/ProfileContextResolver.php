@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Profiles;
 
+use App\Services\Parents\ParentAccessService;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
 
@@ -35,8 +36,8 @@ class ProfileContextResolver
             viewerRank: RoleRank::highest($viewerRoles),
             subjectRoles: RoleRank::sort($subjectRoles),
             subjectActive: (int) $subject['active'] === 1 && ! $deactivated,
-            viewerIsParentOfSubject: $this->linked($viewerId, $subjectId),
-            viewerIsChildOfSubject: $this->linked($subjectId, $viewerId),
+            viewerIsParentOfSubject: $this->isParentOf($viewerId, $subjectId),
+            viewerIsChildOfSubject: $this->isParentOf($subjectId, $viewerId),
             viewerIsInstitutionAdmin: in_array('institutional_admin', $viewerRoles, true),
             subjectIsSystemAdmin: in_array('admin', $subjectRoles, true),
         );
@@ -48,8 +49,9 @@ class ProfileContextResolver
         return array_column(db_connect()->table('auth_groups_users')->select('group')->where('user_id', $userId)->get()->getResultArray(), 'group');
     }
 
-    private function linked(int $parentId, int $studentId): bool
+    /** A live link, by the same rules as ParentAccessService (membership, group, not deleted, parent active). */
+    private function isParentOf(int $parentId, int $studentId): bool
     {
-        return db_connect()->table('parent_student_links')->where('parent_user_id', $parentId)->where('student_user_id', $studentId)->countAllResults() > 0;
+        return in_array($parentId, array_column((new ParentAccessService())->parentsOf($studentId), 'parent_id'), true);
     }
 }
