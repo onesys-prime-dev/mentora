@@ -10,6 +10,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\PeopleService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\CorrectionRequestService;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UserExport;
 use App\Services\Users\UserFilters;
@@ -63,6 +64,7 @@ class PeopleController extends BaseController
             'peopleSeats'        => (new PlanLimits())->report($institutionId)['seats'],
             'peopleCanEdit'      => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'peopleCanViewAs'    => (bool) auth()->user()->can('institution.impersonate'),
+            'peopleRequests'     => count((new CorrectionRequestService())->pendingFor(auth()->user())),
         ]);
     }
 

@@ -14,6 +14,7 @@
  * @var array<string, mixed>       $peopleSeats         used / limit / percent / state
  * @var bool                       $peopleCanEdit
  * @var bool                       $peopleCanViewAs
+ * @var int                        $peopleRequests      correction requests waiting for this admin
  */
 $base    = 'institution/people';
 $f       = $peopleFilters;
@@ -212,6 +213,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         ['label' => 'People', 'href' => site_url($base), 'active' => $peopleView === 'people'],
         ['label' => 'Invitations', 'href' => site_url($base) . '?view=invitations', 'active' => $peopleView === 'invitations', 'count' => $peopleOpen],
         ['label' => 'Parents', 'href' => site_url($base . '/parents')],
+        ['label' => 'Requests', 'href' => site_url($base . '/requests'), 'count' => $peopleRequests ?? 0],
     ]], ['saveData' => false]) ?>
 
     <?php if ($peopleView === 'people'): ?>

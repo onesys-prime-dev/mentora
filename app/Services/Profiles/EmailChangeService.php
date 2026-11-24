@@ -59,12 +59,25 @@ class EmailChangeService
             ]);
         });
 
-        SecurityNotice::sendTo($newEmail, $userId, 'Confirm your new email address', "Your school approved changing your Mentora sign-in email to this address.\n\n"
+        SecurityNotice::sendTo($newEmail, $userId, 'Confirm your new email address', ($requestId === null ? 'You asked for' : 'Your school approved') . " changing your Mentora sign-in email to this address.\n\n"
             . 'Open this link within ' . self::HOURS . " hours to confirm it:\n" . site_url('email-change/' . $token) . "\n\n"
             . "Until you do, you keep signing in with your current address. If you did not ask for this, ignore this email.\n");
 
         SecurityNotice::sendTo((string) $user->email, $userId, 'A change to your Mentora email address was requested', "Someone asked to change your Mentora sign-in email to {$newEmail}. It changes only if the link sent to that address is opened.\n\n"
             . "If this wasn't you, contact your school.\n");
+    }
+
+    /** The address a link would confirm, while it is still open (not used, not expired); null otherwise. Changes nothing. */
+    public function peek(string $token): ?string
+    {
+        if (preg_match('/^[0-9a-f]{64}$/', $token) !== 1) {
+            return null;
+        }
+
+        $row = db_connect()->table('pending_email_changes')->select('new_email')->where('token_hash', hash('sha256', $token))
+            ->where('confirmed_at IS NULL', null, false)->where('expires_at >', date('Y-m-d H:i:s'))->get()->getRowArray();
+
+        return $row === null ? null : (string) $row['new_email'];
     }
 
     /**

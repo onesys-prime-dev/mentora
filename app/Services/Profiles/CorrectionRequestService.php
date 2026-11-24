@@ -94,7 +94,7 @@ class CorrectionRequestService
             $this->nameOf($ownerId) . ' asked to correct their ' . strtolower(self::LABELS[$field]) . '.',
             "correction:{$id}:new",
             $institution,
-            $route === 'platform' ? 'admin/users' : 'institution/people',
+            $route === 'platform' ? 'admin/users' : 'institution/people/requests',
         );
 
         return $id;
@@ -109,14 +109,27 @@ class CorrectionRequestService
     }
 
     /**
+     * The owner's own open requests, for "Waiting for ..." beside each field.
+     *
+     * @return array<string, string> field => 'institution' or 'platform'
+     */
+    public function openFor(User $owner): array
+    {
+        $rows = db_connect()->table('profile_correction_requests')->select('field, routed_to')->where(['user_id' => (int) $owner->id, 'status' => 'pending'])->get()->getResultArray();
+
+        return array_column($rows, 'routed_to', 'field');
+    }
+
+    /**
      * The open requests this admin may decide, oldest first. Never their own.
      *
-     * @return list<array{id: int, user_id: int, requester: string, field: string, old_value: ?string, new_value: string, reason: ?string, created_at: string, sis_linked: bool}>
+     * @return list<array{id: int, user_id: int, requester: string, role: ?string, student_number: ?string, field: string, old_value: ?string, new_value: string, reason: ?string, created_at: string, sis_linked: bool}>
      */
     public function pendingFor(User $admin): array
     {
         $query = db_connect()->table('profile_correction_requests r')
-            ->select('r.id, r.user_id, r.field, r.old_value, r.new_value, r.reason, r.created_at, r.routed_to, r.institution_id')
+            ->select('r.id, r.user_id, r.field, r.old_value, r.new_value, r.reason, r.created_at, r.routed_to, r.institution_id, p.student_number')
+            ->join('user_profiles p', 'p.user_id = r.user_id', 'left')
             ->where('r.status', 'pending')
             ->where('r.user_id !=', (int) $admin->id)
             ->orderBy('r.created_at')->orderBy('r.id');
@@ -125,20 +138,29 @@ class CorrectionRequestService
             return [];
         }
 
-        $sis = new SisOwnership();
+        $sis  = new SisOwnership();
+        $rows = $query->get()->getResultArray();
+        $ids  = array_map('intval', array_column($rows, 'user_id'));
+
+        $roles = [];
+        foreach ($ids === [] ? [] : db_connect()->table('auth_groups_users')->select('user_id, group')->whereIn('user_id', $ids)->get()->getResultArray() as $g) {
+            $roles[(int) $g['user_id']][] = $g['group'];
+        }
 
         // shortcut: one SIS lookup per row; fine for a review queue, batch it if queues grow to hundreds.
         return array_map(fn (array $r): array => [
             'id'         => (int) $r['id'],
             'user_id'    => (int) $r['user_id'],
             'requester'  => $this->nameOf((int) $r['user_id']),
+            'role'       => RoleRank::highest($roles[(int) $r['user_id']] ?? []),
+            'student_number' => $r['student_number'] === null || $r['student_number'] === '' ? null : (string) $r['student_number'],
             'field'      => $r['field'],
             'old_value'  => $r['old_value'],
             'new_value'  => $r['new_value'],
             'reason'     => $r['reason'],
             'created_at' => $r['created_at'],
             'sis_linked' => $sis->managesPerson((int) $r['user_id']),
-        ], $query->get()->getResultArray());
+        ], $rows);
     }
 
     /**
@@ -206,6 +228,56 @@ class CorrectionRequestService
         });
 
         $this->tell((int) $request['user_id'], $id, 'rejected', 'Your correction was not approved', 'Your request to correct your ' . strtolower(self::LABELS[$request['field']]) . " was not approved.\n\nReason: {$note}");
+    }
+
+    /**
+     * A system administrator's own official details, edited directly (FR7.6): names are written now, a new email
+     * waits for the link sent to it. Audited with the field names and the owner is emailed. Anyone else: not found.
+     *
+     * @param array<string, mixed> $input first_name, middle_name, last_name, suffix, email
+     *
+     * @throws PageNotFoundException when the user is not a system administrator
+     * @throws ProfileEditException  when a value is refused (nothing is written)
+     */
+    public function updateOwnOfficial(User $admin, array $input): void
+    {
+        $id = (int) $admin->id;
+
+        if (! $this->inGroup($id, 'admin')) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $names = [];
+        foreach (array_keys(self::NAME_LENGTHS) as $field) {
+            $names[$field] = $this->checked($field, (string) ($input[$field] ?? ''), $id, null);
+        }
+        $email = $this->checked('email', (string) ($input['email'] ?? ''), $id, null);
+
+        $changed = array_keys(array_filter($names, fn (string $v, string $f): bool => $v !== (string) $this->current($id, $f), ARRAY_FILTER_USE_BOTH));
+        $newMail = $email !== strtolower((string) $this->current($id, 'email'));
+
+        if ($changed !== []) {
+            $db  = db_connect();
+            $set = array_map(static fn (string $v): ?string => $v === '' ? null : $v, $names) + ['updated_at' => date('Y-m-d H:i:s')];
+
+            // A system administrator may have no profile row yet: the first edit makes it.
+            $db->table('user_profiles')->where('user_id', $id)->countAllResults() > 0
+                ? $db->table('user_profiles')->where('user_id', $id)->update($set)
+                : $db->table('user_profiles')->insert($set + ['user_id' => $id, 'created_at' => $set['updated_at']]);
+        }
+
+        if ($changed !== [] || $newMail) {
+            service('auditLogger')->log('profile.official_updated', $admin, ['target_type' => 'user', 'target_id' => $id, 'new' => ['fields' => $newMail ? [...$changed, 'email'] : $changed]]);
+        }
+
+        if ($changed !== []) {
+            $labels = implode(', ', array_map(static fn (string $f): string => strtolower(self::LABELS[$f]), $changed));
+            SecurityNotice::send($admin, 'Your official details were changed', "Your {$labels} on Mentora were changed.\n\n" . SecurityNotice::ifNotYou());
+        }
+
+        if ($newMail) {
+            (new EmailChangeService())->start($id, $email, null); // emails both addresses itself
+        }
     }
 
     /**

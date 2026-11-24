@@ -23,6 +23,11 @@ $routes->post('invitation/(:segment)', 'InvitationController::accept/$1');
 $routes->get('reset-password/(:segment)', 'PasswordResetController::show/$1');
 $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1');
 
+// The link sent to a new email address (D17): the page asks, the POST confirms, so a mail scanner
+// opening the link changes nothing. Public like reset-password (works signed in too); the token is the proof.
+$routes->get('email-change/(:segment)', 'Profiles\EmailChangeController::show/$1');
+$routes->post('email-change/(:segment)', 'Profiles\EmailChangeController::confirm/$1');
+
 // Leaving a "view as" session. Outside the role areas on purpose: while viewing, the session
 // is the other person's and must not need the admin group to get out (the filter allows it).
 $routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
@@ -52,6 +57,9 @@ $routes->post('notifications/read', 'NotificationController::read', ['filter' =>
 $routes->get('profile', 'Profiles\ProfileController::index', ['filter' => 'session']);
 $routes->post('profile/checklist/dismiss', 'Profiles\ProfileController::dismissChecklist', ['filter' => ['session', 'readonly']]);
 $routes->post('profile/(identity|about|staff)', 'Profiles\ProfileController::update/$1', ['filter' => ['session', 'readonly']]);
+// Asking the school to correct an official detail (FR7); a system administrator edits their own directly (FR7.6).
+$routes->post('profile/corrections', 'Profiles\ProfileController::requestCorrection', ['filter' => ['session', 'readonly']]);
+$routes->post('profile/identity-official', 'Profiles\ProfileController::updateOfficial', ['filter' => ['session', 'readonly']]);
 // Other people's profiles (D20): the page, the popover card and the modal panel. Anyone the viewer
 // may not see answers 404. Message starts (or reopens) a direct conversation as the Messages API does.
 $routes->get('people/(:num)', 'Profiles\PersonProfileController::show/$1', ['filter' => 'session']);
@@ -1182,6 +1190,10 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('upload/(:segment)/apply', 'Institution\CsvUploadController::apply/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('upload/(:segment)/discard', 'Institution\CsvUploadController::discard/$1', ['filter' => 'permission:people.manage']);
             $routes->get('parents', 'Institution\ParentLinksController::index', ['filter' => 'permission:people.view']);
+            // Correction requests from the institution's people (FR7, D22).
+            $routes->get('requests', 'Institution\ProfileRequestsController::index', ['filter' => 'permission:people.view']);
+            $routes->post('requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => 'permission:people.manage']);
+            $routes->post('requests/(:num)/reject', 'Institution\ProfileRequestsController::decide/$1/reject', ['filter' => 'permission:people.manage']);
             $routes->post('parents/(:num)/students', 'Institution\ParentLinksController::link/$1', ['filter' => 'permission:people.manage']);
             $routes->post('parents/links/(:num)/remove', 'Institution\ParentLinksController::unlink/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)', 'Institution\PeopleController::update/$1', ['filter' => 'permission:people.manage']);
@@ -1284,6 +1296,9 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->get('users/new', 'Admin\UsersController::new', ['filter' => 'permission:users.manage']);
     $routes->post('users', 'Admin\UsersController::invite', ['filter' => 'permission:users.manage']);
     $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => ['permission:users.manage', 'reauth']]);
+    // Correction requests that reach the platform (no institution, or no other institutional admin there).
+    $routes->post('users/requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => 'permission:users.manage']);
+    $routes->post('users/requests/(:num)/reject', 'Institution\ProfileRequestsController::decide/$1/reject', ['filter' => 'permission:users.manage']);
     $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
     $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/impersonate', 'Admin\ImpersonationController::start/$1', ['filter' => ['permission:impersonation.start', 'reauth']]);

@@ -10,6 +10,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\ParentLinkService;
 use App\Services\Institutions\PeopleService;
+use App\Services\Profiles\CorrectionRequestService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -51,6 +52,7 @@ class ParentLinksController extends BaseController
             'parentFilters'  => $filters,
             'parentOpen'     => (new PeopleService())->openInvitations($institutionId),
             'parentCanEdit'  => (new InstitutionAccess())->canWrite((int) auth()->id()),
+            'parentRequests' => count((new CorrectionRequestService())->pendingFor(auth()->user())),
         ]);
     }
 

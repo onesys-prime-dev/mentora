@@ -9,6 +9,7 @@
  * @var array<string, mixed>       $parentFilters
  * @var int                        $parentOpen      open invitations, for the People tabs
  * @var bool                       $parentCanEdit
+ * @var int                        $parentRequests  correction requests waiting, for the tab
  */
 $base    = 'institution/people/parents';
 $link    = 'inline-flex items-center min-h-6 pointer-coarse:min-h-11 pointer-coarse:min-w-11 text-sm font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 rounded';
@@ -90,6 +91,7 @@ foreach ($parentRows as $p) {
         ['label' => 'People', 'href' => site_url('institution/people')],
         ['label' => 'Invitations', 'href' => site_url('institution/people') . '?view=invitations', 'count' => $parentOpen],
         ['label' => 'Parents', 'href' => site_url($base), 'active' => true],
+        ['label' => 'Requests', 'href' => site_url('institution/people/requests'), 'count' => $parentRequests ?? 0],
     ]], ['saveData' => false]) ?>
 
     <?= view('components/toolbar', [

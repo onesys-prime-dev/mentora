@@ -445,8 +445,11 @@ function bindDialogForm(form) {
         buttons.forEach((b) => (b.disabled = true));
         form.setAttribute("aria-busy", "true");
 
+        // A button with its own formaction (Reject beside Approve) posts there, as the browser would.
+        const action = event.submitter?.getAttribute("formaction") || form.action;
+
         const send = async () => {
-            const response = await fetch(form.action, {
+            const response = await fetch(action, {
                 method: (form.method || "post").toUpperCase(),
                 body: new FormData(form),
                 // A form marked data-stay is answered where it is: no redirect, no message left for the next page.

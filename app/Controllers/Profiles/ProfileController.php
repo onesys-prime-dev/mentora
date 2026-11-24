@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Services\Parents\ParentAccessService;
 use App\Services\Parents\ParentPortal;
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\CorrectionRequestService;
 use App\Services\Profiles\ProfileEditException;
 use App\Services\Profiles\ProfileEditService;
 use App\Services\Profiles\ProfilePhotoService;
@@ -39,6 +40,14 @@ class ProfileController extends BaseController
         ];
 
         $own['managed'] = ! $user->inGroup('admin'); // a system administrator's account is not school-managed
+
+        // What the owner may ask to correct, with today's value; a system administrator edits their own instead (FR7.6).
+        $now = ['first_name' => $row['first_name'] ?? '', 'middle_name' => $row['middle_name'] ?? '', 'last_name' => $row['last_name'] ?? '', 'suffix' => $row['suffix'] ?? '', 'email' => (string) $user->email];
+        if ($user->inGroup('student')) {
+            $now['student_number'] = $row['student_number'] ?? '';
+        }
+        $own['correction'] = $own['managed'] ? ['now' => $now, 'open' => (new CorrectionRequestService())->openFor($user)] : null;
+        $own['official_edit'] = $own['managed'] ? null : $now;
 
         // The student's own number comes from their own row, not from student_details.
         if (array_key_exists('student_details', $p)) {
@@ -167,6 +176,51 @@ class ProfileController extends BaseController
         }
 
         return redirect()->to($back)->with('message', 'Profile updated');
+    }
+
+    /** The owner asks for a correction of one official detail (FR7). */
+    public function requestCorrection(): ResponseInterface|RedirectResponse
+    {
+        $user = auth()->user();
+
+        if ($user->inGroup('admin')) {
+            throw PageNotFoundException::forPageNotFound(); // they edit their own directly
+        }
+
+        $post = $this->request;
+
+        return $this->answer(static fn () => (new CorrectionRequestService())->submit($user, (string) $post->getPost('field'), (string) $post->getPost('new_value'), (string) $post->getPost('reason')), 'Request sent');
+    }
+
+    /** A system administrator's own official details, edited directly (FR7.6). Anyone else: not found. */
+    public function updateOfficial(): ResponseInterface|RedirectResponse
+    {
+        $input = (array) $this->request->getPost();
+
+        return $this->answer(static fn () => (new CorrectionRequestService())->updateOwnOfficial(auth()->user(), $input), 'Profile updated');
+    }
+
+    /** Runs an owner's change and answers the dialog (JSON) or the plain form (redirect), as update() does. */
+    private function answer(callable $change, string $message): ResponseInterface|RedirectResponse
+    {
+        $wantsJson = $this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json');
+        $back      = site_url('profile');
+
+        try {
+            $change();
+        } catch (ProfileEditException $e) {
+            return $wantsJson
+                ? $this->response->setStatusCode(422)->setJSON(['errors' => $e->field !== '' ? [$e->field => $e->getMessage()] : [], 'message' => $e->getMessage()])
+                : redirect()->to($back)->with('error', $e->getMessage());
+        }
+
+        if ($wantsJson) {
+            session()->setFlashdata('message', $message);
+
+            return $this->response->setJSON(['message' => $message, 'redirect' => $back]);
+        }
+
+        return redirect()->to($back)->with('message', $message);
     }
 
     private function hasProfile(int $id): bool

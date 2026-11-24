@@ -17,8 +17,39 @@ export function countText(length, max) {
     return length > max ? `${length} / ${max}, ${length - max} over` : `${length} / ${max}`;
 }
 
+/**
+ * The correction dialog's chosen detail: its current value for "Now", and whether the email note shows.
+ *
+ * @param {HTMLSelectElement} select
+ */
+export function correctionChoice(select) {
+    const option = select.selectedOptions[0];
+
+    return { now: option?.dataset.now ?? "", email: select.value === "email" };
+}
+
 /** @param {ParentNode} root */
 export function bindProfileDialogs(root = document) {
+    for (const select of root.querySelectorAll("[data-correction-field]")) {
+        const form = select.form;
+        const now = form?.querySelector("[data-correction-now]");
+        const note = form?.querySelector("[data-correction-email-note]");
+        const sync = () => {
+            const choice = correctionChoice(select);
+
+            if (now) {
+                now.value = choice.now;
+            }
+            if (note) {
+                note.hidden = !choice.email;
+            }
+        };
+
+        select.addEventListener("change", sync);
+        form?.addEventListener("reset", () => setTimeout(sync));
+        sync();
+    }
+
     for (const select of root.querySelectorAll("[data-pronoun-select]")) {
         const box = select.closest("[data-field]")?.querySelector("[data-pronoun-custom]");
 

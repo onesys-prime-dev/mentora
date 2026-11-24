@@ -204,21 +204,34 @@ $studies = array_filter(['Program' => $p['student_details']['program'] ?? '', 'Y
             <span>Official details</span>
             <?php if ($own['managed'] ?? true): ?>
                 <span class="inline-flex items-center gap-1.5 text-xs font-normal text-[#646464]"><?= icon('lock', 'h-3.5 w-3.5 text-[#646464]') ?>Managed by your school</span>
+            <?php elseif (($own['official_edit'] ?? null) !== null): ?>
+                <?= '<button type="button" data-dialog-open="profile-official" aria-label="Edit official details" class="inline-flex items-center justify-center rounded-full p-1.5 text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11">' . icon('pencil', 'h-4 w-4') . '</button>' ?>
             <?php endif; ?>
         </h2>
+        <?php
+        // "Waiting for ..." beside a detail with an open correction request.
+        $open    = $own['correction']['open'] ?? [];
+        $waiting = static fn (string $field): string => isset($open[$field])
+            ? ' <span class="ml-1 inline-flex items-center rounded-full bg-[#FFF1D6] px-2 py-0.5 text-[11px] font-semibold text-[#946200]" data-correction-waiting>' . ($open[$field] === 'platform' ? 'Waiting for an administrator' : 'Waiting for your school') . '</span>'
+            : '';
+        $keys = ['First name' => 'first_name', 'Middle name' => 'middle_name', 'Last name' => 'last_name', 'Suffix' => 'suffix'];
+        ?>
         <dl class="<?= $dl ?>">
             <?php foreach ($official as $label => $value): ?>
                 <dt class="<?= $dt ?>"><?= esc($label) ?></dt>
-                <dd class="<?= $dd ?>"><?= esc($value) ?></dd>
+                <dd class="<?= $dd ?>"><?= esc($value) ?><?= $waiting($keys[$label] ?? '') ?></dd>
             <?php endforeach; ?>
             <?php if (array_key_exists('email', $p)): ?>
                 <dt class="<?= $dt ?>">Email</dt>
-                <dd class="<?= $dd ?>"><?= esc($p['email']) ?></dd>
+                <dd class="<?= $dd ?>"><?= esc($p['email']) ?><?= $waiting('email') ?></dd>
             <?php endif; ?>
             <?php if (array_key_exists('student_number', $own)): ?>
                 <dt class="<?= $dt ?>">Student number</dt>
-                <dd class="<?= $dd ?>"><?= $own['student_number'] !== '' ? esc($own['student_number']) : '<span class="text-[#646464]">Not set</span>' ?></dd>
+                <dd class="<?= $dd ?>"><?= $own['student_number'] !== '' ? esc($own['student_number']) : '<span class="text-[#646464]">Not set</span>' ?><?= $waiting('student_number') ?></dd>
             <?php endif; ?>
         </dl>
+        <?php if (($own['correction'] ?? null) !== null): ?>
+            <p><button type="button" data-dialog-open="profile-correction" class="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11">Request a correction</button></p>
+        <?php endif; ?>
     </section>
 <?php endif; ?>

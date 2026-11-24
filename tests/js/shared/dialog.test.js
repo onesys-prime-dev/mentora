@@ -292,6 +292,20 @@ describe("a dialog form", () => {
         expect(reload).not.toHaveBeenCalled();
         expect(document.getElementById("go").disabled).toBe(false);
     });
+
+    it("posts to the pressed button's formaction, as the browser would", async () => {
+        page(FORM.replace('<button type="submit" id="go">Save</button>', '<button type="submit" id="go">Save</button><button type="submit" id="no" formaction="/reject">Reject</button>'));
+        bindDialogs();
+        answer(422, { errors: {} });
+
+        const form = document.getElementById("f");
+        const event = new Event("submit", { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "submitter", { value: document.getElementById("no") });
+        form.dispatchEvent(event);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/reject"), expect.anything());
+    });
 });
 
 describe("a guarded action", () => {

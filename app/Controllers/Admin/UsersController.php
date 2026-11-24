@@ -6,6 +6,8 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
+use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\CorrectionRequestService;
 use App\Services\Sis\SisOwnership;
 use App\Services\Users\PasswordResetService;
 use App\Services\Users\UserAdminService;
@@ -42,6 +44,9 @@ class UsersController extends BaseController
     {
         $filters = UserFilters::fromInput($this->request->getGet());
         $result  = $this->directory->search($filters);
+        $admin   = auth()->user();
+        // Correction requests that reach the platform (D22): no institution, or no other institutional admin there.
+        $requests = (new CorrectionRequestService())->pendingFor($admin);
 
         return view('pages/admin/users/index', [
             'title'            => 'Users',
@@ -53,6 +58,9 @@ class UsersController extends BaseController
             'userPages'        => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'userInstitutions' => $this->institutions(),
             'userSelf'         => (int) auth()->id(),
+            'userRequests'     => $requests,
+            'userRequestFaces' => (new AvatarData())->forViewer($admin, array_column($requests, 'user_id')),
+            'userCanDecide'    => (bool) $admin->can('users.manage'),
         ]);
     }
 

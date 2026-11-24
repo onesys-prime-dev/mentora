@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bindProfileDialogs, countText, syncCustomPronouns } from "../../../../resources/js/pages/profile/dialogs.js";
+import { bindProfileDialogs, correctionChoice, countText, syncCustomPronouns } from "../../../../resources/js/pages/profile/dialogs.js";
 
 describe("the custom pronouns box", () => {
 
@@ -71,6 +71,30 @@ describe("the character count", () => {
         area.dispatchEvent(new Event("input"));
 
         expect(document.body.textContent).toContain("5 / 300");
+
+    });
+
+});
+
+describe("the correction dialog", () => {
+
+    it("shows the chosen detail's current value and the email note only for email", () => {
+
+        document.body.innerHTML = `<form><select data-correction-field>
+            <option value="last_name" data-now="Lee" selected>Last name</option><option value="email" data-now="ann@example.com">Email</option></select>
+            <input data-correction-now readonly><div data-correction-email-note></div></form>`;
+        bindProfileDialogs();
+        const select = document.querySelector("select");
+
+        expect(document.querySelector("[data-correction-now]").value).toBe("Lee");
+        expect(document.querySelector("[data-correction-email-note]").hidden).toBe(true);
+
+        select.value = "email";
+        select.dispatchEvent(new Event("change"));
+
+        expect(correctionChoice(select)).toEqual({ now: "ann@example.com", email: true });
+        expect(document.querySelector("[data-correction-now]").value).toBe("ann@example.com");
+        expect(document.querySelector("[data-correction-email-note]").hidden).toBe(false);
 
     });
 
