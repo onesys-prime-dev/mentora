@@ -14,15 +14,18 @@ $fullName = trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))
 $secondaryLine = isset($data['program_name'])
     ? str_replace('Bachelor of Science in', 'BS in', $data['program_name'])
     : null;
+
+// The card is always the signed-in person's own (the dean's dashboard reuses it).
+$avatarPerson = (new \App\Services\Profiles\AvatarData())->forMany([(int) auth()->id()])[(int) auth()->id()]
+    ?? ['id' => (int) auth()->id(), 'name' => $fullName];
 ?>
 
 <!-- profile card (chairperson) -->
 <div class="shrink-0 flex flex-col items-center gap-1 bg-white rounded-3xl p-6 text-center shadow-md ring-1 ring-black/5 border-t-4 border-t-brand">
 
-    <img
-        class="w-18 h-18 rounded-full object-cover mb-2"
-        src="<?= base_url('assets/images/placeholder/profile.png') ?>"
-        alt="Profile photo of <?= esc($fullName) ?>">
+    <div class="mb-2">
+        <?= view('components/avatar', ['person' => $avatarPerson, 'size' => 'xl'], ['saveData' => false]) ?>
+    </div>
 
     <span class="text-[17px] font-bold leading-tight text-[#0A0F1E]">
         <?= esc($fullName) ?>

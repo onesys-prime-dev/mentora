@@ -23,7 +23,7 @@ final class StudentDashboardTabsTest extends RouteTestCase
         'key-metrics'    => ['today', '//main//span[normalize-space()="Courses Enrolled"]'],
         'upcoming-tasks' => ['today', 'Pending Tasks'],
         'reminders'      => ['today', 'Reminders'],
-        'profile-card'   => ['courses', '//main//img[starts-with(@alt,"Profile photo")]'],
+        'profile-card'   => ['courses', '//main//*[@data-avatar]'],
         'my-courses'     => ['courses', 'My Courses'],
         'quick-access'   => ['courses', 'Quick Access'],
         'announcements'  => ['updates', 'Announcements'],

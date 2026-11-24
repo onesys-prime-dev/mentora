@@ -22,7 +22,7 @@ final class InstructorDashboardTabsTest extends RouteTestCase
     private const WIDGETS = [
         'grading-queue'    => ['grade', 'Grading Queue'],
         'at-risk-students' => ['grade', 'Needs Your Attention'],
-        'profile-card'     => ['sections', '//img[starts-with(@alt,"Profile photo")]'],
+        'profile-card'     => ['sections', '//*[@data-avatar]'],
         'teaching-load'    => ['sections', 'Teaching Load'],
         'class-progress'   => ['sections', 'Class Progress'],
         'content-status'   => ['sections', 'Unpublished'],
