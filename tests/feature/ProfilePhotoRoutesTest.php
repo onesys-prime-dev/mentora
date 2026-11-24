@@ -65,9 +65,12 @@ final class ProfilePhotoRoutesTest extends RouteTestCase
     }
 
     /** @return array{int, string, \CodeIgniter\HTTP\ResponseInterface|null} */
-    private function photo(User $viewer, int $size = 256): array
+    private function photo(User $viewer, int $size = 256, ?string $etag = null): array
     {
         $this->signIn($viewer);
+        if ($etag !== null) {
+            $this->withHeaders(['If-None-Match' => $etag]);
+        }
         try {
             $r = $this->call('GET', "/people/{$this->student->id}/photo/{$size}")->response();
 
@@ -92,10 +95,28 @@ final class ProfilePhotoRoutesTest extends RouteTestCase
                 $this->assertSame($size, getimagesizefromstring($body)[0]);
                 $this->assertStringStartsWith('image/jpeg', $r->getHeaderLine('Content-Type'));
                 $this->assertSame('nosniff', $r->getHeaderLine('X-Content-Type-Options'));
-                $this->assertStringContainsString('private', $r->getHeaderLine('Cache-Control'));
-                $this->assertStringContainsString('max-age=86400', $r->getHeaderLine('Cache-Control'));
+                // Revalidated every time, so photos going off or access ending takes effect at once.
+                $this->assertSame('private, no-cache', $r->getHeaderLine('Cache-Control'));
+                $this->assertNotSame('', $r->getHeaderLine('ETag'));
             }
         }
+    }
+
+    public function testAMatchingEtagAnswers304WithoutTheBodyAndADifferentOneSendsTheFile(): void
+    {
+        $etag = $this->photo($this->instructor)[2]->getHeaderLine('ETag');
+        $this->assertNotSame($etag, $this->photo($this->instructor, 64)[2]->getHeaderLine('ETag'));
+
+        [$status, $body, $r] = $this->photo($this->instructor, 256, $etag);
+        $this->assertSame(304, $status);
+        $this->assertSame('', $body);
+        $this->assertSame('private, no-cache', $r->getHeaderLine('Cache-Control'));
+
+        $this->assertSame(200, $this->photo($this->instructor, 256, '"other"')[0]);
+
+        // Revalidation still checks access: photos off is a 404, not a 304.
+        $this->photosEnabled(false);
+        $this->assertSame(404, $this->photo($this->instructor, 256, $etag)[0]);
     }
 
     public function testViewersFr2ForbidsGet404(): void

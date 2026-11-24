@@ -3,6 +3,7 @@
 import { deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
 import { signInAs } from "./support/course.js";
+import { runSql } from "./support/database.js";
 import { accounts, submitLoginForm } from "./support/sign-in.js";
 
 const band = (page) => page.locator("[data-profile-band]");
@@ -88,6 +89,12 @@ test.describe.serial("Profile photos", () => {
             await expect(band(page).locator("[data-avatar] img")).toHaveCount(0);
         }
         await context.close();
+
+        // The administrator's removal notified instructor1 and queued an email; later specs start without them.
+        const mine = `(SELECT user_id FROM auth_identities WHERE secret = '${accounts.instructor.email}')`;
+
+        runSql(`DELETE FROM notifications WHERE type = 'profile.photo' AND user_id IN ${mine}`);
+        runSql(`DELETE FROM mail_outbox WHERE kind = 'photo' AND user_id IN ${mine}`);
     });
 
     test("TC-PRF-10 An instructor uploads a photo and a student sees it on their card", async ({ page, browser }) => {
@@ -95,7 +102,7 @@ test.describe.serial("Profile photos", () => {
         await page.goto("/profile");
         await expect(band(page).locator("[data-avatar] img")).toHaveCount(0);
 
-        await page.getByRole("button", { name: "Change photo" }).click();
+        await page.getByRole("button", { name: "Add photo" }).click();
         const dialog = page.getByRole("dialog");
 
         // The page script loads after the page; choose again until it has attached and the crop is ready.

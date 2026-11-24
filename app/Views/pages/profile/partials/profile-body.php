@@ -8,6 +8,7 @@
  * @var string               $actions HTML for the band's action row (Message), viewers only
  * @var array<string, mixed> $own    owner-only extras: official, student_number, portal_on (never built for a viewer)
  * @var array<string, mixed> $avatar AvatarData row
+ * @var array{has: bool, on: bool}|null $photo the owner's photo state (names the pencil: Add or Change photo)
  * @var array<string, mixed>|null $edit set only on the owner's own page: their editable values (pencils and dialogs); null for a viewer
  */
 
@@ -38,7 +39,7 @@ $official  = $own['official'] ?? [];
         <div class="relative self-start rounded-full ring-4 ring-white">
             <?= view('components/avatar', ['person' => $avatar, 'size' => 'xl'], ['saveData' => false]) ?>
             <?php if ($edit !== null): ?>
-                <button type="button" data-dialog-open="profile-photo" data-photo-pencil aria-label="Change photo" class="absolute -bottom-1 -right-1 inline-flex items-center justify-center rounded-full bg-white p-1.5 text-brand shadow-sm ring-1 ring-brand/30 transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11"><?= icon('pencil', 'h-4 w-4') ?></button>
+                <button type="button" data-dialog-open="profile-photo" data-photo-pencil aria-label="<?= ($photo['has'] ?? false) ? 'Change photo' : 'Add photo' ?>" class="absolute -bottom-1 -right-1 inline-flex items-center justify-center rounded-full bg-white p-1.5 text-brand shadow-sm ring-1 ring-brand/30 transition hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11 pointer-coarse:min-w-11"><?= icon('pencil', 'h-4 w-4') ?></button>
             <?php endif; ?>
         </div>
         <div class="flex min-w-0 flex-1 basis-56 flex-col gap-1 sm:pt-14">

@@ -122,6 +122,8 @@ final class ProfilePhotoFlowTest extends RouteTestCase
         $this->assertStringContainsString('data-photo-crop', $empty);
         $this->assertStringContainsString('Choose a JPEG, PNG or WebP image up to 5 MB.', $empty);
         $this->assertStringNotContainsString('data-photo-remove', $empty);
+        $this->assertStringContainsString('aria-label="Add photo"', $empty);
+        $this->assertStringNotContainsString('aria-label="Change photo"', $empty);
 
         $this->givePhoto($this->student);
         $url = (new ProfilePhotoService())->url((int) $this->student->id, 256);
@@ -129,6 +131,8 @@ final class ProfilePhotoFlowTest extends RouteTestCase
         $own = $this->body($this->student, '/profile');
         $this->assertStringContainsString('src="' . esc($url, 'attr') . '"', $own);
         $this->assertStringContainsString('data-photo-remove', $own);
+        $this->assertStringContainsString('aria-label="Change photo"', $own);
+        $this->assertStringNotContainsString('aria-label="Add photo"', $own);
 
         $card = $this->body($this->instructor, "/people/{$this->student->id}/card");
         $this->assertStringContainsString('src="' . esc($url, 'attr') . '"', $card);
@@ -354,16 +358,35 @@ final class ProfilePhotoFlowTest extends RouteTestCase
         $this->step('POST', "institution/people/{$this->student->id}/photo/remove", ['return' => 'institution/people'])->assertRedirectTo(site_url('institution/people'));
     }
 
-    public function testAnAdminWithoutPeopleManageSeesNoPhotoControlsOrOpenInPeople(): void
+    private function withdraw(string $permission): void
+    {
+        db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'institutional_admin', 'permission' => $permission, 'granted' => 0]);
+        \App\Services\Auth\RolePermissions::flush();
+    }
+
+    public function testAnAdminWithoutPeopleManageSeesNoPhotoControlsButStillOpenInPeople(): void
     {
         $this->givePhoto($this->student);
-        db_connect()->table('role_permissions')->insert(['institution_id' => $this->institution, 'role' => 'institutional_admin', 'permission' => 'people.manage', 'granted' => 0]);
-        \App\Services\Auth\RolePermissions::flush();
+        $this->withdraw('people.manage');
+
+        foreach (["/people/{$this->student->id}", "/people/{$this->student->id}/panel"] as $uri) {
+            $body = $this->body($this->admin, $uri);
+            $this->assertStringContainsString('Open in People', $body, $uri);
+            $this->assertStringNotContainsString('person-photo-upload', $body, $uri);
+            $this->assertStringNotContainsString('data-admin-photo-link', $body, $uri);
+            $this->assertStringNotContainsString('Remove photo', $body, $uri);
+        }
+    }
+
+    public function testAnAdminWithoutPeopleViewGetsNoOpenInPeopleButKeepsThePhotoControls(): void
+    {
+        $this->givePhoto($this->student);
+        $this->withdraw('people.view');
 
         $page = $this->body($this->admin, "/people/{$this->student->id}");
-        $this->assertStringNotContainsString('person-photo-upload', $page);
         $this->assertStringNotContainsString('Open in People', $page);
-        $this->assertStringNotContainsString('data-admin-photo-link', $this->body($this->admin, "/people/{$this->student->id}/panel"));
+        $this->assertStringContainsString('person-photo-upload', $page);
+        $this->assertStringContainsString('data-admin-photo-link', $this->body($this->admin, "/people/{$this->student->id}/panel"));
     }
 
     public function testTheModalLinkSaysUploadWhenThereIsNoPhoto(): void

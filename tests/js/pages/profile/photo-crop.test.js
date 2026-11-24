@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OUTPUT, bindPhotoCrop, exportBlob, nudge, pan, squareFor } from "../../../../resources/js/pages/profile/photo-crop.js";
 
@@ -75,53 +75,79 @@ describe("the export", () => {
 
 describe("a stale image", () => {
 
-    it("never has its crop posted after another image was chosen", async () => {
+    const markup = `<form data-photo-crop data-max-bytes="5242880" data-limit="too big">
+        <input type="file" data-photo-choose><div data-photo-stage hidden><canvas data-photo-canvas width="256" height="256"></canvas><input type="range" data-photo-zoom></div>
+        <input type="file" data-photo-export><button data-photo-save disabled></button><p data-field-error hidden></p></form>`;
+    let pending;
+    let images;
+    let draws;
 
-        document.body.innerHTML = `<form data-photo-crop data-max-bytes="5242880" data-limit="too big">
-            <input type="file" data-photo-choose><div data-photo-stage hidden><canvas data-photo-canvas width="256" height="256"></canvas><input type="range" data-photo-zoom></div>
-            <input type="file" data-photo-export><button data-photo-save disabled></button><p data-field-error hidden></p></form>`;
-        const realCreate = document.createElement.bind(document);
-        const pending = [];
+    beforeEach(() => {
+        document.body.innerHTML = markup;
+        pending = [];
+        images = [];
+        draws = vi.fn();
 
-        document.createElement = (tag) => {
-            const el = realCreate(tag);
+        const create = document.createElement.bind(document);
+
+        vi.spyOn(document, "createElement").mockImplementation((tag, options) => {
+            const el = create(tag, options);
 
             if (tag === "canvas") {
                 el.toBlob = (done) => pending.push(done);
             }
 
             return el;
-        };
-        HTMLCanvasElement.prototype.getContext = () => ({ drawImage() {} });
-        globalThis.URL.createObjectURL = () => "blob:x";
-        globalThis.URL.revokeObjectURL = () => {};
-        globalThis.Image = class {
-            set src(_) {
-                this.naturalWidth = 100;
-                this.naturalHeight = 100;
-                queueMicrotask(() => this.onload());
+        });
+        vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({ drawImage: draws });
+        vi.stubGlobal("URL", { createObjectURL: () => "blob:x", revokeObjectURL: () => {} });
+        // An image that loads (or fails) only when the test says so.
+        vi.stubGlobal("Image", class {
+            naturalWidth = 100;
+            naturalHeight = 100;
+            constructor() {
+                images.push(this);
             }
-        };
-        globalThis.DataTransfer = class {
+            set src(_) {}
+        });
+        vi.stubGlobal("DataTransfer", class {
             items = { add: (f) => { this.files = [f]; } };
-        };
+        });
+    });
 
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    const setup = () => {
         const form = document.querySelector("form");
         const exported = form.querySelector("[data-photo-export]");
 
         // jsdom only accepts a real FileList here.
         Object.defineProperty(exported, "files", { value: undefined, writable: true, configurable: true });
         const choose = form.querySelector("[data-photo-choose]");
-        const pick = async () => {
-            Object.defineProperty(choose, "files", { value: [{ type: "image/png", size: 10 }], configurable: true });
-            choose.dispatchEvent(new Event("change"));
-            await Promise.resolve();
-            await Promise.resolve();
-        };
 
         bindPhotoCrop(document);
-        await pick(); // image 1: its export is pending
-        await pick(); // image 2: its export is pending too
+
+        return {
+            exported,
+            problem: form.querySelector("[data-field-error]"),
+            pick: () => {
+                Object.defineProperty(choose, "files", { value: [{ type: "image/png", size: 10 }], configurable: true });
+                choose.dispatchEvent(new Event("change"));
+            },
+        };
+    };
+
+    it("never has its crop posted after another image was chosen", async () => {
+
+        const { exported, pick } = setup();
+
+        pick();
+        images[0].onload();
+        pick();
+        images[1].onload(); // each image's export is pending
 
         const mark = (name) => new Blob([name], { type: "image/jpeg" });
 
@@ -130,8 +156,35 @@ describe("a stale image", () => {
         pending[0](mark("first")); // the first image's late answer
         await Promise.resolve();
 
-        expect(exported.files[0]).toBeDefined();
         expect(await exported.files[0].text()).toBe("second");
+
+    });
+
+    it("is ignored when it loads after a later choice", () => {
+
+        const { pick } = setup();
+
+        pick();
+        pick();
+        images[1].onload();
+        draws.mockClear();
+        images[0].onload(); // the slow first image arrives last
+
+        expect(draws).not.toHaveBeenCalled();
+        expect(pending).toHaveLength(1);
+
+    });
+
+    it("shows no error when it fails after a later choice", () => {
+
+        const { pick, problem } = setup();
+
+        pick();
+        pick();
+        images[1].onload();
+        images[0].onerror();
+
+        expect(problem.hidden).toBe(true);
 
     });
 

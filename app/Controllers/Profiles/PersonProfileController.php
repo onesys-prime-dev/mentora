@@ -94,12 +94,16 @@ class PersonProfileController extends BaseController
             $p['display_name'] = (string) $viewer->username; // only yourself as a system administrator: no profile row
         }
 
+        $admin       = array_key_exists('admin_actions', $p);
+        $permissions = new RolePermissions();
+
         return [
             'p'          => $p,
             'avatar'     => (new AvatarData())->forMany([$id])[$id] ?? ['id' => $id, 'name' => $p['display_name']],
             'canMessage' => $this->canMessage($viewer, $id, $p),
-            // Admin actions need people.manage as well as the role, as the People routes do; null hides them.
-            'photo'      => array_key_exists('admin_actions', $p) && (new \App\Services\Auth\RolePermissions())->allows($viewer, 'people.manage') ? (new ProfilePhotoService())->state($id) : null,
+            // Admin actions follow the People routes: Open in People needs people.view, the photo controls people.manage (null hides them).
+            'canPeople'  => $admin && $permissions->allows($viewer, 'people.view'),
+            'photo'      => $admin && $permissions->allows($viewer, 'people.manage') ? (new ProfilePhotoService())->state($id) : null,
         ];
     }
 

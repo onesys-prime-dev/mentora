@@ -76,6 +76,7 @@ export function bindPhotoCrop(root = document) {
         let img = null;
         let state = null;
         let drag = null;
+        let choice = 0; // a slow image that loads after a later choice (or a reset) must not replace it
         let generation = 0; // a late toBlob of an earlier crop or image must not replace the current one
 
         const fail = (message) => {
@@ -84,6 +85,7 @@ export function bindPhotoCrop(root = document) {
         };
 
         const clear = () => {
+            choice++;
             generation++;
             img = null;
             stage.hidden = true;
@@ -128,9 +130,14 @@ export function bindPhotoCrop(root = document) {
 
             const url = URL.createObjectURL(file);
             const image = new Image();
+            const mine = ++choice;
 
             image.onload = () => {
                 URL.revokeObjectURL(url);
+                if (mine !== choice) {
+                    return;
+                }
+
                 img = image;
                 state = { width: image.naturalWidth, height: image.naturalHeight, zoom: 1, cx: image.naturalWidth / 2, cy: image.naturalHeight / 2 };
                 zoom.value = "1";
@@ -139,7 +146,9 @@ export function bindPhotoCrop(root = document) {
             };
             image.onerror = () => {
                 URL.revokeObjectURL(url);
-                fail(form.dataset.limit);
+                if (mine === choice) {
+                    fail(form.dataset.limit);
+                }
             };
             image.src = url;
         });

@@ -31,11 +31,17 @@ class ProfilePhotoController extends BaseController
 
         $file = (new ProfilePhotoService())->file($id, (int) $size) ?? throw PageNotFoundException::forPageNotFound();
 
-        // Small (at most a few tens of KB), so sent whole; ?v= changes on replace, so a day's private cache is safe.
+        // no-cache: the browser may keep it but asks every time, so photos turning off or access ending applies at once.
+        $etag = '"' . (int) $file['id'] . '-' . (int) $size . '"';
+        $this->response->removeHeader('Cache-Control')->setHeader('Cache-Control', 'private, no-cache')->setHeader('ETag', $etag)->setHeader('X-Content-Type-Options', 'nosniff');
+
+        if ($this->request->getHeaderLine('If-None-Match') === $etag) {
+            return $this->response->setStatusCode(304)->setBody('');
+        }
+
+        // Small (at most a few tens of KB), so sent whole.
         return $this->response
             ->setContentType('image/jpeg', '')
-            ->setHeader('Cache-Control', 'private, max-age=86400')
-            ->setHeader('X-Content-Type-Options', 'nosniff')
             ->setBody((string) file_get_contents((new StorageService())->path($file['storage_key'])));
     }
 
