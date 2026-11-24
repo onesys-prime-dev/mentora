@@ -6,14 +6,24 @@ namespace App\Controllers\Profiles;
 
 use App\Controllers\BaseController;
 use App\Filters\AccountStateFilter;
+use App\Filters\MessagesFilter;
+use App\Services\Auth\RolePermissions;
+use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InstitutionSecurity;
+use App\Services\Messaging\MessagePreferences;
+use App\Services\Parents\ParentAccessService;
+use App\Services\Parents\ParentPortal;
+use App\Services\Parents\ParentPreferences;
 use App\Services\Profiles\PasswordChangeService;
 use App\Services\Profiles\ProfileEditException;
+use App\Services\Profiles\SecurityActivity;
 use App\Services\Profiles\SecurityNotice;
 use App\Services\Profiles\TwoFactorPreference;
+use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\AccountControl;
 use App\Services\Users\PasswordResetService;
 use CodeIgniter\HTTP\RedirectResponse;
+use CodeIgniter\Shield\Entities\User;
 use InvalidArgumentException;
 
 /**
@@ -22,6 +32,8 @@ use InvalidArgumentException;
  */
 class AccountSettingsController extends BaseController
 {
+    use InTransaction;
+
     private const PAGE = 'settings';
 
     /** Reset links a person may ask for per 15 minutes. */
@@ -29,7 +41,8 @@ class AccountSettingsController extends BaseController
 
     public function index(): string
     {
-        $user = auth()->user();
+        $user          = auth()->user();
+        $notifications = $this->notifications($user);
 
         // Each section is [id, jump-list label, partial]; the jump list is drawn from what is here.
         return view('pages/settings/index', [
@@ -42,9 +55,59 @@ class AccountSettingsController extends BaseController
                 ['id' => 'password', 'label' => 'Password', 'view' => 'pages/settings/partials/password'],
                 ['id' => 'two-step', 'label' => 'Two-step sign-in', 'view' => 'pages/settings/partials/two-step'],
                 ['id' => 'devices', 'label' => 'Signed-in devices', 'view' => 'pages/settings/partials/devices'],
+                // Nothing to choose (Messages closed to them and not a parent): no card.
+                ...($notifications['messages'] === null && $notifications['parent'] === null ? [] : [
+                    ['id' => 'notifications', 'label' => 'Notifications', 'view' => 'pages/settings/partials/notifications'],
+                ]),
+                ['id' => 'activity', 'label' => 'Recent activity', 'view' => 'pages/settings/partials/activity'],
             ],
-            'twoFactor'   => (new TwoFactorPreference())->status($user),
+            'twoFactor'     => (new TwoFactorPreference())->status($user),
+            'notifications' => $notifications,
+            'activity'      => (new SecurityActivity())->recent((int) $user->id),
         ]);
+    }
+
+    /**
+     * Saves the Notifications card (D15): the Messages email switch and quiet hours, and a parent's email choice
+     * for each child, with the same rules as before. A choice left as it was is not written again (AC8).
+     */
+    public function saveNotifications(): RedirectResponse
+    {
+        $user  = auth()->user();
+        $parts = $this->notifications($user);
+        $post  = fn (string $key): string => (string) $this->request->getPost($key);
+
+        if ($parts['messages'] !== null) {
+            // The switch off, or hours not offered to them, means no quiet hours.
+            $quiet = $parts['messages']['quiet_allowed'] && $post('quiet_on') === '1';
+
+            if (! (new MessagePreferences())->save($user, $quiet ? $post('quiet_start') : null, $quiet ? $post('quiet_end') : null, $post('email_alerts') === '1')) {
+                return redirect()->to(site_url(self::PAGE) . '#notifications')->withInput()->with('errors', ['quiet_start' => 'Enter both times, as hours and minutes.']);
+            }
+        }
+
+        if ($parts['parent'] !== null && $parts['parent']['portal_on']) {
+            $ticked  = array_map('intval', (array) $this->request->getPost('email'));
+            $changed = [];
+
+            foreach ($parts['parent']['children'] as $child) {
+                $want = in_array($child['student_id'], $ticked, true);
+
+                if ($want !== $child['email']) {
+                    $changed[$child['student_id']] = $want;
+                }
+            }
+
+            (new ParentPreferences())->save((int) $user->id, $changed);
+        }
+
+        return redirect()->to(site_url(self::PAGE))->with('message', 'Notifications saved');
+    }
+
+    /** The old addresses of these forms (D15, D23): sent to their card here, without acting. */
+    public function moved(string $section): RedirectResponse
+    {
+        return redirect()->to(site_url(self::PAGE) . '#' . $section)->setStatusCode($this->request->getMethod() === 'GET' ? 301 : 303);
     }
 
     public function changePassword(): RedirectResponse
@@ -93,19 +156,15 @@ class AccountSettingsController extends BaseController
         $user    = auth()->user();
         $service = new TwoFactorPreference();
 
-        if ($this->request->getPost('action') === 'on') {
-            $service->optIn($user);
-
-            return redirect()->to(site_url(self::PAGE))->with('message', 'Two-step sign-in turned on');
-        }
+        $on      = $this->request->getPost('action') === 'on';
 
         try {
-            $service->optOut($user, (string) $this->request->getPost('password'));
+            $on ? $service->optIn($user) : $service->optOut($user, (string) $this->request->getPost('password'));
         } catch (ProfileEditException $e) {
             return redirect()->to(site_url(self::PAGE) . '#two-step')->with('errors', [$e->field => $e->getMessage()]);
         }
 
-        return redirect()->to(site_url(self::PAGE))->with('message', 'Two-step sign-in turned off');
+        return redirect()->to(site_url(self::PAGE))->with('message', $on ? 'Two-step sign-in turned on' : 'Two-step sign-in turned off');
     }
 
     /** Ends every other session the account has; this one began "after" it, so it stays (D14). */
@@ -113,10 +172,13 @@ class AccountSettingsController extends BaseController
     {
         $user = auth()->user();
 
-        (new AccountControl())->signOutEverywhere((int) $user->id);
+        // The sign-out and its audit entry happen together or not at all.
+        $this->inTransaction(static function () use ($user): void {
+            (new AccountControl())->signOutEverywhere((int) $user->id);
+            service('auditLogger')->log('profile.signed_out_others', $user, ['target_type' => 'user', 'target_id' => (int) $user->id]);
+        });
         session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
 
-        service('auditLogger')->log('profile.signed_out_others', $user, ['target_type' => 'user', 'target_id' => (int) $user->id]);
         SecurityNotice::send(
             $user,
             'Your Mentora account was signed out on your other devices',
@@ -124,5 +186,40 @@ class AccountSettingsController extends BaseController
         );
 
         return redirect()->to(site_url(self::PAGE))->with('message', 'Signed out of all other devices');
+    }
+
+    /**
+     * What the Notifications card offers this person: the Messages part while Messages is open to them, and the
+     * parent part for a parent (their children only while the portal is on, as before).
+     *
+     * @return array{
+     *     messages: array{quiet_start: ?string, quiet_end: ?string, email_alerts: bool, quiet_allowed: bool}|null,
+     *     parent: array{portal_on: bool, children: list<array{student_id: int, name: string, email: bool}>}|null,
+     * }
+     */
+    private function notifications(User $user): array
+    {
+        $messages = null;
+
+        if (! MessagesFilter::closed() && (new RolePermissions())->allows($user, 'messages.use')) {
+            $prefs    = new MessagePreferences();
+            $messages = $prefs->get((int) $user->id) + ['quiet_allowed' => $prefs->quietHoursAllowed($user)];
+        }
+
+        $parent = null;
+
+        if ($user->inGroup('parent')) {
+            $portalOn = (new ParentPortal())->enabled((new PlanLimits())->institutionOf((int) $user->id));
+            $prefs    = new ParentPreferences();
+            $children = [];
+
+            foreach ($portalOn ? (new ParentAccessService())->children($user) : [] as $child) {
+                $children[] = $child + ['email' => $prefs->emailEnabled((int) $user->id, $child['student_id'])];
+            }
+
+            $parent = ['portal_on' => $portalOn, 'children' => $children];
+        }
+
+        return ['messages' => $messages, 'parent' => $parent];
     }
 }

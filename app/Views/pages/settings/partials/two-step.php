@@ -38,7 +38,7 @@ $switch = 'role="switch" aria-checked="' . ($twoFactor['on'] ? 'true' : 'false')
     <?php endif; ?>
 </div>
 
-<?php if ($twoFactor['required'] && $error !== ''): ?>
+<?php if ($error !== '' && ($twoFactor['required'] || ! $twoFactor['on'])): ?>
     <p class="text-xs font-medium text-[#C33939]" role="alert"><?= esc($error) ?></p>
 <?php endif; ?>
 

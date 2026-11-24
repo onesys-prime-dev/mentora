@@ -170,4 +170,32 @@ final class TwoFactorPreferenceTest extends DatabaseTestCase
         $this->refused(fn () => $this->service->optOut($this->ivo, self::PASSWORD), 'Your school requires');
         $this->assertTrue((new AdminEmail2FA())->appliesTo($this->ivo));
     }
+    public function testOptingInWhenTheSchoolAlreadyRequiresItChangesNothing(): void
+    {
+        $this->requireForInstructors();
+
+        $this->service->optIn($this->ivo);
+
+        $this->assertSame(0, (int) db_connect()->table('user_profiles')->where('user_id', $this->ivo->id)->get()->getRow('two_factor_opt_in'));
+        $this->assertSame([], $this->audits('profile.two_factor_on'));
+        $this->assertSame([], $this->mailer->sent);
+    }
+
+    public function testAnAccountWithNoProfileIsRefusedClearlyAndNothingIsLogged(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->ivo->id)->delete();
+
+        $this->refused(fn () => $this->service->optIn($this->ivo), 'Ask your school to finish setting up your account.');
+
+        $this->assertSame([], $this->audits('profile.two_factor_on'));
+        $this->assertSame([], $this->mailer->sent);
+    }
+
+    public function testTheRightPasswordDoesNotAlsoUnlockAdministratorPages(): void
+    {
+        $this->service->optIn($this->ivo);
+        $this->service->optOut($this->ivo, self::PASSWORD);
+
+        $this->assertNull(session('reauth'), 'only a password check, not a re-authentication');
+    }
 }

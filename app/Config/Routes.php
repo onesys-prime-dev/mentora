@@ -66,6 +66,7 @@ $routes->post('settings/password', 'Profiles\AccountSettingsController::changePa
 $routes->post('settings/password-link', 'Profiles\AccountSettingsController::sendPasswordLink', ['filter' => 'session']);
 $routes->post('settings/two-factor', 'Profiles\AccountSettingsController::twoFactor', ['filter' => 'session']);
 $routes->post('settings/sign-out-others', 'Profiles\AccountSettingsController::signOutOthers', ['filter' => 'session']);
+$routes->post('settings/notifications', 'Profiles\AccountSettingsController::saveNotifications', ['filter' => 'session']);
 $routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
 
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
@@ -554,12 +555,11 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
     // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
     $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
-    // The parent's own page. These two forms are the only things a parent can post, and both are
-    // about their own account: the email choice for each child, and an emailed password link.
-    // Phase 5 moves them under /settings and this GET then redirects to /profile.
-    $routes->get('profile', 'Parents\ParentProfileController::index');
-    $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
-    $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
+    // The parent's old own page moved for good to /profile, and its two forms to Settings (D23): a post
+    // from a page still open is sent to the card in Settings without acting.
+    $routes->get('profile', 'Profiles\ProfileController::legacy');
+    $routes->post('profile/notifications', 'Profiles\AccountSettingsController::moved/notifications');
+    $routes->post('profile/password-link', 'Profiles\AccountSettingsController::moved/password');
 
     // The child's calendar, read-only (deadlines and announcements; never their reminders).
     $routes->get('calendar', 'Parents\ParentCalendarController::index');
@@ -610,8 +610,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('group-candidates', 'Messaging\GroupController::candidates');
-    $routes->get('preferences', 'Messaging\PreferenceController::show');
-    $routes->post('preferences', 'Messaging\PreferenceController::save');
+    // The email switch and quiet hours moved to Settings (D15).
+    $routes->get('preferences', 'Profiles\AccountSettingsController::moved/notifications');
     $routes->get('blocks', 'Messaging\BlockController::index');
     $routes->post('blocks', 'Messaging\BlockController::create');
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');

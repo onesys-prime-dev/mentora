@@ -394,6 +394,22 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
     }
 });
 
+/** Sets (from, to) or clears (null) quiet hours on the open Settings page and saves. */
+async function setQuietHours(page, from, to) {
+    const quiet = page.getByRole("switch", { name: "Quiet hours" });
+
+    if (from === null) {
+        await quiet.uncheck();
+    } else {
+        await quiet.check();
+        await page.getByLabel("From").fill(from);
+        await page.getByLabel("to", { exact: true }).fill(to);
+    }
+
+    await page.getByRole("button", { name: "Save notifications" }).click();
+    await expect(page.getByText("Notifications saved")).toBeVisible();
+}
+
 test("TC-MSG-12 Quiet hours hold a notification, and the unread count still shows the message", async ({ browser }) => {
     const teacher = await openMessagesAs(browser, people.instructor1);
     const student = await openMessagesAs(browser, people.michael);
@@ -402,13 +418,12 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
         // Earlier cases left message notifications behind; start this one without any.
         runSql("DELETE FROM notifications WHERE type = 'message'");
 
-        // The whole day, but a minute.
+        // The whole day, but a minute. Quiet hours are set in Settings (D15), reached from the Messages Settings dialog.
         await teacher.page.locator("[data-role=prefs-open]").click();
-        await teacher.page.locator("[data-role=prefs-start]").fill("00:00");
-        await teacher.page.locator("[data-role=prefs-end]").fill("23:59");
-        await teacher.page.locator("[data-role=prefs-save]").click();
-        await expect(teacher.page.locator("[data-role=prefs-note]")).toHaveText("Saved.");
-        await teacher.page.locator("#messages-prefs [data-dialog-close]").first().click();
+        await teacher.page.locator("#messages-prefs").getByRole("link", { name: "Settings" }).click();
+        await expect(teacher.page).toHaveURL(/\/settings#notifications$/);
+        await setQuietHours(teacher.page, "00:00", "23:59");
+        await teacher.page.goto("/messages");
 
         await startThreadWith(student.page, "Maria", people.instructor1.name, "Instructor");
         await sendMessage(student.page, "May I submit my assignment a day late?");
@@ -425,12 +440,9 @@ test("TC-MSG-12 Quiet hours hold a notification, and the unread count still show
         // Control: with no quiet hours, a reply notifies the student.
         await teacher.page.keyboard.press("Escape");
         await expect(teacher.page.locator("#notifications-panel")).toBeHidden();
-        await teacher.page.locator("[data-role=prefs-open]").click();
-        await teacher.page.locator("[data-role=prefs-start]").fill("");
-        await teacher.page.locator("[data-role=prefs-end]").fill("");
-        await teacher.page.locator("[data-role=prefs-save]").click();
-        await expect(teacher.page.locator("[data-role=prefs-note]")).toHaveText("Saved.");
-        await teacher.page.locator("#messages-prefs [data-dialog-close]").first().click();
+        await teacher.page.goto("/settings#notifications");
+        await setQuietHours(teacher.page, null);
+        await teacher.page.goto("/messages");
         await rowFor(teacher.page, people.michael.name).click();
         await sendMessage(teacher.page, "Yes, until Friday.");
 

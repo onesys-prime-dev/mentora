@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Profiles;
 
-use App\Services\Admin\ReauthService;
 use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InstitutionSecurity;
 use CodeIgniter\Shield\Entities\User;
-use RuntimeException;
 
 /**
  * Emailed two-step sign-in from Settings (D14). It is on when the school requires it for one of the person's
@@ -42,9 +40,10 @@ class TwoFactorPreference
         return $this->required($user) || $this->optedIn($user);
     }
 
+    /** @throws ProfileEditException when the account has no profile row to keep the choice on */
     public function optIn(User $user): void
     {
-        if ($this->optedIn($user)) {
+        if ($this->required($user) || $this->optedIn($user)) {
             return;
         }
 
@@ -63,7 +62,8 @@ class TwoFactorPreference
             throw new ProfileEditException(PasswordChangeService::TOO_MANY, self::FIELD);
         }
 
-        if ($password === '' || ! (new ReauthService())->confirm($user, $password, time())) {
+        // Only a password check, like a password change: a re-authentication would also unlock administrator pages.
+        if ($password === '' || ! auth('session')->check(['email' => (string) $user->email, 'password' => $password])->isOK()) {
             throw new ProfileEditException('Your password is not right.', self::FIELD);
         }
 
@@ -101,7 +101,7 @@ class TwoFactorPreference
             $db->table('user_profiles')->where('user_id', $user->id)->update(['two_factor_opt_in' => $value, 'updated_at' => date('Y-m-d H:i:s')]);
 
             if ($db->affectedRows() < 1) {
-                throw new RuntimeException('This account has no profile to save the choice on.');
+                throw new ProfileEditException('We could not save this choice. Ask your school to finish setting up your account.', self::FIELD);
             }
 
             service('auditLogger')->log($action, $user, ['target_type' => 'user', 'target_id' => (int) $user->id]);

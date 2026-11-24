@@ -205,4 +205,49 @@ final class SettingsSecurityTest extends RouteTestCase
         $this->assertSame(0, $this->audits('profile.signed_out_others'));
         $this->assertSame([], $this->mailer->sent);
     }
+    public function testAnAccountWithNoProfileIsToldWhyInsteadOfAnError(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->ivo->id)->delete();
+        $this->browserSignedInSince($this->ivo, time() - 60);
+
+        $this->step('POST', 'settings/two-factor', ['action' => 'on']);
+
+        $this->assertStringContainsString('Ask your school to finish setting up your account.', $this->page());
+        $this->assertSame(0, $this->audits('profile.two_factor_on'));
+    }
+
+    public function testTheSignOutAndItsAuditEntryAreWrittenInOneTransaction(): void
+    {
+        $this->browserSignedInSince($this->ivo, time() - 3600);
+        $depth = static fn (): int => (int) (new ReflectionProperty(db_connect(), 'transDepth'))->getValue(db_connect());
+        $outer = $depth();
+        $seen  = new ArrayObject();
+
+        // The test's own transaction is outermost, so a rollback cannot be watched here: check the audit entry is
+        // written inside a transaction of the action's own, after the sign-out, and a failure stops the notice.
+        Services::injectMock('auditLogger', new class ($depth, $seen, (int) $this->ivo->id) extends App\Services\Audit\AuditLogger {
+            public function __construct(private Closure $depth, private ArrayObject $seen, private int $owner)
+            {
+            }
+
+            public function log(string $action, ?User $actor = null, array $details = []): int
+            {
+                $this->seen['depth']     = ($this->depth)();
+                $this->seen['signedOut'] = db_connect()->table('user_account_controls')->where('user_id', $this->owner)->get()->getRow('sessions_valid_from') !== null;
+
+                throw new RuntimeException('audit store down');
+            }
+        });
+
+        try {
+            $this->step('POST', 'settings/sign-out-others');
+            $this->fail('the failure should reach the error page');
+        } catch (RuntimeException $e) {
+            $this->assertSame('audit store down', $e->getMessage());
+        }
+
+        $this->assertSame(['depth' => $outer + 1, 'signedOut' => true], $seen->getArrayCopy());
+        $this->assertSame($outer, $depth(), 'rolled back');
+        $this->assertSame([], $this->mailer->sent);
+    }
 }

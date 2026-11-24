@@ -25,8 +25,8 @@ class ReadOnlyFilter implements FilterInterface
 
     /**
      * A person's own things stay theirs in a read-only institution (decision 8.2): their
-     * reminders, and a parent's email choices and password link. Notification read state
-     * and the role switch are outside the read-only areas already.
+     * reminders, and the parent's two old account forms (they now only redirect to Settings).
+     * Settings, notification read state and the role switch are outside the read-only areas already.
      */
     public const OWN_ACCOUNT = [
         '#^(student|instructor|chairperson)/api/calendar/reminders(/\d+(/done)?)?$#',

@@ -985,42 +985,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     });
 
-    const prefsEmail = $("[data-role=prefs-email]");
-    const prefsQuiet = $("[data-role=prefs-quiet]");
-    const prefsStart = $("[data-role=prefs-start]");
-    const prefsEnd = $("[data-role=prefs-end]");
-    const prefsNote = $("[data-role=prefs-note]");
-
+    // The email switch and quiet hours moved to Settings (D15); this dialog keeps the blocked people.
     const settings = createSettings({ root, api });
 
-    $("[data-role=prefs-open]")?.addEventListener("click", async () => {
-        settings.sync();
-        prefsNote.textContent = "";
-
-        const { status, data } = await api.preferences();
-
-        if (status !== 200 || !data) {
-            prefsNote.textContent = "Couldn't load your settings.";
-
-            return;
-        }
-
-        prefsEmail.checked = data.preferences.email_alerts;
-        prefsStart.value = data.preferences.quiet_start ?? "";
-        prefsEnd.value = data.preferences.quiet_end ?? "";
-        prefsQuiet.hidden = !data.quiet_hours_allowed;
-    });
-
-    $("[data-role=prefs-save]")?.addEventListener("click", async () => {
-        const hours = !prefsQuiet.hidden;
-        const result = await api.savePreferences({
-            email_alerts: prefsEmail.checked,
-            quiet_start: hours ? prefsStart.value || null : null,
-            quiet_end: hours ? prefsEnd.value || null : null,
-        });
-
-        prefsNote.textContent = result.status === 200 ? "Saved." : result.status === 422 ? "Check the times." : describeFailure(result, "Couldn't save your settings. Try again.");
-    });
+    $("[data-role=prefs-open]")?.addEventListener("click", () => settings.sync());
 
     // ---- starting a staff group ----------------------------------------
     // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.

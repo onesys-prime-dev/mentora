@@ -7,7 +7,6 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DeanFactory;
-use Tests\Support\FakeEmail;
 use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
@@ -158,28 +157,15 @@ final class ProfilePageTest extends RouteTestCase
         }
     }
 
-    public function testTheOldStudentProfileUrlRedirectsPermanentlyAndTheParentPageStaysUntilPhase5(): void
+    public function testTheOldStudentAndParentProfileUrlsRedirectPermanently(): void
     {
-        $this->loggedInAs($this->ann);
-        $response = $this->call('GET', '/student/profile')->response();
+        foreach (['/student/profile' => $this->ann, '/parent/profile' => $this->pam] as $old => $user) {
+            $this->loggedInAs($user);
+            $response = $this->call('GET', $old)->response();
 
-        $this->assertSame(301, $response->getStatusCode());
-        $this->assertStringEndsWith('/profile', $response->getHeaderLine('Location'));
-
-        $this->loggedInAs($this->pam);
-        $this->assertSame(200, $this->call('GET', '/parent/profile')->response()->getStatusCode());
-    }
-
-    public function testTheParentFormsStillRespond(): void
-    {
-        $mailer = FakeEmail::install();
-        $this->loggedInAs($this->pam);
-
-        $this->assertSame(302, $this->call('POST', '/parent/profile/notifications', ['email' => [(string) $this->ann->id]])->response()->getStatusCode());
-        $this->assertSame(302, $this->call('POST', '/parent/profile/password-link')->response()->getStatusCode());
-        $this->assertSame(['pam@family.example'], array_column($mailer->sent, 'to'));
-
-        Services::resetSingle('email');
+            $this->assertSame(301, $response->getStatusCode(), $old);
+            $this->assertStringEndsWith('/profile', $response->getHeaderLine('Location'), $old);
+        }
     }
 
     public function testTheAccountMenuLinksToTheProfileForEveryRole(): void

@@ -18,13 +18,6 @@ class MessagePreferences
     /** Roles that are offered quiet hours (spec call 6). */
     public const QUIET_ROLES = ['instructor', 'chairperson', 'dean'];
 
-    private MessagingContextResolver $resolver;
-
-    public function __construct(?MessagingContextResolver $resolver = null)
-    {
-        $this->resolver = $resolver ?? new MessagingContextResolver();
-    }
-
     /**
      * Times are `HH:MM`; defaults are no quiet hours and emails on.
      *
@@ -41,10 +34,10 @@ class MessagePreferences
         ];
     }
 
-    /** Whether this person is offered quiet hours at all. */
+    /** Whether this person is offered quiet hours at all: by any role they hold, whichever one they are using. */
     public function quietHoursAllowed(User $user): bool
     {
-        return in_array($this->resolver->activeRole($user), self::QUIET_ROLES, true);
+        return $user->inGroup(...self::QUIET_ROLES);
     }
 
     /**
