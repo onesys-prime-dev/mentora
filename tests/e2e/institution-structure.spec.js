@@ -2,6 +2,7 @@
 // Data: the demo institutional administrator of institution 1 (DemoUsersSeeder).
 import { deflateSync } from "node:zlib";
 import { expect, test } from "@playwright/test";
+import { runSql } from "./support/database.js";
 import { accounts, submitLoginForm } from "./support/sign-in.js";
 
 test.describe.configure({ mode: "serial" });
@@ -531,6 +532,10 @@ test("TC-PPL-03 Deactivating asks for the password in a dialog, then switches th
 
     await expect(page.getByText(/The account was deactivated/)).toBeVisible();
     await expect(page.getByRole("row", { name: new RegExp(accounts.student4.email) })).toContainText("Deactivated");
+
+    // student4 is a demo account later specs sign in with (profile-journeys W6): switch it back on.
+    runSql(`UPDATE users u JOIN auth_identities i ON i.user_id = u.id SET u.active = 1 WHERE i.secret = '${accounts.student4.email}'`);
+    runSql(`UPDATE user_account_controls c JOIN auth_identities i ON i.user_id = c.user_id SET c.deactivated_at = NULL WHERE i.secret = '${accounts.student4.email}'`);
 });
 
 test("TC-PPL-04 The last administrator has no Deactivate action", async ({ page }) => {

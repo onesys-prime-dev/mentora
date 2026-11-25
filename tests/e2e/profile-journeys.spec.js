@@ -142,6 +142,11 @@ test("TC-PRF-17 W5 A student changes their password and the old one stops workin
         await page.getByRole("button", { name: "Change password" }).click();
     };
 
+    // The demo password cannot be chosen back through the form (it holds the account's name, which the password
+    // rules refuse), so the original hash is put back afterwards; later specs sign in with it.
+    const identity = `type = 'email_password' AND secret = '${account.email}'`;
+    const hash = queryValue(`SELECT secret2 FROM auth_identities WHERE ${identity}`);
+
     await signInAs(page, account, "student");
     try {
         await change(account.password, changed);
@@ -154,9 +159,13 @@ test("TC-PRF-17 W5 A student changes their password and the old one stops workin
         await expect(fresh).not.toHaveURL(/dashboard$/);
         await context.close();
     } finally {
-        await change(changed, account.password);
-        await expect(page.getByText(/password was changed|Password changed/i).first()).toBeVisible();
+        runSql(`UPDATE auth_identities SET secret2 = '${hash}' WHERE ${identity}`);
     }
+
+    // Back to the demo password: a fresh sign-in works again.
+    const context = await browser.newContext();
+    await signInAs(await context.newPage(), account, "student");
+    await context.close();
 });
 
 test("TC-PRF-18 W6 A student turns two-step sign-in on and off with their password", async ({ page }) => {
