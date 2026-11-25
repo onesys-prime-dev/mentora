@@ -42,8 +42,10 @@ User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages
 
 - **Phase 6 complete** 2026-11-25 on `feat/user-profile-p6-corrections` (ca1e2aea..2530d65d).
 
+- **Phase 7 complete** 2026-11-25 on `feat/user-profile-p7-avatars` (9f953f6c..22bb643a).
+
 ## Next action
-Phase 7 on `feat/user-profile-p7-avatars` (from p6). Carries: batch visibility once per page (C2), admin-layout avatars via forViewer (C3), popover name via data attribute, preferred name in social places (7.4).
+Phase 8 on `feat/user-profile-p8-hardening` (from p7): security sweep, Playwright journeys, docs.
 
 ## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
 Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.
