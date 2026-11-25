@@ -67,7 +67,7 @@ How it works:
 
 A child's linked parents are told what changes for the child (`ParentNotifier`). Each parent hears each
 thing once, in the app always, and by email when the event is one of the emailed kinds and their switch
-for that child is on (default on; set on their Profile page, `parent/profile`).
+for that child is on (default on; set in Settings, Notifications, `/settings#notifications`).
 
 | Event | Told when | Emailed | Opens |
 |---|---|---|---|

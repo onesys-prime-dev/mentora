@@ -52,3 +52,17 @@ Snapshot taken from branch `feat/group-activities-p11-report-group` @ a46a34e6. 
 - **Redesign:** student and parent pages into one shared profile shell with role-specific sections; the header menu entries.
 - **Decide:** SIS-owned field locking; photo storage (the `files` table / `FileModel` already exists); where "Settings" goes.
 - **Retire:** nothing until it is replaced and the user approves.
+
+## Status after the rebuild
+
+Retired or replaced:
+- `StudentProfileController` and `pages/student/profile.php`: replaced by `/profile` (`Profiles\ProfileController`); `student/profile` GET redirects (`legacy`).
+- `ParentProfileController` and `pages/parent/profile.php`: replaced by `/profile` and `/settings`; the GET redirects, the old POSTs answer 303 without acting.
+- Messaging `PreferenceController` (own page): its choices moved to Settings, Notifications; GET `messages/preferences` redirects.
+- The hard-coded `placeholder/profile.png`: every avatar now comes from `components/avatar` (initials or the stored photo).
+- Inert account-menu items: My Profile and Settings are real; Help & Support is shown disabled ("Coming soon").
+- `teachingHomeColumns` as the instructor's home: the profile shows the home department, falling back to "Teaches in ..." only when none is set.
+
+Retained and extended:
+- `user_profiles` and its rows (byte-identical after migration), `retrieveUserProfile` (extended through `ProfileReader`), `PasswordResetService` (the "Email me a link" path), parent email preferences and message preferences (same data, same behaviour, new home), the `files`/storage conventions for photos.
+- Dashboard identity cards keep their layout but use the shared avatar.

@@ -161,7 +161,7 @@ travels in it are tested in `tests/database/ParentNotifierTest.php`.
   anything.
 - **Already automated:** `tests/feature/StudentProfilePageTest.php`
 - **Playwright:** `tests/e2e/parent.spec.js`
-- **Basis:** `app/Views/pages/student/profile.php`
+- **Basis:** `app/Views/pages/profile/partials/profile-body.php` (the old student/profile page was retired)
 - **Review:** Draft
 
 ### TC-PRT-10 The institution's administrator sees who follows which students

@@ -17,16 +17,16 @@
 ## Acceptance criteria → tests
 | AC | Covered by |
 |---|---|
-| AC1 pages, redirects | `ProfilePageTest`, `SettingsNotificationsTest`, `ProfileRouteSecurityTest` |
-| AC2 FR2 matrix + D31 | `ProfilePolicyTest` (unit), `PersonProfileRoutesTest` (HTTP, absence asserts) |
-| AC3 parent / other institution | `PersonProfileRoutesTest`, `ProfilePhotoRoutesTest` |
-| AC4 photos | `ProfilePhotoServiceTest`, `ProfilePhotoRoutesTest`, `ProfilePhotoFlowTest` |
-| AC5 corrections, email | `CorrectionRequestServiceTest`, `EmailChangeServiceTest`, `ProfileCorrectionFlowTest` |
-| AC6 password | `PasswordChangeServiceTest`, `SettingsPasswordTest` |
-| AC7 2FA | `TwoFactorPreferenceTest`, `AdminEmail2FA` tests |
-| AC8 preferences preserved | `SettingsNotificationsTest` |
-| AC9 avatars everywhere | Phase 3 + 7 page tests, `person-card.test.js`, `profile.spec.js` |
-| AC10 no regression | full suites each phase |
+| AC1 pages, redirects | `ProfilePageTest`, `SettingsNotificationsTest`, `ProfileRouteSecurityTest`; e2e `profile.spec.js` TC-PRF-01..05 |
+| AC2 FR2 matrix + D31 | `ProfilePolicyTest` (unit), `PersonProfileRoutesTest` (HTTP, absence asserts); e2e TC-PRF-13 (hover, modal, page) |
+| AC3 parent / other institution | `PersonProfileRoutesTest`, `ProfilePhotoRoutesTest`, `ProfileContextResolverTest`; e2e TC-PRF-23 (parent's child 200 without contact, unlinked student 404) |
+| AC4 photos | `ProfilePhotoServiceTest`, `ProfilePhotoRoutesTest`, `ProfilePhotoFlowTest`; e2e `profile-photo.spec.js` TC-PRF-10..12 |
+| AC5 corrections, email | `CorrectionRequestServiceTest`, `EmailChangeServiceTest`, `ProfileCorrectionFlowTest`, `ProfileModerationTest`, `ProfileClearFieldRoutesTest`; e2e TC-PRF-15, 16 (request, approve, link, new sign-in), 21 (clear), 22 (home department) |
+| AC6 password | `PasswordChangeServiceTest`, `SettingsPasswordTest`; e2e TC-PRF-17 |
+| AC7 2FA | `TwoFactorPreferenceTest`, `SettingsSecurityTest`, `AdminEmail2FA` tests; e2e TC-PRF-18; sign-out-elsewhere TC-PRF-19 |
+| AC8 preferences preserved | `SettingsNotificationsTest`; e2e TC-PRF-20 |
+| AC9 avatars everywhere | Phase 3 + 7 page tests (`MessagesAvatarsTest`, `GroupAvatarsTest`, ...), `person-card.test.js`, `AvatarComponentTest`; e2e `profile-card.spec.js` TC-PRF-06..09 |
+| AC10 no regression | full phpunit and vitest each phase; Phase 8 Playwright regression (parent, messages, menu-placement, institutional-admin); axe and overflow TC-PRF-25, 26 |
 
 ## Local environment
 XAMPP MySQL is broken (do not repair). Tests run on the scratch MariaDB on port 3307 (start command in `docs/feature-development/group-activities/test-strategy.md`). Playwright e2e resets the DB on :3306 and cannot run until that is fixed or the support scripts take a port; record e2e as NOT RUN when so.
@@ -92,3 +92,6 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - Fixed in review: a button inside the "Reply in thread" button (reply was broken), audit avatars in the wrong column, duplicate lookups.
 - Deferred (names only, no leak): recipient/group pickers, "who reacted", notifications, parent feed, message reports, group generator preview, parents.php chips, dean teaching load, chairperson workload and monitor-program, follow-ups, announcement index/dashboard bylines, parent instructor posts, grades at-risk, activity feed; lists still sort by legal name.
 - Responsive screenshot baselines to regenerate on CI (GitHub Actions → Responsive → update_snapshots): student/chairperson/dean messages (+dialogs), student-course-announcements, instructor-announcements, student-module-item, student-item-reading, chairperson-course-module, dean-assessment-view, instructor-grade-work (+graded), chairperson-grade-work, instructor-dashboard, chairperson-dashboard, dean-chairperson-review, dean-monitor-college, institution-people, institution-audit, institution-enrolments, admin-audit-log, admin-users, admin-institution-audit, group screens, student-profile, parent-profile.
+
+### Phase 8 (2026-11-25) - feat/user-profile-p8-hardening
+- Task 8.2: Playwright journeys TC-PRF-13..26 in `tests/e2e/profile-journeys.spec.js` (W1-W13, axe, overflow). Suite counts: _to be completed by the controller._

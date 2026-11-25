@@ -77,16 +77,15 @@ API call), then `parentchild` (the child must be the parent's, and enrolled in t
 address, in any enrolment status). A course with no grading scheme shows no standing and none is
 created by looking; a child who also holds a staff role has no grade or assessment data read.
 
-**The student can see who their parents are.** `student/profile` (read only, no write route) shows the
-student's name, email and student number and "Parents who can see your progress": the names (never an
+**The student can see who their parents are.** `/profile` (the old `student/profile` redirects there; owner-only card) shows
+"Parents who can see your progress": the names (never an
 email) of the parents who actually have access now, that is `ParentAccessService::parentsOf` (linked,
 active, a parent, members of the institution) whose institution has the parent portal on. With none,
-or the portal off, it says "No parent can see your progress." The header's "My Profile" opens it (and a
-parent's own profile for a parent).
+or the portal off, it says "No parent can see your progress." The header's "My Profile" opens it (the same page for a parent's own profile).
 
-**The parent's profile** (`parent/profile`) is the parent's own account and the only place a parent can
-change anything: the email choice for each child (`POST parent/profile/notifications`, behind
-`parentportal`) and an emailed password link to their own address (`POST parent/profile/password-link`).
+**The parent's profile and settings.** `/profile` lists the linked children; the only things a parent can
+change are in `/settings`: the email choice for each child (Notifications, `POST settings/notifications`) and the
+password (Password card, with an emailed link). The old `parent/profile` redirects to `/profile`; its two old POSTs answer 303 and do nothing.
 Nothing under `parent/children/...` can be posted to, and a read-only institution refuses both.
 Notifications are on the shared `/notifications` page (`docs/notifications.md`, "Parents").
 

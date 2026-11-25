@@ -109,7 +109,7 @@ to your institution, have a second administrator account review reports about th
 
 ## What each person can set
 
-- **Email alerts** for new messages (everyone). At most one email per conversation per hour.
+- **Email alerts** for new messages (everyone). At most one email per conversation per hour. These choices (and quiet hours) moved from the old Messages preferences page to **Settings, Notifications** (`/settings#notifications`); `GET messages/preferences` redirects there.
 - **Blocked people** (everyone): the list of people you have blocked, with Unblock, in Settings.
 - **Chat controls** (the institution's administrator only, in **Institution settings, Messages**; not in the Messages page): a picker of every course chat and staff group of the institution (the administrator does not need to be in the chat), then that chat's switches. It has switches for **Reactions**, **Replies**, **Forwarding**, **Bump** and **Delete for everyone**, and for course chats the lock ("Only the instructor can post"). Turning one off hides it from members' menus and the server refuses it. Two things are never switches: **Delete for me** is always available, and a manager's **Remove** is always available. Turning Forwarding off does not stop someone copying the text by hand. Everyone else cannot change them; the Messages page's Settings is only "My alerts" and blocked people. Instructors keep the **Lock chat** button on their own course chat. Who manages a chat is in `roles-and-permissions.md`.
 - **Quiet hours** (instructors, chairpersons and deans): during them nothing is notified or
