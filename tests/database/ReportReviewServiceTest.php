@@ -8,6 +8,8 @@ use App\Services\Messaging\MessageService;
 use App\Services\Messaging\ReportReviewService;
 use App\Services\Messaging\ReportService;
 use CodeIgniter\Config\Services;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
@@ -194,5 +196,54 @@ final class ReportReviewServiceTest extends DatabaseTestCase
         db_connect()->table('message_reports')->where('id', $first)->update(['snapshot_enc' => $stolen]);
 
         $this->assertSame([], $this->review()->view($this->admin, $first)['snapshot']);
+    }
+
+    public function testReportsCarryAvatarsButKeepTheLegalNames(): void
+    {
+        db_connect()->table('user_profiles')->whereIn('user_id', [$this->child->id, $this->instructor->id])->update(['preferred_first_name' => 'Jun']);
+        $report = $this->report($this->child, $this->chat, $this->say($this->instructor, 'hello'));
+
+        $row  = $this->review()->list($this->admin)[0];
+        $line = $this->review()->view($this->admin, $report)['snapshot'][0];
+
+        $this->assertSame('Kid Child', $row['reporter_name'], 'an official screen: the legal name');
+        $this->assertSame((int) $this->child->id, $row['reporter_avatar']['person']['id']);
+        $this->assertTrue($row['reporter_avatar']['interactive']);
+        $this->assertSame('Ins Tructor', $line['sender_name']);
+        $this->assertSame((int) $this->instructor->id, $line['avatar']['person']['id']);
+        $this->assertTrue($line['avatar']['interactive']);
+    }
+
+    public function testAHiddenPersonsAvatarOnAReportIsInert(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Zedekiah']);
+        $report = $this->report($this->child, $this->chat, $this->say($this->instructor, 'hello'));
+        db_connect()->table('institution_users')->where('user_id', $this->instructor->id)->delete();
+
+        $view = $this->review()->view($this->admin, $report);
+
+        $this->assertFalse($view['snapshot'][0]['avatar']['interactive']);
+        $this->assertNull($view['snapshot'][0]['avatar']['person']['photo_url']);
+        $this->assertStringNotContainsString('Zedekiah', (string) json_encode($view));
+    }
+
+    public function testTheListLooksAvatarsUpOnce(): void
+    {
+        $other = PeopleFactory::person('student', 'Oth', 'Er', null, $this->institution);
+        CourseFactory::enroll($this->offering, $other);
+        (new CourseChatSync())->syncOffering($this->offering);
+        $this->report($this->child, $this->chat, $this->say($this->instructor, 'one'));
+        $this->report($other, $this->chat, $this->say($this->instructor, 'two'));
+
+        $n = 0;
+        $l = static function (Query $q) use (&$n): void {
+            $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        Events::on('DBQuery', $l);
+        $list = $this->review()->list($this->admin);
+        Events::removeListener('DBQuery', $l);
+
+        $this->assertCount(2, $list);
+        $this->assertSame(1, $n);
     }
 }

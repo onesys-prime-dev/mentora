@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -45,6 +46,9 @@ class ConversationPresenter
         $role        = $this->resolver->activeRole($viewer);
         $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $blocked     = $this->blockedIds((int) $viewer->id);
+        // One lookup for the list: the other person of each direct chat and each subject student, as this viewer
+        // may see them (FR2); their gated names replace the legal ones (FR5).
+        $avatars     = (new AvatarData())->forViewerJson($viewer, array_values(array_filter(array_map('intval', [...array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
         $out         = [];
 
         foreach ($rows as $row) {
@@ -66,14 +70,15 @@ class ConversationPresenter
                 $name  = (string) ($row['title'] ?? 'Group');
                 $short = $name;
             } else {
-                $name  = $other === null ? 'Someone' : ($people[$other] ?? 'Someone');
+                $name  = $other === null ? 'Someone' : ($avatars[$other]['name'] ?? $people[$other] ?? 'Someone');
                 $short = $name;
             }
 
             $row['name']     = $name;
             $row['closed']   = $closed;
             $row['initials'] = $this->initials($short);
-            $row['subtitle'] = $subject === null ? null : ($people[$subject] ?? null);
+            $row['avatar']   = $row['type'] === 'direct' && $other !== null ? ($avatars[$other] ?? null) : null;
+            $row['subtitle'] = $subject === null ? null : ($avatars[$subject]['name'] ?? $people[$subject] ?? null);
             $row['preview']  = $this->preview((int) $row['id'], (int) $viewer->id);
             $row['can_post'] = $this->policy->canPost($this->resolver->forPost($viewer, [
                 'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution,

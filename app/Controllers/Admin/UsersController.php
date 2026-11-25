@@ -6,6 +6,8 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 use App\Models\Academic\InstitutionModel;
+use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\CorrectionRequestService;
 use App\Services\Sis\SisOwnership;
 use App\Services\Users\PasswordResetService;
 use App\Services\Users\UserAdminService;
@@ -42,6 +44,11 @@ class UsersController extends BaseController
     {
         $filters = UserFilters::fromInput($this->request->getGet());
         $result  = $this->directory->search($filters);
+        $admin   = auth()->user();
+        // Correction requests that reach the platform (D22): no institution, or no other institutional admin there.
+        $requests = (new CorrectionRequestService())->pendingFor($admin);
+        // One avatar lookup for the page: the listed users and the people asking for corrections.
+        $avatars = (new AvatarData())->forViewer($admin, array_values(array_unique(array_map('intval', [...array_column($result['rows'], 'id'), ...array_column($requests, 'user_id')]))));
 
         return view('pages/admin/users/index', [
             'title'            => 'Users',
@@ -49,10 +56,14 @@ class UsersController extends BaseController
             'user'             => auth()->user(),
             'userFilters'      => $filters,
             'userRows'         => $result['rows'],
+            'userAvatars'      => $avatars,
             'userTotal'        => $result['total'],
             'userPages'        => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'userInstitutions' => $this->institutions(),
             'userSelf'         => (int) auth()->id(),
+            'userRequests'     => $requests,
+            'userRequestFaces' => $avatars,
+            'userCanDecide'    => (bool) $admin->can('users.manage'),
         ]);
     }
 
@@ -140,6 +151,11 @@ class UsersController extends BaseController
 
     public function update(int $id): RedirectResponse
     {
+        // D17: your own official details change on your profile, where every change is recorded the same way.
+        if ($id === (int) auth()->id()) {
+            return redirect()->to("admin/users/{$id}")->with('error', 'Edit your own details from your profile.');
+        }
+
         return $this->act($id, fn () => $this->users->update($id, $this->request->getPost()), 'Saved.', true);
     }
 

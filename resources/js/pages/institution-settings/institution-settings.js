@@ -90,3 +90,12 @@ document.querySelectorAll("[data-announcement-clear]").forEach((button) => {
         }
     });
 });
+
+// The Profile photos switch: aria-checked follows the checkbox (role="switch").
+document.addEventListener("change", (event) => {
+    const el = event.target;
+
+    if (el instanceof HTMLInputElement && el.matches("[data-photos-switch]")) {
+        el.setAttribute("aria-checked", String(el.checked));
+    }
+});

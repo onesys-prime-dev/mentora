@@ -81,20 +81,27 @@ test("TC-PRT-05 The calendar is read-only", async ({ page }) => {
     await expect(page.getByText("Reminder", { exact: true })).toHaveCount(0);
 });
 
-test("TC-PRT-06 A parent chooses which child they are emailed about, and it is kept", async ({ page }) => {
+test("TC-PRT-06 A parent chooses which child they are emailed about in Settings, and it is kept", async ({ page }) => {
     await signInAs(page, accounts.parent, "parent");
-    await page.goto("/parent/profile");
 
-    const michael = page.getByLabel(/Michael Villanueva/);
+    // The old page and its menu item lead to the profile; the choices live in Settings.
+    await page.goto("/parent/profile");
+    await expect(page).toHaveURL(/\/profile$/);
+    await page.goto("/settings#notifications");
+
+    const michael = page.getByRole("switch", { name: /Michael Villanueva/ });
+    await expect(michael).toBeChecked();
     await michael.uncheck();
-    await page.getByRole("button", { name: "Save choices" }).click();
+    await page.getByRole("button", { name: "Save notifications" }).click();
+    await expect(page.getByText("Notifications saved")).toBeVisible();
 
-    await page.goto("/parent/profile");
+    await page.goto("/settings#notifications");
     await expect(michael).not.toBeChecked();
 
     // Put it back so the next run starts the same (the e2e database is reseeded anyway).
     await michael.check();
-    await page.getByRole("button", { name: "Save choices" }).click();
+    await page.getByRole("button", { name: "Save notifications" }).click();
+    await expect(page.getByText("Notifications saved")).toBeVisible();
 });
 
 test("TC-PRT-07 A parent with no linked student gets an explanation, not an error", async ({ page }) => {
@@ -113,9 +120,9 @@ test("TC-PRT-08 Other roles cannot open the parent area", async ({ page }) => {
 
 test("TC-PRT-09 A student sees which parents can see their progress", async ({ page }) => {
     await signInAs(page, accounts.student, "student");
-    await page.goto("/student/profile");
+    await page.goto("/profile");
 
-    const parents = page.locator("[data-student-parents]");
+    const parents = page.locator("[data-profile-parents]");
     await expect(parents).toContainText("Roberto");
     await expect(parents).toContainText("cannot change anything");
 });

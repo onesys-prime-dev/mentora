@@ -122,7 +122,12 @@ function bindStudentList() {
         .querySelectorAll("[data-grade-work-student]")
         .forEach((row) => {
 
-            row.addEventListener("click", () => {
+            row.addEventListener("click", (event) => {
+
+                // The avatar opens the person's card, not the student.
+                if (event.target.closest("[data-person-avatar]")) {
+                    return;
+                }
 
                 const studentId =
                     row.dataset.gradeWorkStudentId;

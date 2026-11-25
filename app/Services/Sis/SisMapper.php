@@ -24,7 +24,7 @@ final class SisMapper
      *
      * @param array<string, string> $record a students.csv or instructors.csv record
      *
-     * @return array{external_id: string, first_name: string, middle_name: ?string, last_name: string, suffix: ?string, email: string, student_number: ?string}
+     * @return array{external_id: string, first_name: string, middle_name: ?string, last_name: string, suffix: ?string, email: string, student_number: ?string, home_department: ?string}
      */
     public static function person(array $record): array
     {
@@ -36,6 +36,8 @@ final class SisMapper
             'suffix'         => self::optional($record, 'suffix'),
             'email'          => strtolower($record['email']),
             'student_number' => self::optional($record, 'student_number'),
+            // Instructors only; absent and empty both leave what the school set alone.
+            'home_department' => self::optional($record, 'home_department'),
         ];
     }
 

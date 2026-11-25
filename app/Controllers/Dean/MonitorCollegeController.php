@@ -65,6 +65,11 @@ class MonitorCollegeController extends BaseController
         }
 
         $name = db_connect()->table('colleges')->select('name')->where('id', (int) $college['college_id'])->get()->getRow('name');
+        // One avatar lookup for the page: the at-risk students and the audit actors together.
+        $avatars = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_filter(array_map('intval', [
+            ...array_column($overview['atRisk'], 'student_id'),
+            ...array_column($audit['rows'] ?? [], 'actor_id'),
+        ])))));
 
         return view('pages/dean/monitor-college', [
             'title'          => 'Monitor College',
@@ -80,8 +85,10 @@ class MonitorCollegeController extends BaseController
             'groups'         => $overview['groups'],
             'gradeDistribution' => $overview['gradeDistribution'],
             'atRisk'         => $overview['atRisk'],
+            'atRiskAvatars'  => $avatars,
             'instructorActivity' => $instructors,
             'audit'          => $audit,
+            'auditAvatars'   => $avatars,
             'auditPage'      => $auditPage,
             'auditPages'     => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
             'previousPage'   => 'dashboard',
@@ -202,6 +209,11 @@ class MonitorCollegeController extends BaseController
             'monitorEmptyText'   => 'Courses in this program will appear here.',
             'monitorBackUrl'     => site_url('dean/monitor-college?compare=program'),
             'monitorBackLabel'   => 'Back to Monitor College',
+            // One lookup for the page: the at-risk students and the audit actors together, as on Monitor College.
+            'monitorAvatars'     => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_filter(array_map('intval', [
+                ...array_column($page['atRisk'], 'student_id'),
+                ...array_column($page['audit']['rows'] ?? [], 'actor_id'),
+            ]))))),
             'mainGutter'   => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
         ]);
     }

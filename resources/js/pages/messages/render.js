@@ -8,6 +8,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { renderAvatar } from "../../shared/avatar.js";
 import { reactionChips } from "./reactions.js";
 
 const ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" };
@@ -235,6 +236,13 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
         const role = ROLE_LABELS[message.sender_role];
         const label = el("small", `mb-0.5 block text-[12px] font-semibold ${message.sender_role === "instructor" ? "text-brand" : "text-gray-500"}`, role ? `${message.sender_name} · ${role}` : message.sender_name);
 
+        // The server's avatar (AvatarData::forViewer): a way into the profile, or decoration beside the name.
+        if (message.avatar) {
+            label.classList.replace("block", "flex");
+            label.classList.add("items-center", "gap-1.5");
+            label.prepend(renderAvatar(message.avatar, "xs", { decorative: true }));
+        }
+
         node.append(label);
     }
 
@@ -287,7 +295,10 @@ export function conversationRow(conversation, { selected }) {
     }
 
     const shape = conversation.type === "course" ? "rounded-lg bg-brand text-white" : conversation.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark";
-    const avatar = el("span", `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${shape}`, conversation.initials ?? "");
+    // A direct chat shows the other person's avatar; never a button, as the row is one. Course and group chats keep their tile.
+    const avatar = conversation.avatar
+        ? renderAvatar({ ...conversation.avatar, interactive: false }, "sm", { decorative: true })
+        : el("span", `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${shape}`, conversation.initials ?? "");
 
     avatar.dataset.avatar = "";
     avatar.setAttribute("aria-hidden", "true");

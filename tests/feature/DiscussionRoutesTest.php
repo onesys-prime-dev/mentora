@@ -487,4 +487,66 @@ final class DiscussionRoutesTest extends RouteTestCase
         $this->assertNotNull($this->row('discussion_threads', $foreign));
         $this->assertSame(0, (int) $this->row('discussion_threads', $foreign)['is_pinned']);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Author avatars (profile card)
+    |--------------------------------------------------------------------------
+    */
+
+    public function testAuthorAvatarsOpenTheProfileOnlyForPeopleTheViewerMaySee(): void
+    {
+        // Someone still enrolled who has left the institution: a viewer there may no longer see them (FR2).
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student, $this->classmate]);
+        CourseFactory::members($this->offering, [$leaver], false);
+
+        $id = $this->start($this->student, 'Seen by classmates');
+        $this->start($leaver, 'From someone who left');
+        $this->api($this->instructor, 'post', "/{$id}/reply", ['body' => 'Teacher here']);
+        $this->api($leaver, 'post', "/{$id}/reply", ['body' => 'Leaver here']);
+        $own = $this->api($this->classmate, 'post', "/{$id}/reply", ['body' => 'Mine'])['html'];
+
+        $interactive = static fn (string $html, User $u): bool => str_contains($html, 'data-person-avatar="' . $u->id . '"');
+
+        $list = $this->api($this->classmate, 'get')['html'];
+        $this->assertTrue($interactive($list, $this->student));
+        $this->assertFalse($interactive($list, $leaver));
+        $this->assertSame(2, substr_count($list, 'data-avatar'), 'every row has an avatar');
+
+        $thread = $this->api($this->classmate, 'get', "/{$id}")['html'];
+        $this->assertTrue($interactive($thread, $this->student), 'opening post');
+        $this->assertTrue($interactive($thread, $this->instructor), 'reply');
+        $this->assertTrue($interactive($thread, $this->classmate), 'their own reply opens their card');
+        $this->assertFalse($interactive($thread, $leaver));
+        $this->assertSame(4, substr_count($thread, 'data-avatar'));
+        $this->assertTrue($interactive($own, $this->classmate), 'the reply just posted');
+        $this->assertStringNotContainsString('placeholder/profile.png', $list . $thread);
+    }
+
+    public function testAuthorNamesArePreferredOnlyForPeopleTheViewerMaySee(): void
+    {
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student, $this->classmate]);
+        CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+
+        $id = $this->start($this->student, 'Seen by classmates');
+        $this->start($leaver, 'From someone who left');
+        $own = $this->api($this->student, 'post', "/{$id}/reply", ['body' => 'Me again'])['html'];
+        $this->api($leaver, 'post', "/{$id}/reply", ['body' => 'Leaver here']);
+
+        $list = $this->api($this->classmate, 'get')['html'];
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $list);
+        $this->assertStringContainsString('>Hal Hidden</span>', $list);
+
+        $thread = $this->api($this->classmate, 'get', "/{$id}")['html'];
+        $this->assertSame(2, substr_count($thread, '>Jun Dela Cruz</span>'), 'the opening post and the reply');
+        $this->assertStringContainsString('>Hal Hidden</span>', $thread, 'a hidden author keeps the legal name');
+        $this->assertStringNotContainsString('Zedekiah', $list . $thread);
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $own, 'the reply just posted');
+    }
 }

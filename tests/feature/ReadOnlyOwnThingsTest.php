@@ -72,10 +72,10 @@ final class ReadOnlyOwnThingsTest extends RouteTestCase
     {
         $this->personIn('parent', $status);
 
-        $result = $this->step('POST', 'parent/profile/notifications', ['email' => []]);
+        $result = $this->step('POST', 'settings/notifications', ['email' => []]);
 
         $this->assertStringNotContainsString('read-only', (string) session('error'));
-        $this->assertSame('Your email choices were saved.', session('message'));
+        $this->assertSame('Notifications saved', session('message'));
         $result->assertRedirect();
     }
 

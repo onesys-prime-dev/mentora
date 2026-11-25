@@ -1,4 +1,5 @@
 import { applyFieldErrors, createDialog } from "../../../shared/dialog.js";
+import { renderAvatar } from "../../../shared/avatar.js";
 import { showToast } from "../../../shared/toast.js";
 import { beginLoad } from "../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../shared/spa/error-state.js";
@@ -256,7 +257,7 @@ function leaderRow(group) {
 function renderMine(card, state) {
 
     const group = state.myGroup;
-    const chips = group.members.map((m) => `<span class="rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${memberChip(m)}</span>`).join("");
+    const chips = group.members.map((m) => `<span class="inline-flex items-center gap-1.5 rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${m.avatar ? renderAvatar(m.avatar, "xs", { decorative: true }).outerHTML : ""}<span>${memberChip(m)}</span></span>`).join("");
     let notice = "";
     let actions = "";
 
@@ -423,8 +424,9 @@ async function onClick(card, event) {
         const invitable = card.state.invitable ?? [];
 
         form.querySelector("[data-sg-size-hint]").textContent = minSize === maxSize ? `Groups have ${minSize} members, you included.` : `Groups have ${minSize} to ${maxSize} members, you included.`;
+        // Inside a tick box's label a button would steal the click: each avatar is a plain picture beside the name.
         form.querySelector("[data-sg-invitees]").innerHTML = invitable.length
-            ? invitable.map((s) => `<label class="flex items-center gap-2 py-1 text-sm text-[#3D3D3D] pointer-coarse:min-h-11"><input type="checkbox" name="invitee_ids" value="${s.id}" class="h-4 w-4 rounded border-gray-300 text-brand focus-visible:ring-2 focus-visible:ring-brand/50"> ${escapeHtml(s.name)}</label>`).join("")
+            ? invitable.map((s) => `<label class="flex items-center gap-2 py-1 text-sm text-[#3D3D3D] pointer-coarse:min-h-11"><input type="checkbox" name="invitee_ids" value="${s.id}" class="h-4 w-4 rounded border-gray-300 text-brand focus-visible:ring-2 focus-visible:ring-brand/50">${s.avatar ? renderAvatar({ ...s.avatar, interactive: false }, "xs", { decorative: true }).outerHTML : ""} ${escapeHtml(s.name)}</label>`).join("")
             : "<p class=\"text-sm text-[#646464]\">Nobody else is free to invite right now. You can still propose the group on your own.</p>";
 
         return;

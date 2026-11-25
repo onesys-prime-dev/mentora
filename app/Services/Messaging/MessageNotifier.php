@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Notifications\NotificationService;
+use App\Services\Profiles\ProfileContextResolver;
 use DateInterval;
 use DateTimeImmutable;
 
@@ -86,6 +87,7 @@ class MessageNotifier
         $members = $db->table('conversation_participants')->where(['conversation_id' => $conversationId, 'is_muted' => 0, 'left_at' => null])->get()->getResultArray();
         $told    = 0;
         $name    = null;
+        $due     = [];
 
         foreach ($members as $member) {
             $userId = (int) $member['user_id'];
@@ -100,15 +102,26 @@ class MessageNotifier
                 continue;
             }
 
-            $maxId = (int) $unseen['id'];
+            $due[] = ['row' => (int) $member['id'], 'user' => $userId, 'sender' => (int) $unseen['sender_id'], 'max' => (int) $unseen['id'], 'tell' => ! $this->hasUnreadNoticeForThread($userId, $conversationId)];
+        }
 
-            if (! $this->hasUnreadNoticeForThread($userId, $conversationId)) {
+        // The senders' names for everyone told, worked out once for the whole send.
+        $wanted = [];
+        foreach ($due as $d) {
+            if ($d['tell']) {
+                $wanted[$d['sender']][] = $d['user'];
+            }
+        }
+        $names = $this->namesFor($wanted);
+
+        foreach ($due as $d) {
+            if ($d['tell']) {
                 $name ??= $this->chatName($chat);
-                $this->tell($userId, $chat, (int) $unseen['sender_id'], $name, $maxId, $now);
+                $this->tell($d['user'], $chat, $names[$d['sender']][$d['user']] ?? 'Someone', $name, $d['max'], $now);
                 $told++;
             }
 
-            $db->table('conversation_participants')->where('id', (int) $member['id'])->update(['last_notified_message_id' => $maxId]);
+            $db->table('conversation_participants')->where('id', $d['row'])->update(['last_notified_message_id' => $d['max']]);
         }
 
         return $told;
@@ -117,11 +130,10 @@ class MessageNotifier
     /**
      * @param array<string, mixed> $chat a `conversations` row
      */
-    private function tell(int $userId, array $chat, int $senderId, ?string $chatName, int $maxId, DateTimeImmutable $now): void
+    private function tell(int $userId, array $chat, string $sender, ?string $chatName, int $maxId, DateTimeImmutable $now): void
     {
         $conversationId = (int) $chat['id'];
-        $sender         = ConversationPresenter::names([$senderId])[$senderId] ?? 'Someone';
-        $body           = $chat['type'] === 'direct' || $chatName === null ? "{$sender} sent you a message." : "{$sender} sent you a message in {$chatName}.";
+        $body          = $chat['type'] === 'direct' || $chatName === null ? "{$sender} sent you a message." : "{$sender} sent you a message in {$chatName}.";
         $emails         = $this->prefs->get($userId)['email_alerts'] && ! $this->emailedRecently($userId, $conversationId, $now);
 
         // Never any message text: who, where, and a link.
@@ -151,9 +163,43 @@ class MessageNotifier
 
         $key = "react:{$messageId}";
 
-        $name = ConversationPresenter::names([$reactorId])[$reactorId] ?? 'Someone';
+        $name = $this->namesFor([$reactorId => [$authorId]])[$reactorId][$authorId] ?? 'Someone';
 
         $this->notes->send($authorId, 'message', 'New reaction', "{$name} reacted to your message.", false, $key, (int) $row['institution_id'], 'messages/' . $row['conversation_id']);
+    }
+
+    /**
+     * The words are stored when sent, so each recipient gets the name they may see then (FR2, R20): the preferred
+     * first name only for recipients who may see the person, otherwise the legal name. One profile lookup for all
+     * the people, and a visibility check only for someone who has a preferred name: one call per person, whatever
+     * the number of recipients.
+     *
+     * @param array<int, list<int>> $wanted person id => the recipients to be told about them
+     *
+     * @return array<int, array<int, string>> person id => recipient id => name
+     */
+    private function namesFor(array $wanted): array
+    {
+        if ($wanted === []) {
+            return [];
+        }
+
+        $rows = db_connect()->table('user_profiles')->select('user_id, first_name, last_name, preferred_first_name')->whereIn('user_id', array_keys($wanted))->get()->getResultArray();
+        $out  = [];
+
+        foreach ($rows as $r) {
+            $id        = (int) $r['user_id'];
+            $last      = trim((string) $r['last_name']);
+            $legal     = trim(trim((string) $r['first_name']) . ' ' . $last);
+            $preferred = trim((string) $r['preferred_first_name']);
+            $sees      = $preferred === '' ? [] : array_flip((new ProfileContextResolver())->viewersWhoSee($id, $wanted[$id]));
+
+            foreach ($wanted[$id] as $recipient) {
+                $out[$id][$recipient] = isset($sees[$recipient]) ? trim($preferred . ' ' . $last) : $legal;
+            }
+        }
+
+        return $out;
     }
 
     private function hasUnreadNoticeForThread(int $userId, int $conversationId): bool

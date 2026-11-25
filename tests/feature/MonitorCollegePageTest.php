@@ -65,6 +65,43 @@ final class MonitorCollegePageTest extends RouteTestCase
         }
     }
 
+    public function testAtRiskStudentsGetAvatarsFromOneLookupAndNoPlaceholder(): void
+    {
+        $it    = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $count = function (): int {
+            $queries = 0;
+            $l       = static function () use (&$queries): void {
+                $queries++;
+            };
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $this->page();
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return $queries;
+        };
+
+        // The first student belongs to no institution: the dean may not open their card.
+        $this->enrolled($it, 1);
+        $few = $count();
+        $this->enrolled($it, 6);
+        $ids = array_map('intval', array_column(db_connect()->table('enrollments')->select('student_user_id')->where('offering_id', $it)->orderBy('id')->get()->getResultArray(), 'student_user_id'));
+        $hidden = array_shift($ids);
+        foreach ($ids as $id) {
+            db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $id]);
+        }
+        $many = $count();
+        $body = $this->page();
+
+        $this->assertSame(7, substr_count($body, 'data-follow-up-link'));
+        foreach ($ids as $id) {
+            $this->assertStringContainsString('data-person-avatar="' . $id . '"', $body);
+        }
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden . '"', $body);
+        $this->assertStringContainsString('Dent' . $hidden, $body, 'the hidden student keeps the name the page prints');
+        $this->assertStringNotContainsString('placeholder/profile.png', $body);
+        $this->assertLessThanOrEqual($few + 2, $many, 'avatars are fetched once for the page, not per row');
+    }
+
     public function testTheDeanSeesTheCollegesTotalsComparisonAndAtRiskStudents(): void
     {
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
@@ -191,6 +228,23 @@ final class MonitorCollegePageTest extends RouteTestCase
         $this->assertSame(1, substr_count($body, 'data-audit-entry'));
     }
 
+    public function testTheAuditLogShowsTheActorsAvatarOpenOnlyWhereTheDeanMaySee(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->chairAction('maria@dept.example', $it, 'PATCH', '2026-09-02 09:00:00');
+        $this->chairAction('lone@dept.example', $it, 'PATCH', '2026-09-03 09:00:00');
+
+        $actors = array_map('intval', array_column(db_connect()->table('audit_logs')->select('actor_user_id')->where('action', 'course.chairperson_action')->orderBy('id')->get()->getResultArray(), 'actor_user_id'));
+        [$seen, $lone] = $actors;
+        db_connect()->table('institution_users')->where('user_id', $lone)->delete();
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $seen . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $lone . '"', $body);
+        $this->assertStringContainsString('lone@dept.example', html_entity_decode($body), 'the name stays');
+    }
+
     public function testTheAuditLogPagesAndKeepsTheFilters(): void
     {
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101');
@@ -251,6 +305,24 @@ final class MonitorCollegePageTest extends RouteTestCase
         $this->assertStringContainsString('maria@dept.example', $body, 'the dean sees who');
         $this->assertStringContainsString(site_url('dean/monitor-college?compare=program'), $body);
         $this->assertStringContainsString('id="monitor-program-charts"', $body);
+    }
+
+    public function testAProgramPageGivesAtRiskStudentsAndActorsTheirGatedAvatars(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->enrolled($it, 2);
+        $this->chairAction('maria@dept.example', $it, 'POST', '2026-09-02 09:00:00');
+        [$seen, $hidden] = array_map('intval', array_column(db_connect()->table('enrollments')->select('student_user_id')->where('offering_id', $it)->orderBy('id')->get()->getResultArray(), 'student_user_id'));
+        db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $seen]);
+        $actor = (int) db_connect()->table('audit_logs')->where('action', 'course.chairperson_action')->get()->getRowArray()['actor_user_id'];
+
+        $this->loggedInAs($this->dean);
+        $body = $this->call('GET', "/dean/monitor-college/programs/{$this->programA}")->response()->getBody();
+
+        $this->assertStringContainsString('data-person-avatar="' . $seen . '"', $body);
+        $this->assertStringContainsString('data-person-avatar="' . $actor . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden . '"', $body);
+        $this->assertStringContainsString('Dent' . $hidden, $body, 'the hidden student keeps the name the page prints');
     }
 
     public function testAProgramPageKeepsItsOwnFiltersInItsLinks(): void

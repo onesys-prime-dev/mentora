@@ -519,7 +519,7 @@ final class DeanGradesPageTest extends RouteTestCase
 
         $x = $this->xpath($this->open('sub=at-risk'));
 
-        $this->assertContains('Faye Failing', $this->texts($x, '//*[@data-risk-row]/th'));
+        $this->assertContains('Faye Failing', $this->texts($x, '//*[@data-risk-row]/th//*[@data-risk-name]'));
         $this->assertSame(0, $x->query('//*[@data-risk-row]//a')->length, 'the course page would refuse them');
     }
 
@@ -542,18 +542,18 @@ final class DeanGradesPageTest extends RouteTestCase
 
         $this->assertSame('at-risk', $x->query("//*[@data-grades-sub][@aria-current='page']")->item(0)->getAttribute('data-grades-sub'));
         $this->assertStringContainsString('your college', $this->text($x->query('//*[@data-program-at-risk]/p')->item(0)));
-        $names = $this->texts($x, '//*[@data-risk-row]/th');
+        $names = $this->texts($x, '//*[@data-risk-row]/th//*[@data-risk-name]');
         $this->assertContains('Faye Failing', $names);
         $this->assertContains('Bea Behind', $names);
         $this->assertNotContains('Pat Passing', $names);
         $this->assertNotContains('Otto Outside', $names);
-        $this->assertSame(site_url("dean/courses/{$a}/course-it101/grades"), $x->query("//*[@data-risk-row][th[normalize-space()='Faye Failing']]//a")->item(0)->getAttribute('href'));
+        $this->assertSame(site_url("dean/courses/{$a}/course-it101/grades"), $x->query("//*[@data-risk-row][th[.//*[@data-risk-name][normalize-space()='Faye Failing']]]//a")->item(0)->getAttribute('href'));
         $this->assertSame(0, $x->query('//a[@data-program-row] | //*[@data-grades-grid]')->length, 'the list, not the table');
         $this->assertSame(1, $x->query('//select[@data-risk-reason]')->length);
 
         // The program picker narrows the list too.
         $x = $this->xpath($this->open('sub=at-risk&program=' . $this->programB));
-        $this->assertSame(['Bea Behind'], $this->texts($x, '//*[@data-risk-row]/th'));
+        $this->assertSame(['Bea Behind'], $this->texts($x, '//*[@data-risk-row]/th//*[@data-risk-name]'));
         $this->assertSame(['sub' => 'at-risk', 'term' => (string) $this->term, 'program' => (string) $this->programB], $this->queryOf($x->query("//*[@data-grades-sub='at-risk']")->item(0)->getAttribute('href')));
     }
 

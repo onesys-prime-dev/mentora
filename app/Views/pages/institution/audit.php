@@ -5,6 +5,7 @@
  *
  * @var App\Services\Audit\AuditLogFilters $auditFilters
  * @var list<array<string, mixed>>         $auditRows
+ * @var array<int, array>                 $auditAvatars AvatarData::forViewer() entries by actor id
  * @var int                                $auditTotal
  * @var int                                $auditPages
  * @var array<string, string>              $auditActions
@@ -37,6 +38,7 @@ foreach ($auditRows as $row) {
             . '</details>';
     }
 
+    $avatar = $auditAvatars[(int) ($row['actor_id'] ?? 0)] ?? null;
     $who = esc((string) $row['actor']) . ($row['via'] !== null ? '<span class="block text-xs text-[#946200]">viewing as, by ' . esc((string) $row['via']) . '</span>' : '');
 
     $rows[] = [
@@ -44,7 +46,7 @@ foreach ($auditRows as $row) {
         'label' => $row['action_label'],
         'cells' => [
             'created_at'  => date('j M Y H:i', strtotime((string) $row['created_at'])),
-            'actor_label' => ['html' => $who],
+            'actor_label' => ['html' => $avatar === null ? $who : '<span class="flex items-center gap-2">' . view('components/avatar', ['person' => $avatar['person'], 'size' => 'xs', 'interactive' => $avatar['interactive'], 'decorative' => true], ['saveData' => false]) . '<span class="min-w-0">' . $who . '</span></span>'],
             'acting_role' => $row['acting_role'] === null ? '—' : ucfirst(str_replace('_', ' ', (string) $row['acting_role'])),
             'action'      => $row['action_label'],
             'target'      => trim(((string) ($row['target_type'] ?? '')) . ' ' . ((string) ($row['target_id'] ?? ''))) ?: '—',

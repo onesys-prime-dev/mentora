@@ -131,8 +131,8 @@ class MessageActionController extends MessagingController
 
     public function reactors(int $conversationId, int $messageId): ResponseInterface
     {
-        $reactors = (new MessageActions())->reactors(auth()->user(), $conversationId, $messageId);
+        $who = (new MessageActions())->reactors(auth()->user(), $conversationId, $messageId);
 
-        return $reactors === null ? $this->notFound() : $this->response->setJSON(['reactors' => (object) $reactors]);
+        return $who === null ? $this->notFound() : $this->response->setJSON(['reactors' => (object) $who['reactors'], 'avatars' => (object) $who['avatars']]);
     }
 }

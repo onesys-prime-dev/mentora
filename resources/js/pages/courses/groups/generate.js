@@ -1,3 +1,4 @@
+import { renderAvatar } from "../../../shared/avatar.js";
 import { applyFieldErrors } from "../../../shared/dialog.js";
 import { showToast } from "../../../shared/toast.js";
 
@@ -14,12 +15,15 @@ import { capacityBadge, escapeHtml } from "./detail.js";
 | asks first, naming what will be deleted.
 */
 
-const CHIP = "inline-flex max-w-full items-center rounded-lg bg-brand-tint px-3 py-1 text-sm text-[#1A1C1E]";
+const CHIP = "inline-flex max-w-full items-center gap-2 rounded-lg bg-brand-tint px-3 py-1 text-sm text-[#1A1C1E]";
 const ALERT = "rounded-2xl border border-[#946200]/30 bg-[#FFF1D6] px-4 py-3 text-sm text-[#6F4A00]";
 const REMOVE = "rounded-full px-3 py-1 text-xs font-semibold text-[#C33939] transition hover:bg-[#FDEDEC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 pointer-coarse:min-h-11";
 const NETWORK = "We could not reach the server. Nothing was saved. Check your connection and try again.";
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+// A proposed member: the avatar the server gated for this viewer (FR2) beside the name it shows.
+const chip = (m) => `<li class="${CHIP}">${m.avatar ? renderAvatar(m.avatar, "xs", { decorative: true }).outerHTML : ""}<span class="truncate">${escapeHtml(m.name)}</span></li>`;
 
 /**
  * @param {object} ctx
@@ -133,11 +137,11 @@ export function bindGenerate({ page, dialogs, getDetail, onSubmit, onSaved }) {
                     <h4 class="font-semibold text-[#1A1C1E]">Group ${i + 1}</h4>
                     ${capacityBadge(g.members.length, set)}
                 </div>
-                <ul class="flex flex-wrap gap-1.5" aria-label="Members of Group ${i + 1}">${g.members.map((m) => `<li class="${CHIP}">${escapeHtml(m.name)}</li>`).join("")}</ul>
+                <ul class="flex flex-wrap gap-1.5" aria-label="Members of Group ${i + 1}">${g.members.map(chip).join("")}</ul>
             </div>`).join("") + (ungrouped.length === 0 ? "" : `
             <div class="flex flex-col gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3" data-preview-ungrouped>
                 <h4 class="font-semibold text-[#1A1C1E]">Ungrouped (${ungrouped.length})</h4>
-                <ul class="flex flex-wrap gap-1.5" aria-label="Ungrouped students">${ungrouped.map((m) => `<li class="${CHIP}">${escapeHtml(m.name)}</li>`).join("")}</ul>
+                <ul class="flex flex-wrap gap-1.5" aria-label="Ungrouped students">${ungrouped.map(chip).join("")}</ul>
             </div>`);
 
         const alerts = conflicts.map((c) => `<div class="${ALERT}" role="alert" data-preview-conflict><span class="sr-only">Warning: </span>${escapeHtml(c)}</div>`);

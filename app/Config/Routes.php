@@ -23,6 +23,11 @@ $routes->post('invitation/(:segment)', 'InvitationController::accept/$1');
 $routes->get('reset-password/(:segment)', 'PasswordResetController::show/$1');
 $routes->post('reset-password/(:segment)', 'PasswordResetController::complete/$1');
 
+// The link sent to a new email address (D17): the page asks, the POST confirms, so a mail scanner
+// opening the link changes nothing. Public like reset-password (works signed in too); the token is the proof.
+$routes->get('email-change/(:segment)', 'Profiles\EmailChangeController::show/$1');
+$routes->post('email-change/(:segment)', 'Profiles\EmailChangeController::confirm/$1');
+
 // Leaving a "view as" session. Outside the role areas on purpose: while viewing, the session
 // is the other person's and must not need the admin group to get out (the filter allows it).
 $routes->post('impersonation/stop', 'Admin\ImpersonationController::stop');
@@ -48,6 +53,30 @@ $routes->get('notifications/latest', 'NotificationController::latest', ['filter'
 $routes->post('notifications/delete', 'NotificationController::delete', ['filter' => 'session']);
 $routes->post('notifications/read', 'NotificationController::read', ['filter' => 'session']);
 
+// Everyone's own profile, for every role. The old student/profile and parent/profile GETs (kept in their groups) redirect here.
+$routes->get('profile', 'Profiles\ProfileController::index', ['filter' => 'session']);
+$routes->post('profile/checklist/dismiss', 'Profiles\ProfileController::dismissChecklist', ['filter' => ['session', 'readonly']]);
+$routes->post('profile/(identity|about|staff)', 'Profiles\ProfileController::update/$1', ['filter' => ['session', 'readonly']]);
+// Asking the school to correct an official detail (FR7); a system administrator edits their own directly (FR7.6).
+$routes->post('profile/corrections', 'Profiles\ProfileController::requestCorrection', ['filter' => ['session', 'readonly']]);
+$routes->post('profile/identity-official', 'Profiles\ProfileController::updateOfficial', ['filter' => ['session', 'readonly']]);
+// Other people's profiles (D20): the page, the popover card and the modal panel. Anyone the viewer
+// may not see answers 404. Message starts (or reopens) a direct conversation as the Messages API does.
+$routes->get('people/(:num)', 'Profiles\PersonProfileController::show/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/card', 'Profiles\PersonProfileController::card/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/panel', 'Profiles\PersonProfileController::panel/$1', ['filter' => 'session']);
+$routes->get('people/(:num)/photo/(64|256)', 'Profiles\ProfilePhotoController::show/$1/$2', ['filter' => 'session']);
+$routes->post('profile/photo', 'Profiles\ProfilePhotoController::upload', ['filter' => ['session', 'readonly']]);
+$routes->post('profile/photo/remove', 'Profiles\ProfilePhotoController::remove', ['filter' => ['session', 'readonly']]);
+// Account settings, for every role (D21). No `readonly`: your own security stays yours in a read-only institution (D29-C3).
+$routes->get('settings', 'Profiles\AccountSettingsController::index', ['filter' => 'session']);
+$routes->post('settings/password', 'Profiles\AccountSettingsController::changePassword', ['filter' => 'session']);
+$routes->post('settings/password-link', 'Profiles\AccountSettingsController::sendPasswordLink', ['filter' => 'session']);
+$routes->post('settings/two-factor', 'Profiles\AccountSettingsController::twoFactor', ['filter' => 'session']);
+$routes->post('settings/sign-out-others', 'Profiles\AccountSettingsController::signOutOthers', ['filter' => 'session']);
+$routes->post('settings/notifications', 'Profiles\AccountSettingsController::saveNotifications', ['filter' => 'session']);
+$routes->post('people/(:num)/message', 'Profiles\PersonProfileController::message/$1', ['filter' => ['session', 'messages', 'readonly', 'permission:messages.use']]);
+
 // Every uploaded file (videos, PDFs, submitted work, AI sources) is served
 // here; access is decided per file by FileAccessService.
 $routes->get('files/(:num)', 'FileController::show/$1', ['filter' => 'session']);
@@ -58,8 +87,8 @@ $routes->group('student', ['filter' => ['role:student', 'readonly']], function (
     $routes->get('/', 'Dashboard\DashboardController::index');
     $routes->get('dashboard', 'Dashboard\DashboardController::index');
 
-    // The student's own profile, to read: their details and the parents who can see their progress.
-    $routes->get('profile', 'Students\StudentProfileController::index');
+    // The student's profile moved to /profile.
+    $routes->get('profile', 'Profiles\ProfileController::legacy');
 
     $routes->get('courses', 'Courses\CourseController::index', ['filter' => 'permission:courses.view']);
     $routes->get('courses/(:num)/(:segment)', 'Courses\CourseController::redirect/$1/$2', ['filter' => ['permission:courses.view', 'coursemember:student']]);
@@ -534,11 +563,11 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
     $routes->get('dashboard', 'Parents\ParentDashboardController::index');
     // One child's dashboard; `parentchild` answers 404 for anyone the parent is not linked to.
     $routes->get('children/(:num)', 'Parents\ParentDashboardController::child/$1', ['filter' => 'parentchild']);
-    // The parent's own page. These two forms are the only things a parent can post, and both are
-    // about their own account: the email choice for each child, and an emailed password link.
-    $routes->get('profile', 'Parents\ParentProfileController::index');
-    $routes->post('profile/notifications', 'Parents\ParentProfileController::saveNotifications', ['filter' => 'parentportal']);
-    $routes->post('profile/password-link', 'Parents\ParentProfileController::sendPasswordLink');
+    // The parent's old own page moved for good to /profile, and its two forms to Settings (D23): a post
+    // from a page still open is sent to the card in Settings without acting.
+    $routes->get('profile', 'Profiles\ProfileController::legacy');
+    $routes->post('profile/notifications', 'Profiles\AccountSettingsController::moved/notifications');
+    $routes->post('profile/password-link', 'Profiles\AccountSettingsController::moved/password');
 
     // The child's calendar, read-only (deadlines and announcements; never their reminders).
     $routes->get('calendar', 'Parents\ParentCalendarController::index');
@@ -589,8 +618,8 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->get('unread-count', 'Messaging\ConversationController::unread');
     $routes->get('recipients', 'Messaging\RecipientController::index');
     $routes->get('group-candidates', 'Messaging\GroupController::candidates');
-    $routes->get('preferences', 'Messaging\PreferenceController::show');
-    $routes->post('preferences', 'Messaging\PreferenceController::save');
+    // The email switch and quiet hours moved to Settings (D15).
+    $routes->get('preferences', 'Profiles\AccountSettingsController::moved/notifications');
     $routes->get('blocks', 'Messaging\BlockController::index');
     $routes->post('blocks', 'Messaging\BlockController::create');
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
@@ -1147,6 +1176,9 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->get('/', 'Institution\PeopleController::index', ['filter' => 'permission:people.view']);
             $routes->get('export', 'Institution\PeopleController::export', ['filter' => 'permission:people.view']);
             $routes->post('export', 'Institution\PeopleController::exportSelected', ['filter' => 'permission:people.view']);
+            $routes->post('(:num)/photo', 'Profiles\ProfilePhotoController::adminUpload/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/photo/remove', 'Profiles\ProfilePhotoController::adminRemove/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/clear', 'Institution\PeopleController::clear/$1', ['filter' => 'permission:people.manage']);
             $routes->post('/', 'Institution\PeopleController::invite', ['filter' => 'permission:people.manage']);
             $routes->post('bulk/deactivate', 'Institution\PeopleController::bulkDeactivate', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('bulk/reactivate', 'Institution\PeopleController::bulkReactivate', ['filter' => 'permission:people.manage']);
@@ -1159,6 +1191,10 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('upload/(:segment)/apply', 'Institution\CsvUploadController::apply/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('upload/(:segment)/discard', 'Institution\CsvUploadController::discard/$1', ['filter' => 'permission:people.manage']);
             $routes->get('parents', 'Institution\ParentLinksController::index', ['filter' => 'permission:people.view']);
+            // Correction requests from the institution's people (FR7, D22).
+            $routes->get('requests', 'Institution\ProfileRequestsController::index', ['filter' => 'permission:people.view']);
+            $routes->post('requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => 'permission:people.manage']);
+            $routes->post('requests/(:num)/reject', 'Institution\ProfileRequestsController::decide/$1/reject', ['filter' => 'permission:people.manage']);
             $routes->post('parents/(:num)/students', 'Institution\ParentLinksController::link/$1', ['filter' => 'permission:people.manage']);
             $routes->post('parents/links/(:num)/remove', 'Institution\ParentLinksController::unlink/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)', 'Institution\PeopleController::update/$1', ['filter' => 'permission:people.manage']);
@@ -1261,6 +1297,10 @@ $routes->group('admin', ['filter' => ['group:admin', 'ajaxredirect']], function 
     $routes->get('users/new', 'Admin\UsersController::new', ['filter' => 'permission:users.manage']);
     $routes->post('users', 'Admin\UsersController::invite', ['filter' => 'permission:users.manage']);
     $routes->post('users/bulk', 'Admin\UsersController::bulk', ['filter' => ['permission:users.manage', 'reauth']]);
+    // Correction requests that reach the platform (no institution, or no other institutional admin there).
+    // Approving changes a name or email, so it asks for the password as a Users edit does.
+    $routes->post('users/requests/(:num)/approve', 'Institution\ProfileRequestsController::decide/$1/approve', ['filter' => ['permission:users.manage', 'reauth']]);
+    $routes->post('users/requests/(:num)/reject', 'Institution\ProfileRequestsController::decide/$1/reject', ['filter' => 'permission:users.manage']);
     $routes->get('users/(:num)', 'Admin\UsersController::show/$1', ['filter' => 'permission:users.view']);
     $routes->post('users/(:num)', 'Admin\UsersController::update/$1', ['filter' => ['permission:users.manage', 'reauth']]);
     $routes->post('users/(:num)/impersonate', 'Admin\ImpersonationController::start/$1', ['filter' => ['permission:impersonation.start', 'reauth']]);

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profile mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Parkinsans:wght@500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#0040A6;--brand-dark:#002068;--tint:#F2F7FF;--ink:#1A1C1E;--muted:#646464;--line:#E8ECF2;--page:#EEF2F8;--ok:#2E7D4F}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Poppins,system-ui,sans-serif;color:var(--ink);background:var(--page);font-size:14px;line-height:1.5}
+  .wrap{max-width:1280px;margin:0 auto;padding:24px 16px 64px}
+  .intro{max-width:760px;margin-bottom:24px}
+  .intro h1{font-family:Parkinsans,sans-serif;font-size:24px;margin:0 0 6px}
+  .intro p{margin:0;color:var(--muted)}
+  .row{display:grid;grid-template-columns:1fr;gap:24px}
+  @media(min-width:1100px){.row{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr)}}
+  .frame{background:#fff;border-radius:20px;box-shadow:0 1px 2px rgba(16,24,40,.06);overflow:hidden}
+  .cap{font-size:12px;color:var(--muted);margin:0 0 8px 4px}
+  /* app chrome */
+  .hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--line)}
+  .logo{font-family:Parkinsans;font-weight:700;color:var(--brand);font-size:18px}
+  .av{display:inline-grid;place-items:center;border-radius:999px;font-weight:600;color:#fff;flex-shrink:0;font-family:Parkinsans}
+  .page{padding:20px;background:var(--page)}
+  .ph{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .ph h2{font-family:Parkinsans;font-size:22px;margin:0}
+  .ph p{margin:0;color:var(--muted);font-size:13px}
+  .card{background:#fff;border-radius:16px;padding:18px 20px;margin-bottom:14px}
+  .card h3{margin:0 0 10px;font-size:14px;color:var(--brand);font-weight:700;display:flex;align-items:center;justify-content:space-between}
+  .pen{border:0;background:var(--tint);color:var(--brand);border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:14px}
+  .pen:focus-visible,.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+  /* hero: the one bold element */
+  .hero{border-radius:16px;overflow:hidden;margin-bottom:14px;background:#fff}
+  .band{height:84px;background:linear-gradient(120deg,var(--brand-dark),var(--brand) 60%,#2D6BD0)}
+  .heroin{display:flex;gap:16px;align-items:flex-end;padding:0 20px 18px;margin-top:-44px;flex-wrap:wrap}
+  .heroin .av{width:96px;height:96px;font-size:34px;border:4px solid #fff;background:#5B4FCF}
+  .who{flex:1;min-width:220px}
+  .who .name{font-family:Parkinsans;font-size:24px;font-weight:700;margin:0;line-height:1.2}
+  .who .legal{color:var(--muted);font-size:12px}
+  .roles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{background:var(--tint);color:var(--brand);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+  .chip.sub{background:#F3F4F6;color:#374151;font-weight:500}
+  .btn{border:0;border-radius:999px;padding:8px 16px;font:600 13px Poppins;cursor:pointer}
+  .btn.primary{background:var(--brand);color:#fff}
+  .btn.ghost{background:#fff;color:var(--brand);box-shadow:inset 0 0 0 1px #C9D6EE}
+  .two{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:640px){.two{grid-template-columns:1fr 1fr}}
+  dl{display:grid;grid-template-columns:9rem 1fr;gap:6px 12px;margin:0}
+  dt{color:var(--muted)} dd{margin:0}
+  .lock{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+  .check{background:var(--tint);border-radius:16px;padding:14px 18px;margin-bottom:14px;display:flex;gap:16px;align-items:flex-start}
+  .check ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+  .check li button{border:1px dashed #9DB5E0;background:#fff;color:var(--brand);border-radius:999px;padding:5px 12px;font:500 12px Poppins;cursor:pointer}
+  .check .x{margin-left:auto;border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px}
+  .preview{display:inline-flex;background:#F3F4F6;border-radius:999px;padding:3px}
+  .preview span{padding:4px 12px;border-radius:999px;font-size:12px}
+  .preview .on{background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08);font-weight:600}
+  /* popover + modal stage */
+  .stage{position:relative;padding:20px;background:var(--page);min-height:100%}
+  .post{background:#fff;border-radius:16px;padding:14px 16px;display:flex;gap:10px}
+  .post .av{width:36px;height:36px;font-size:14px;background:#0E7C66;outline:2px solid var(--brand);outline-offset:2px}
+  .post b{font-size:13px} .post p{margin:2px 0 0;font-size:13px;color:#374151}
+  .pop{position:relative;margin:10px 0 0 22px;width:300px;background:#fff;border-radius:16px;box-shadow:0 12px 32px rgba(16,24,40,.16),0 0 0 1px var(--line);padding:14px}
+  .pop:before{content:"";position:absolute;top:-7px;left:18px;width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:-1px -1px 0 var(--line)}
+  .pop .top{display:flex;gap:12px;align-items:center}
+  .pop .av{width:52px;height:52px;font-size:19px;background:#0E7C66}
+  .pop .n{font-weight:700;font-size:15px;line-height:1.25}
+  .pop .s{font-size:12px;color:var(--muted)}
+  .pop .acts{display:flex;gap:8px;margin-top:12px}
+  .modal{margin-top:20px;background:#fff;border-radius:20px;box-shadow:0 20px 48px rgba(16,24,40,.22);overflow:hidden}
+  .modal .band{height:64px}
+  .modal .heroin{margin-top:-36px;padding:0 18px 12px}
+  .modal .heroin .av{width:76px;height:76px;font-size:26px;background:#0E7C66}
+  .modal .who .name{font-size:20px}
+  .mbody{padding:0 18px 18px;display:grid;gap:12px}
+  .sec{border-top:1px solid var(--line);padding-top:12px}
+  .sec h4{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600}
+  .close{position:absolute;right:12px;top:10px;background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:999px;width:30px;height:30px;cursor:pointer}
+  .mwrap{position:relative}
+  .note{font-size:12px;color:var(--muted);margin:14px 4px 0}
+  .tag{display:inline-block;background:#FFF4E5;color:#8A4B00;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="intro">
+    <h1>Profile: your own page, the hover summary, and the full profile</h1>
+    <p>Left: Juan, an instructor who is also department chair, on his own <b>/profile</b>. Right: a student hovers Maria's avatar in a discussion, then clicks <b>See more</b>. Content and fields follow D3, D7, D8, D12, D20, D21, D27.</p>
+  </div>
+
+  <div class="row">
+    <!-- LEFT: own profile -->
+    <div>
+      <p class="cap">/profile, desktop (Juan's own view)</p>
+      <div class="frame">
+        <div class="hdr"><span class="logo">Mentora</span><span class="av" style="width:32px;height:32px;font-size:13px;background:#5B4FCF" title="Opens the account menu (C1)">JD</span></div>
+        <div class="page">
+          <div class="ph">
+            <div><h2>My profile</h2><p>This is what people in your school see when they open your profile.</p></div>
+            <div style="margin-left:auto" class="preview" aria-label="Preview as"><span class="on">Me</span><span>As a student sees it</span></div>
+          </div>
+
+          <div class="check" role="region" aria-label="Finish your profile">
+            <div>
+              <b>Help students find you</b>
+              <ul>
+                <li><button>Add a photo</button></li>
+                <li><button>Add consultation hours</button></li>
+              </ul>
+            </div>
+            <button class="x">Dismiss</button>
+          </div>
+
+          <div class="hero">
+            <div class="band"></div>
+            <div class="heroin">
+              <div style="position:relative"><span class="av">JD</span><button class="pen" style="position:absolute;right:0;bottom:4px" aria-label="Change photo">✎</button></div>
+              <div class="who">
+                <p class="name">Jun Dela Cruz <span style="font-size:13px;font-weight:500;color:var(--muted)">he/him</span></p>
+                <div class="legal">Legal name: Juan Miguel Dela Cruz</div>
+                <div class="roles">
+                  <span class="chip">Chairperson · Computer Science</span>
+                  <span class="chip">Instructor · Computer Science</span>
+                </div>
+              </div>
+              <button class="btn ghost">Edit name &amp; pronouns</button>
+            </div>
+          </div>
+
+          <div class="two">
+            <div class="card"><h3>About <button class="pen" aria-label="Edit about">✎</button></h3>
+              <p style="margin:0;color:#374151">Teaches data structures and databases. Ask me about the capstone schedule.</p></div>
+            <div class="card"><h3>Office &amp; consultation <button class="pen" aria-label="Edit office and consultation">✎</button></h3>
+              <dl><dt>Office</dt><dd>CS Building, Rm 204</dd><dt>Consultation</dt><dd style="color:var(--muted)">Not added yet</dd><dt>Work phone</dt><dd>(02) 8123 4567 loc. 204</dd></dl></div>
+          </div>
+
+          <div class="card"><h3>Official details <span class="lock">🔒 Managed by your school</span></h3>
+            <dl><dt>Legal name</dt><dd>Juan Miguel Dela Cruz</dd><dt>Email</dt><dd>jdelacruz@school.edu.ph</dd><dt>Home department</dt><dd>Computer Science</dd></dl>
+            <div style="margin-top:12px"><button class="btn ghost">Request a correction</button></div>
+          </div>
+
+          <div class="card"><h3>This term</h3>
+            <dl><dt>Teaching</dt><dd>CS 201 Data Structures · CS 305 Databases</dd><dt>Chairs</dt><dd>Department of Computer Science</dd></dl></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: popover + modal -->
+    <div>
+      <p class="cap">Hover an avatar → summary; click it or "See more" → full profile</p>
+      <div class="frame"><div class="stage">
+        <div class="post">
+          <span class="av" tabindex="0" aria-haspopup="dialog">MS</span>
+          <div><b>Maria Santos</b> <span style="font-size:12px;color:var(--muted)">replied · 2h</span><p>The deadline moved to Friday, see the announcement.</p></div>
+        </div>
+
+        <div class="pop" role="dialog" aria-label="Maria Santos, summary">
+          <div class="top"><span class="av">MS</span>
+            <div><div class="n">Mia Santos <span style="font-weight:500;color:var(--muted);font-size:12px">she/her</span></div>
+              <div class="s">Maria Santos</div>
+              <div class="s" style="color:var(--brand);font-weight:600">Instructor · Information Technology</div></div>
+          </div>
+          <div class="acts"><button class="btn primary">Message</button><button class="btn ghost">See more</button></div>
+        </div>
+
+        <div class="mwrap"><div class="modal" role="dialog" aria-label="Maria Santos, profile">
+          <div class="band"></div><button class="close" aria-label="Close">✕</button>
+          <div class="heroin"><span class="av">MS</span>
+            <div class="who"><p class="name">Mia Santos <span style="font-size:12px;font-weight:500;color:var(--muted)">she/her</span></p>
+              <div class="legal">Maria Santos</div>
+              <div class="roles"><span class="chip">Instructor · Information Technology</span></div></div>
+          </div>
+          <div class="mbody">
+            <div style="display:flex;gap:8px"><button class="btn primary">Message</button><button class="btn ghost">Copy email</button></div>
+            <div class="sec"><h4>About</h4>Web development and UX. Office hours fill up before exams, book early.</div>
+            <div class="sec"><h4>Office &amp; consultation</h4><dl><dt>Office</dt><dd>IT Building, Rm 112</dd><dt>Consultation</dt><dd>Tue &amp; Thu, 1:00–3:00 PM</dd></dl></div>
+            <div class="sec"><h4>Contact</h4><dl><dt>Email</dt><dd>msantos@school.edu.ph</dd></dl></div>
+            <div class="sec"><h4>This term</h4>IT 102 Web Systems · IT 210 Human-Computer Interaction</div>
+            <div class="sec" style="display:flex;gap:8px;align-items:center"><span class="tag">Admins only</span><button class="btn ghost">Remove photo</button><button class="btn ghost">Open in People</button></div>
+          </div>
+        </div></div>
+        <p class="note">On phones the summary is skipped: a tap opens the full profile as a full-screen sheet. Keyboard: focus shows the summary, Enter opens the profile, Esc closes.</p>
+      </div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

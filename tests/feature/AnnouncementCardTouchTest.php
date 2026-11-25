@@ -55,4 +55,29 @@ final class AnnouncementCardTouchTest extends CIUnitTestCase
             $this->assertStringContainsString('pointer-coarse:min-h-11 pointer-coarse:min-w-11', $button->getAttribute('class'));
         }
     }
+
+    public function testTheReplyTriggerHoldsNoInteractiveAvatar(): void
+    {
+        $html = view('pages/courses/features/announcements/partials/announcement-card', [
+            'announcement' => [
+                'id' => 7, 'author_id' => 2, 'author_name' => 'Ana Cruz', 'author_role' => 'instructor', 'subject' => 'Quiz',
+                'message' => null, 'created_at' => '2026-11-12 08:00:00', 'attachments' => [], 'replies' => [],
+                'is_pinned' => false, 'own_reaction' => null, 'reaction_counts' => [],
+                'can_edit' => true, 'can_delete' => true, 'can_pin' => true,
+                // What AvatarData::forViewer gives for the viewer's own avatar: an interactive button.
+                'viewer_avatar' => ['person' => ['id' => 2, 'name' => 'Ana Cruz'], 'interactive' => true],
+            ],
+            'userId' => 2,
+        ], ['saveData' => false]);
+
+        $doc = new DOMDocument();
+        @$doc->loadHTML($html);
+        $xpath = new DOMXPath($doc);
+
+        $trigger = $xpath->query('//button[@data-reply-trigger]')->item(0);
+        $this->assertNotNull($trigger);
+        $this->assertSame(0, $xpath->query('.//*[@data-person-avatar] | .//button', $trigger)->length);
+        $this->assertStringContainsString('Reply in thread', $trigger->textContent);
+        $this->assertSame(1, $xpath->query('//*[@data-reply-form]//*[@data-person-avatar]')->length);
+    }
 }

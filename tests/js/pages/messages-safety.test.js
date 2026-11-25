@@ -51,10 +51,6 @@ const SHELL = `
   </div>
   <div id="messages-prefs" data-dialog hidden>
     <button data-dialog-close></button>
-    <input type="checkbox" data-role="prefs-email">
-    <div data-role="prefs-quiet" hidden><input type="time" data-role="prefs-start"><input type="time" data-role="prefs-end"></div>
-    <p data-role="prefs-note" role="status"></p>
-    <button type="button" data-role="prefs-save"></button>
   </div>
 </div>
 <span data-messages-badge hidden></span>`;
@@ -77,8 +73,6 @@ function makeApi(conversation = direct(), over = {}) {
         block: vi.fn().mockResolvedValue(ok({ ok: true })),
         unblock: vi.fn().mockResolvedValue(ok({ ok: true })),
         report: vi.fn().mockResolvedValue(ok({ ok: true })),
-        preferences: vi.fn().mockResolvedValue(ok({ preferences: { quiet_start: "22:00", quiet_end: "07:00", email_alerts: false }, quiet_hours_allowed: true })),
-        savePreferences: vi.fn().mockResolvedValue(ok({ preferences: {}, quiet_hours_allowed: true })),
         ...over,
     };
 }
@@ -244,55 +238,5 @@ describe("a send over the limit", () => {
 
         expect(note).toContain("You're sending messages too fast.");
         expect(note).toContain("Retry");
-    });
-});
-
-describe("notification settings", () => {
-    it("loads the person's values and offers quiet hours only when allowed", async () => {
-        await mountOpen(makeApi());
-        q("[data-role=prefs-open]").click();
-        await flush();
-
-        expect(q("[data-role=prefs-email]").checked).toBe(false);
-        expect(q("[data-role=prefs-quiet]").hidden).toBe(false);
-        expect(q("[data-role=prefs-start]").value).toBe("22:00");
-        expect(q("[data-role=prefs-end]").value).toBe("07:00");
-
-        await mountOpen(makeApi(direct(), { preferences: vi.fn().mockResolvedValue(ok({ preferences: { quiet_start: null, quiet_end: null, email_alerts: true }, quiet_hours_allowed: false })) }));
-        q("[data-role=prefs-open]").click();
-        await flush();
-
-        expect(q("[data-role=prefs-quiet]").hidden).toBe(true);
-    });
-
-    it("saves the email switch and the hours, and says so", async () => {
-        const api = makeApi();
-
-        await mountOpen(api);
-        q("[data-role=prefs-open]").click();
-        await flush();
-        q("[data-role=prefs-email]").checked = true;
-        q("[data-role=prefs-start]").value = "21:30";
-        q("[data-role=prefs-save]").click();
-        await flush();
-
-        expect(api.savePreferences).toHaveBeenCalledWith({ email_alerts: true, quiet_start: "21:30", quiet_end: "07:00" });
-        expect(q("[data-role=prefs-note]").textContent).toBe("Saved.");
-    });
-
-    it("sends no hours when they are not offered, and asks to check the times on a refusal", async () => {
-        const api = makeApi(direct(), {
-            preferences: vi.fn().mockResolvedValue(ok({ preferences: { quiet_start: null, quiet_end: null, email_alerts: true }, quiet_hours_allowed: false })),
-            savePreferences: vi.fn().mockResolvedValue(ok({ error: "invalid" }, 422)),
-        });
-
-        await mountOpen(api);
-        q("[data-role=prefs-open]").click();
-        await flush();
-        q("[data-role=prefs-save]").click();
-        await flush();
-
-        expect(api.savePreferences).toHaveBeenCalledWith({ email_alerts: true, quiet_start: null, quiet_end: null });
-        expect(q("[data-role=prefs-note]").textContent).toBe("Check the times.");
     });
 });

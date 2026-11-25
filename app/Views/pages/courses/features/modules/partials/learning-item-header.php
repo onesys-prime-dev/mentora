@@ -67,15 +67,14 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-        <div class="h-8 w-8 flex justify-center items-center rounded-4xl">
-            <img
-                class="h-full w-auto" 
-                src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
-        </div>
+        <?php // Built for this viewer by ModuleService; no instructor, no byline. ?>
+        <?php if (! empty($instructorAvatar)): ?>
+            <?= view('components/avatar', $instructorAvatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
 
-        <span class="capitalize text-sm text-[#646464]">
-            Jalen Brunson  •  June 22, 2026  •  7:30AM 
-        </span>
+            <span class="text-sm text-[#646464]" data-byline>
+                Instructor: <?= esc($instructorAvatar['person']['name']) ?>
+            </span>
+        <?php endif; ?>
     </div>
 
 </header>

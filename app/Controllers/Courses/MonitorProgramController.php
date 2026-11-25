@@ -84,6 +84,8 @@ class MonitorProgramController extends BaseController
             'previousPage' => 'dashboard',
             // The Grades page needs courses.view as chairperson; Monitor Program only program.monitor.
             'monitorGradesBase' => (new RolePermissions())->allows($user, 'courses.view', 'chairperson') ? site_url('chairperson/grades') : null,
+            // One lookup for the page: the at-risk students (the log lists only the chairperson's own actions).
+            'monitorAvatars' => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_map('intval', array_column($page['atRisk'], 'student_id'))))),
         ]);
     }
 

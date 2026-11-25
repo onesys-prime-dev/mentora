@@ -462,6 +462,7 @@ class MonitorProgramService
                 'id' => (int) $row['id'],
                 'created_at' => $row['created_at'],
                 'actor' => $row['actor_label'] ?? null,
+                'actor_id' => isset($row['actor_user_id']) ? (int) $row['actor_user_id'] : null,
                 'acting_role' => $row['acting_role'],
                 'offering_id' => $offeringId,
                 'course_code' => $offering['course_code'] ?? null,

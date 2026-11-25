@@ -23,15 +23,15 @@ if ($userRole === 'instructor') {
         ? str_replace('Bachelor of Science in', 'BS in', $data['program_name'])
         : null;
 }
+
+$avatarPerson = (new \App\Services\Profiles\AvatarData())->forMany([(int) $user->id])[(int) $user->id]
+    ?? ['id' => (int) $user->id, 'name' => $fullName];
 ?>
 
 <!-- profile card -->
 <div class="shrink-0 flex items-center gap-4 bg-white/20 backdrop-blur-xl border border-white/30 shadow-xl rounded-3xl p-4">
 
-    <img
-        class="w-14 h-14 shrink-0 rounded-full object-cover"
-        src="<?= base_url('assets/images/placeholder/profile.png') ?>"
-        alt="Profile photo of <?= esc($fullName) ?>">
+    <?= view('components/avatar', ['person' => $avatarPerson, 'size' => 'lg'], ['saveData' => false]) ?>
 
     <div class="flex flex-col gap-0.5 min-w-0">
         <span class="text-lg font-bold leading-tight truncate">

@@ -222,7 +222,7 @@ final class InstitutionPagesResponsiveTest extends CIUnitTestCase
 
         $offering = ['id' => 4, 'course_code' => 'IT101', 'section_code' => 'A', 'course_title' => 'Intro', 'term_name' => 'First', 'academic_year' => '2026-2027', 'status' => 'active', 'enrolled_count' => 1, 'capacity' => 40];
         $x        = $this->page('pages/institution/roster', [
-            'rosterOffering' => $offering, 'rosterRows' => [['id' => 3, 'name' => 'Sam Lee', 'email' => 's@x.y', 'student_number' => '1', 'status' => 'enrolled', 'locked' => false, 'enrolled_at' => '2026-08-02 10:00:00']],
+            'rosterOffering' => $offering, 'rosterRows' => [['id' => 3, 'student_id' => 3, 'name' => 'Sam Lee', 'email' => 's@x.y', 'student_number' => '1', 'status' => 'enrolled', 'locked' => false, 'enrolled_at' => '2026-08-02 10:00:00']],
             'rosterTotal' => 1, 'rosterPages' => 1, 'rosterPage' => 1, 'rosterCounts' => ['dropped' => 0, 'withdrawn' => 0, 'completed' => 0], 'rosterLocked' => false,
             'rosterFilters' => ['q' => '', 'status' => '', 'sort' => '', 'dir' => ''], 'rosterCanEdit' => true,
         ]);

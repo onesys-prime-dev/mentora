@@ -7,6 +7,9 @@
  * @var list<array<string, mixed>>     $userRows
  * @var list<array<string, mixed>>     $userInstitutions
  * @var int                            $userSelf         the signed-in administrator's id
+ * @var list<array<string, mixed>>     $userRequests     correction requests routed to the platform
+ * @var array<int, array<string, mixed>> $userRequestFaces AvatarData::forViewer for their people
+ * @var bool                           $userCanDecide
  */
 use App\Services\Users\UserFilters;
 
@@ -46,6 +49,7 @@ foreach ($userRows as $row) {
     $rows[] = [
         'id'    => (string) $row['id'],
         'label' => $shown,
+        'person' => ($userAvatars ?? [])[(int) $row['id']] ?? null,
         'cells' => [
             'name'        => ['html' => $nameCell],
             'email'       => (string) ($row['email'] ?? '—'),
@@ -84,6 +88,15 @@ $bulk = '<form method="post" action="' . site_url('admin/users/bulk') . '" data-
 <?php endif; ?>
 <?php if (session()->has('error')): ?>
     <div class="mt-4"><?= view('components/alert', ['tone' => 'danger', 'text' => (string) session('error')], ['saveData' => false]) ?></div>
+<?php endif; ?>
+
+<?php if (($userRequests ?? []) !== []): ?>
+    <section class="mt-6 flex flex-col gap-3" aria-labelledby="user-requests" data-user-requests>
+        <h2 id="user-requests" class="flex items-center gap-2 text-base font-bold text-brand">Requests
+            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-[#646464]"><?= count($userRequests) ?></span></h2>
+        <p class="text-sm text-[#646464]">Corrections from people with no institutional administrator to decide them.</p>
+        <?= view('pages/institution/partials/people-requests', ['requests' => $userRequests, 'avatars' => $userRequestFaces, 'canDecide' => $userCanDecide, 'base' => 'admin/users/requests'], ['saveData' => false]) ?>
+    </section>
 <?php endif; ?>
 
 <div class="mt-6 flex flex-col gap-4 lg:min-h-0 lg:flex-1">

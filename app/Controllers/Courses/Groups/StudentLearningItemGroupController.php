@@ -61,7 +61,8 @@ class StudentLearningItemGroupController extends StudentGroupController
 
         if ((int) $config['groups_visible'] === 1) {
             $out['otherGroups'] = array_values(array_map(
-                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => $g['members']],
+                // Other groups stay names only: no avatar is drawn for them.
+                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => array_map(static fn (array $m): array => ['id' => $m['id'], 'name' => $m['name']], $g['members'])],
                 array_filter($groups, static fn (array $g) => $mine === null || $g['id'] !== $mine['id']),
             ));
         }
@@ -90,7 +91,7 @@ class StudentLearningItemGroupController extends StudentGroupController
             ->where('learning_item_id', $itemId)->where('status', 'completed')->whereIn('student_user_id', array_column($g['members'], 'id') ?: [0])->get()->getResultArray(), 'student_user_id'));
         $each   = $config['completion_mode'] !== 'any';
 
-        $members = array_map(static fn (array $m) => ['id' => $m['id'], 'name' => $m['name'], 'isMe' => $m['id'] === $me] + ($each ? ['completed' => in_array($m['id'], $done, true)] : []), $g['members']);
+        $members = array_map(static fn (array $m) => ['id' => $m['id'], 'name' => $m['name'], 'avatar' => $m['avatar'], 'isMe' => $m['id'] === $me] + ($each ? ['completed' => in_array($m['id'], $done, true)] : []), $g['members']);
 
         $out = [
             'id'             => $g['id'],

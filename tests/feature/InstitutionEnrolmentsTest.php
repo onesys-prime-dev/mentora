@@ -106,6 +106,51 @@ final class InstitutionEnrolmentsTest extends RouteTestCase
         $this->assertNull($this->placeOf($ann));
     }
 
+    public function testRosterRowsGetInteractiveAvatarsFromOneLookup(): void
+    {
+        $queries = 0;
+        $count   = function () use (&$queries): int {
+            $queries = 0;
+            $l       = static function () use (&$queries): void {
+                $queries++;
+            };
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $this->page();
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return $queries;
+        };
+
+        $first = $this->student('Ann', '2026-001');
+        $this->step('POST', $this->url(), ['students' => '2026-001']);
+        $few = $count();
+
+        $ids = [(int) $first->id];
+        foreach (['Bea' => '2026-002', 'Cal' => '2026-003', 'Dee' => '2026-004'] as $name => $number) {
+            $ids[] = (int) $this->student($name, $number)->id;
+        }
+        $this->step('POST', $this->url(), ['students' => "2026-002
+2026-003
+2026-004", 'over_capacity' => '1']);
+        $many = $count();
+        $body = $this->page();
+
+        foreach ($ids as $id) {
+            $this->assertStringContainsString('data-person-avatar="' . $id . '"', $body);
+        }
+        $this->assertStringNotContainsString('placeholder/profile.png', $body);
+        $this->assertLessThanOrEqual($few + 2, $many, 'avatars are fetched once for the page, not per row');
+    }
+
+    public function testTheRosterShowsAStudentsPreferredFirstName(): void
+    {
+        $juan = $this->student('Juan', '2026-001');
+        db_connect()->table('user_profiles')->where('user_id', $juan->id)->update(['last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->step('POST', $this->url(), ['students' => '2026-001']);
+
+        $this->assertStringContainsString('<span class="font-medium">Jun Dela Cruz</span>', $this->page());
+    }
+
     public function testTheEmptyRosterOffersToAddStudents(): void
     {
         $body = $this->page();

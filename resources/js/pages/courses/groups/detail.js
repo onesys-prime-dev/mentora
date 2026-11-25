@@ -7,6 +7,8 @@
 | grades, a closed course). Badges use components/status-badge's classes.
 */
 
+import { renderAvatar } from "../../../shared/avatar.js";
+
 export const MODES = {
     manual: "Manual",
     auto: "Auto-generated",
@@ -71,7 +73,7 @@ function memberChip(student, canEdit, ungrouped) {
 
     return `
         <li class="inline-flex max-w-full items-center gap-1 rounded-lg ${tone} py-1 ${canEdit ? "pl-3 pr-1" : "px-3"} text-sm" data-member="${student.student_user_id}"${canEdit ? " draggable=\"true\"" : ""}>
-            <span class="truncate" data-member-name>${name}</span>
+            ${student.avatar ? renderAvatar(student.avatar, "xs", { decorative: true }).outerHTML : ""}<span class="truncate" data-member-name>${name}</span>
             ${canEdit ? `<button type="button" class="${SMALL} text-brand hover:bg-white" data-group-action="move" data-student="${student.student_user_id}" aria-label="Move ${name}…">Move…</button>` : ""}
         </li>`;
 

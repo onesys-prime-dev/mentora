@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -43,7 +44,7 @@ class GroupService
     /**
      * People the creator may add whose name matches, never the creator.
      *
-     * @return list<array{id: int, name: string, role: string}>
+     * @return list<array{id: int, name: string, role: string, avatar: array<string, mixed>|null}>
      */
     public function candidates(User $creator, string $query, int $limit = 20): array
     {
@@ -80,7 +81,10 @@ class GroupService
             }
         }
 
-        return $found;
+        // Shown as the creator may see each person; matched above on the legal name only.
+        $avatars = (new AvatarData())->forViewerJson($creator, array_column($found, 'id'));
+
+        return array_map(static fn (array $f): array => ['id' => $f['id'], 'name' => $avatars[$f['id']]['name'] ?? $f['name'], 'role' => $f['role'], 'avatar' => $avatars[$f['id']] ?? null], $found);
     }
 
     /**

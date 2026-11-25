@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use CodeIgniter\Config\Services;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\FakeEmail;
@@ -110,6 +111,15 @@ final class InstitutionPeopleTest extends RouteTestCase
         $this->assertStringContainsString('(you)', $body);
         $this->assertStringNotContainsString('Zed Person', $body);
         $this->assertMatchesRegularExpression('/2 people\s*</', $body);
+    }
+
+    public function testYourOwnRowLocksYourNameAndEmailInTheEditDialog(): void
+    {
+        $ann  = $this->person('student', 'Ann');
+        $body = $this->page();
+
+        $this->assertMatchesRegularExpression('#data-dialog-action="[^"]*/institution/people/' . $this->admin->id . '"[^>]*data-dialog-locked=#', $body);
+        $this->assertDoesNotMatchRegularExpression('#data-dialog-action="[^"]*/institution/people/' . $ann->id . '"[^>]*data-dialog-locked=#', $body);
     }
 
     public function testTheListIsFilteredAndSearched(): void
@@ -318,5 +328,35 @@ final class InstitutionPeopleTest extends RouteTestCase
         $dashboard = html_entity_decode($this->step('GET', 'institution/dashboard')->response()->getBody());
 
         $this->assertSame(1, preg_match('/<a\s[^>]*href="[^"]*institution\/people"[^>]*data-app-tile="people"/s', $dashboard));
+    }
+
+    public function testEachPersonGetsAnInteractiveAvatarAndTheQueryCountDoesNotGrowWithRows(): void
+    {
+        $this->person('student', 'Ann');
+        $count = function (): int {
+            $queries = 0;
+            $l       = static function () use (&$queries): void {
+                $queries++;
+            };
+            Events::on('DBQuery', $l);
+            $this->page();
+            Events::removeListener('DBQuery', $l);
+
+            return $queries;
+        };
+
+        $few = $count();
+
+        $ids = [];
+        foreach (['Bea', 'Cal', 'Dee', 'Eli', 'Fay', 'Gus', 'Hal', 'Ida'] as $name) {
+            $ids[] = (int) $this->person($name === 'Cal' ? 'instructor' : 'student', $name)->id;
+        }
+        $many = $count();
+        $body = $this->page();
+
+        foreach ($ids as $id) {
+            $this->assertStringContainsString('data-person-avatar="' . $id . '"', $body);
+        }
+        $this->assertLessThanOrEqual($few + 2, $many, 'avatars are fetched once for the page, not per row');
     }
 }

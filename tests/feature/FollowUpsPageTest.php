@@ -134,6 +134,44 @@ final class FollowUpsPageTest extends RouteTestCase
         $this->withHeaders(['Accept' => 'application/json'])->call('post', 'instructor/follow-ups', ['offering_id' => $this->offering]);
     }
 
+    public function testTheStudentARequestIsAboutHasTheirGatedNameAndAvatar(): void
+    {
+        $hidden = PeopleFactory::person('student', 'Hal', 'Hidden', null, $this->institution);
+        CourseFactory::enroll($this->offering, $hidden);
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $hidden->id)->update(['preferred_first_name' => 'Zedekiah']);
+        $this->ask($this->teacher, ['student_id' => $this->student->id]);
+        $this->ask($this->teacher, ['student_id' => $hidden->id, 'title' => 'Another one']);
+        // Hal left the institution: the instructor may no longer see his profile.
+        db_connect()->table('institution_users')->where('user_id', $hidden->id)->delete();
+
+        $lookups = 0;
+        $l       = static function (\CodeIgniter\Database\Query $q) use (&$lookups): void {
+            $lookups += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        \CodeIgniter\Events\Events::on('DBQuery', $l);
+        $body = $this->page($this->teacher, 'instructor/follow-ups');
+        \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->student->id . '"', $body);
+        $this->assertStringContainsString('· Jun Dent', $body);
+        $this->assertStringContainsString('· Hal Hidden', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden->id . '"', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body);
+
+        $third = PeopleFactory::person('student', 'Tom', 'Third', null, $this->institution);
+        CourseFactory::enroll($this->offering, $third);
+        $this->ask($this->teacher, ['student_id' => $third->id, 'title' => 'A third']);
+        $more = 0;
+        $m    = static function (\CodeIgniter\Database\Query $q) use (&$more): void {
+            $more += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        \CodeIgniter\Events\Events::on('DBQuery', $m);
+        $this->page($this->teacher, 'instructor/follow-ups');
+        \CodeIgniter\Events\Events::removeListener('DBQuery', $m);
+        $this->assertLessThanOrEqual($lookups, $more, 'one avatar lookup for the page, not one per request');
+    }
+
     public function testALinkFromAnAttentionItemOpensTheFormForThatCourseAndStudent(): void
     {
         $body = $this->page($this->dean, 'dean/follow-ups?' . http_build_query(['offering' => $this->offering, 'student' => $this->student->id, 'reason' => 'at_risk']));

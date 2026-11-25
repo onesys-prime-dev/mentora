@@ -126,6 +126,7 @@ class InstitutionAuditLog
         return [
             'id'           => (int) $row['id'],
             'created_at'   => (string) $row['created_at'],
+            'actor_id'     => $row['actor_user_id'] === null ? null : (int) $row['actor_user_id'],
             'actor'        => $this->name($row['actor_user_id'] === null ? null : (int) $row['actor_user_id'], $row['actor_label']),
             'via'          => $row['impersonator_user_id'] === null ? null : $this->name((int) $row['impersonator_user_id'], null),
             'acting_role'  => $row['acting_role'],

@@ -67,7 +67,7 @@ class AccountStateFilter implements FilterInterface
         $message = match ($reason) {
             AccountControl::REASON_DEACTIVATED => 'This account has been deactivated. Contact your administrator.',
             self::REASON_IDLE                  => 'You were signed out because you were inactive for a while. Please sign in again.',
-            default                            => 'You were signed out by an administrator. Please sign in again.',
+            default                            => 'You were signed out. Please sign in again.', // an administrator, a password change or "sign out of all other devices"
         };
 
         /** @var IncomingRequest $request */

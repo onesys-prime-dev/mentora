@@ -27,21 +27,17 @@ class ConversationService
     }
 
     /**
-     * The direct conversation between $sender and the recipient, created if it
-     * does not exist (the same pair, and for a parent the same child, is one
-     * conversation whichever side starts it). Null when the policy refuses or
-     * the recipient is not someone the sender can reach.
+     * Whether $sender may start (or reopen) a direct conversation with $recipient, and about which child.
+     * The one check behind startDirect and the profile's Message button, so the button never promises
+     * a conversation that starting refuses. Null when refused.
      *
-     * @throws RateLimitedException when the sender has started too many new threads this hour
-     *
-     * @return array<string, mixed>|null a `conversations` row
+     * @return array{subject_student_id: ?int}|null
      */
-    public function startDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
+    public function resolveDirectStart(User $sender, User $recipient, ?int $subjectStudentId = null): ?array
     {
-        $recipient = $recipientId < 1 ? null : model(UserModel::class)->findById($recipientId);
-        $inst      = $this->resolver->institutionOf($sender);
+        $inst = $this->resolver->institutionOf($sender);
 
-        if ($recipient === null || $inst === null || $this->resolver->institutionOf($recipient) !== $inst) {
+        if ($inst === null || $this->resolver->institutionOf($recipient) !== $inst) {
             return null;
         }
 
@@ -74,6 +70,31 @@ class ConversationService
         if ($subjectStudentId !== null && ! $context->linkedChild) {
             return null;
         }
+
+        return ['subject_student_id' => $subjectStudentId];
+    }
+
+    /**
+     * The direct conversation between $sender and the recipient, created if it
+     * does not exist (the same pair, and for a parent the same child, is one
+     * conversation whichever side starts it). Null when the policy refuses or
+     * the recipient is not someone the sender can reach.
+     *
+     * @throws RateLimitedException when the sender has started too many new threads this hour
+     *
+     * @return array<string, mixed>|null a `conversations` row
+     */
+    public function startDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
+    {
+        $recipient = $recipientId < 1 ? null : model(UserModel::class)->findById($recipientId);
+        $start     = $recipient === null ? null : $this->resolveDirectStart($sender, $recipient, $subjectStudentId);
+
+        if ($start === null) {
+            return null;
+        }
+
+        $inst             = (int) $this->resolver->institutionOf($sender);
+        $subjectStudentId = $start['subject_student_id'];
 
         $db  = db_connect();
         $key = DirectKey::for($inst, (int) $sender->id, $recipientId, $subjectStudentId);

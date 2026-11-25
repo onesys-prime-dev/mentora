@@ -9,6 +9,7 @@ use App\Models\Courses\CourseScheduleModel;
 use App\Models\Learning\CourseModuleModel;
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Assessments\AssessmentScopeService;
+use App\Services\Profiles\AvatarData;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -80,6 +81,11 @@ class OverviewService
 
         $isInstructor = \App\Services\Courses\CourseViewer::seesInstructorView($user);
 
+        // Only the student's course info names the instructor.
+        if (! $isInstructor) {
+            $info = self::withInstructorAvatar($user, $info);
+        }
+
         $viewData = [
             'user'     => $user,
             'role'     => $isInstructor ? 'instructor' : 'student',
@@ -94,7 +100,7 @@ class OverviewService
         );
 
         $viewData += $isInstructor
-            ? $this->forInstructor($offeringId, $info, $assessments)
+            ? $this->forInstructor($offeringId, $info, $assessments, $user)
             : $this->forStudent($user, $offering, $assessments, $modulesUrl);
 
         return [
@@ -106,6 +112,14 @@ class OverviewService
 
         ];
 
+    }
+
+    /** Adds the course-info avatar of the instructor for this viewer (FR3); also used by the parent's Overview. */
+    public static function withInstructorAvatar(User $viewer, array $info): array
+    {
+        $id = (int) ($info['instructor_id'] ?? 0);
+
+        return $info + ['instructor_avatar' => $id > 0 ? (new AvatarData())->forViewer($viewer, [$id])[$id] ?? null : null];
     }
 
     /*
@@ -137,7 +151,7 @@ class OverviewService
             ->buildStudentGrades($user, $offering, $assessments)['summary'];
 
         return [
-            'activity'  => $this->activityFeedService->forStudent((int) $user->id, $offeringId, $assessments['assessments']),
+            'activity'  => $this->activityFeedService->forStudent((int) $user->id, $offeringId, $assessments['assessments'], $user),
             'resume'    => $this->resumePoint((int) $user->id, $offeringId, $modulesUrl),
             'metrics'   => $this->studentMetrics($assessments['metrics'], $grade),
             'deadlines' => $this->studentDeadlines($assessments['upNext']),
@@ -351,10 +365,10 @@ class OverviewService
     |--------------------------------------------------------------------------
     */
 
-    protected function forInstructor(int $offeringId, array $info, array $assessments): array
+    protected function forInstructor(int $offeringId, array $info, array $assessments, ?User $viewer = null): array
     {
         return [
-            'activity'       => $this->activityFeedService->forInstructor($offeringId),
+            'activity'       => $this->activityFeedService->forInstructor($offeringId, $viewer),
             'attention'      => $this->attention($offeringId, $assessments),
             'metrics'        => $assessments['metrics'],
             'deadlines'      => $this->instructorDeadlines($assessments['assessments']),

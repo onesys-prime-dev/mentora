@@ -24,6 +24,8 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
 
     private User $teacher;
 
+    private User $parent;
+
     private int $offering;
 
     private ParentCourseTabs $tabs;
@@ -35,6 +37,8 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
         $institution    = PeopleFactory::institution('PCT');
         $this->child    = PeopleFactory::person('student', 'Ann', 'Lee', null, $institution);
         $this->teacher  = PeopleFactory::person('instructor', 'Tina', 'Tan', 'tina@school.example', $institution);
+        $this->parent   = PeopleFactory::person('parent', 'Pam', 'Parent', null, $institution);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $institution, 'parent_user_id' => $this->parent->id, 'student_user_id' => $this->child->id, 'created_at' => date('Y-m-d H:i:s')]);
         $this->offering = CourseFactory::offering('A');
         $this->tabs     = new ParentCourseTabs();
 
@@ -428,7 +432,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
         $this->schedule('mon', '09:00:00', '10:30:00', 'Room 4');
         $this->schedule('wed', '09:00:00', '10:30:00', 'Room 4');
 
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->parent, $this->offering)['html'];
 
         $this->assertStringContainsString('We learn how computers work.', $html);
         $this->assertStringContainsString('Tina Tan', $html);
@@ -440,7 +444,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
 
     public function testTheOverviewHasNothingOfTheStudentsOwnProgress(): void
     {
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->parent, $this->offering)['html'];
 
         $this->assertStringNotContainsStringIgnoringCase('continue where you left off', $html);
         $this->assertStringNotContainsString('/modules', $html);
@@ -452,7 +456,7 @@ final class ParentCourseTabsServiceTest extends DatabaseTestCase
     {
         db_connect()->table('instructor_assignments')->where('offering_id', $this->offering)->delete();
 
-        $html = $this->tabs->overview($this->offering)['html'];
+        $html = $this->tabs->overview($this->parent, $this->offering)['html'];
 
         $this->assertStringContainsString('Not assigned yet', $html);
         $this->assertStringContainsString('Not scheduled yet', $html);

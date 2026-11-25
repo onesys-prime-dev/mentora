@@ -99,6 +99,20 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
 
                     <?= $field(['name' => 'address', 'label' => 'Address', 'type' => 'textarea', 'value' => (string) ($d['address'] ?? ''), 'maxlength' => 500]) ?>
                 </section>
+
+                <section class="<?= $section ?>" aria-labelledby="photos-heading">
+                    <h2 id="photos-heading" class="<?= $heading ?>">Profile photos</h2>
+
+                    <div class="flex items-center justify-between gap-4">
+                        <p id="photos-help" class="text-sm text-[#3D3D3D]">Show people's profile photos. When off, everyone sees initials; photos are kept.</p>
+                        <label class="relative inline-flex shrink-0 cursor-pointer items-center pointer-coarse:min-h-11">
+                            <input type="hidden" name="profile_photos_enabled" value="0">
+                            <input type="checkbox" name="profile_photos_enabled" value="1" role="switch" aria-labelledby="photos-heading" aria-describedby="photos-help" aria-checked="<?= (int) ($d['profile_photos_enabled'] ?? 1) === 1 ? 'true' : 'false' ?>" class="peer sr-only" data-photos-switch <?= (int) ($d['profile_photos_enabled'] ?? 1) === 1 ? 'checked' : '' ?> <?= $settingsCanEdit ? '' : 'disabled' ?>>
+                            <span class="h-6 w-11 rounded-full bg-gray-300 transition-colors peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-brand/50 peer-disabled:opacity-50"></span>
+                            <span class="absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-white transition-transform peer-checked:translate-x-5"></span>
+                        </label>
+                    </div>
+                </section>
             </div>
 
             <p class="text-xs font-medium text-[#C33939]" data-form-error hidden></p>

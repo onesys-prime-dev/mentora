@@ -6,6 +6,7 @@ namespace App\Services\Notifications;
 
 use App\Services\Users\AccountControl;
 use App\Services\Users\PasswordResetService;
+use App\Services\Profiles\SecurityNotice;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
 use DateTimeImmutable;
@@ -40,7 +41,16 @@ class MailOutbox
     /** Group activity news (GroupNotifier); its in-app notice is made by GroupNotifier, not here. */
     public const GROUP = 'group';
 
-    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP];
+    /** An administrator removed or added the person's profile photo (detail: removed | added); the bell is sent by ProfileModeration. */
+    public const PHOTO = 'photo';
+
+    /** The sign-in email was changed by an administrator or an import (detail: the OLD address, which is told; the new one is the account's current email). Never muted (D26). */
+    public const EMAIL_CHANGED = 'email_changed';
+
+    /** An administrator cleared a profile field (detail: the field in words, e.g. "bio"). */
+    public const FIELD_CLEARED = 'field_cleared';
+
+    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP, self::PHOTO, self::EMAIL_CHANGED, self::FIELD_CLEARED];
 
     /** How long a row waits so that changes made one after another make one email. */
     public const MERGE_SECONDS = 120;
@@ -90,7 +100,8 @@ class MailOutbox
      */
     public function tell(int $institutionId, int $userId, string $kind, string $detail = '', ?DateTimeImmutable $now = null): bool
     {
-        if (self::$muted || ! in_array($kind, self::KINDS, true)) {
+        // A changed sign-in email is a security notice: told even when the run is muted (D26).
+        if ((self::$muted && $kind !== self::EMAIL_CHANGED) || ! in_array($kind, self::KINDS, true)) {
             return false;
         }
 
@@ -219,6 +230,24 @@ class MailOutbox
             return false;
         }
 
+        // A changed sign-in email is told to the address it left, as a notice of its own; the rest is one email to the current address.
+        $old  = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === self::EMAIL_CHANGED));
+        $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] !== self::EMAIL_CHANGED));
+
+        /** @var \CodeIgniter\Shield\Entities\User|null $user a deleted account finds nobody */
+        $user    = $old === [] ? null : model(UserModel::class)->findById($userId);
+        $current = (string) ($user->email ?? '');
+
+        foreach ($old as $r) {
+            // explode: rows queued before the detail held only the old address carried "old new".
+            SecurityNotice::emailChangedByAdmin(explode(' ', (string) $r['detail'])[0], $current, $userId);
+            $db->table('mail_outbox')->where('id', $r['id'])->update(['sent_at' => $stamp, 'last_error' => null]);
+        }
+
+        if ($rows === []) {
+            return $old !== [];
+        }
+
         $ids         = array_map(static fn (array $r): int => (int) $r['id'], $rows);
         $user        = model(UserModel::class)->findById($userId);
         $institution = $db->table('institutions')->where('id', $institutionId)->where('deleted_at IS NULL', null, false)->get()->getRowArray();
@@ -328,6 +357,14 @@ class MailOutbox
         }
 
         $out .= $this->list('About your groups', $by[self::GROUP] ?? []);
+
+        foreach ($by[self::PHOTO] ?? [] as $what) {
+            $out .= ($what === 'removed' ? 'Your profile photo was removed by your school.' : 'Your school added a profile photo for you.') . "\n\n";
+        }
+
+        foreach ($by[self::FIELD_CLEARED] ?? [] as $label) {
+            $out .= "Your school cleared your {$label}. You can add it again on your profile.\n\n";
+        }
 
         $out .= isset($by[self::WELCOME])
             ? "If you were not expecting this, you can ignore this email: nothing happens unless the link is used.\n"

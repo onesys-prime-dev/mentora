@@ -134,6 +134,17 @@ describe("choosing the members", () => {
         expect(all("[data-role=group-results] b")).toHaveLength(0);
     });
 
+    it("draws each candidate's avatar inside the choice as decoration only", async () => {
+        const avatar = { id: 7, name: "Jun Dela Cruz", initials: "JD", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
+
+        await mount(makeApi({ groupCandidates: vi.fn().mockResolvedValue(ok({ candidates: [{ ...person(7, "Jun Dela Cruz"), avatar }] })) }));
+        await type("[data-role=group-search]", "dela");
+
+        expect(results()[0].textContent).toContain("Jun Dela Cruz");
+        expect(results()[0].querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+        expect(results()[0].querySelector("[data-person-avatar]")).toBeNull();
+    });
+
     it("selects a person as a removable chip, and again removes them", async () => {
         await mount(makeApi());
         await type("[data-role=group-search]", "alpha");

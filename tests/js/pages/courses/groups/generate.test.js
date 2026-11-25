@@ -117,6 +117,28 @@ describe("generate groups", () => {
         expect(document.querySelector("[data-preview-replaces]")).toBeNull();
     });
 
+    it("draws each proposed member's gated avatar beside the name, opening only for someone the viewer may see", async () => {
+        const avatar = (id, name, interactive) => ({ id, name, initials: name[0], colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive });
+        server({
+            "GET /groups": () => json({ html: tabHtml() }),
+            "GET /group-sets/5": () => json(detail()),
+            "POST /group-sets/5/generate/preview": () => json(preview(0, {
+                groups: [{ members: [{ ...person(101, "Jun Dela Cruz"), avatar: avatar(101, "Jun Dela Cruz", true) }, { ...person(102, "Hal Hidden"), avatar: avatar(102, "Hal Hidden", false) }] }],
+            })),
+        });
+
+        await initialize();
+        document.querySelector("[data-group-action=\"generate\"]").click();
+        document.querySelector("[data-group-generate-form]").requestSubmit();
+        await flush();
+
+        const group = document.querySelector("[data-preview-group]");
+        expect(group.querySelector("button[data-person-avatar=\"101\"]")).not.toBeNull();
+        expect(group.querySelector("[data-person-avatar=\"102\"]")).toBeNull();
+        expect(group.querySelectorAll("[data-avatar][aria-hidden=\"true\"]")).toHaveLength(1);
+        expect(group.textContent).toContain("Hal Hidden");
+    });
+
     it("sends the picked pairs and warns about conflicts", async () => {
         const fetch = server({
             "GET /groups": () => json({ html: tabHtml() }),

@@ -13,6 +13,7 @@ use App\Services\Groups\GroupExtensionService;
 use App\Services\Groups\GroupLeaderService;
 use App\Services\Groups\GroupProposalService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -78,12 +79,17 @@ class ActivityGroupsController extends BaseController
 
         $access = GroupsTabController::access($offeringId);
 
+        // One lookup for the activity: every member's avatar as this viewer may see them (FR2).
+        $avatars    = (new AvatarData())->forViewerJson(auth()->user(), [...array_map('intval', array_column($members ?? [], 'student_user_id')), ...array_map('intval', array_column($ungrouped, 'student_user_id'))]);
+        $withAvatar = static fn (array $s): array => array_merge($s, ['name' => $avatars[$s['student_user_id']]['name'] ?? $s['name'], 'avatar' => $avatars[$s['student_user_id']] ?? null]);
+        $groups     = array_map(static fn (array $g): array => array_merge($g, ['members' => AvatarData::sortByName(array_map($withAvatar, $g['members']))]), $groups);
+
         return $this->response->setJSON([
             'success'    => true,
             'config'     => $config,
             'dueDate'    => $this->dueDate($assessmentId),
             'groups'     => $groups,
-            'ungrouped'  => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name']], $ungrouped),
+            'ungrouped'  => AvatarData::sortByName(array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null], $ungrouped)),
             'sets'       => array_map(static fn (array $s) => ['id' => (int) $s['id'], 'name' => $s['name'], 'group_count' => (int) $s['group_count']], $sets),
             'activities' => $this->activities($offeringId, $assessmentId),
             'flags'      => [

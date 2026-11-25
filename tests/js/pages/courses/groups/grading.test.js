@@ -136,6 +136,24 @@ describe("loading, empty, error and filled", () => {
         expect(root().querySelector("[data-gg-layout]").hidden).toBe(false);
     });
 
+    it("draws each member's and ungrouped student's avatar beside their name", async () => {
+        const face = (id, name) => ({ id, name, initials: "XY", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true });
+        server({
+            "GET /": () => json(list({ ungrouped: [{ student_user_id: 120, name: "Gil Reyes", avatar: face(120, "Gil Reyes"), hasSubmission: false }] })),
+            "GET /11": () => json(detail({ members: [member(101, "Ana Cruz", { avatar: face(101, "Ana Cruz") }), member(102, "Ben Lim", { avatar: null }), member(103, "Cai Ortiz", { final: 12, removed: true, avatar: face(103, "Cai Ortiz") })] })),
+        });
+
+        await initializeGroupGrading(root());
+        await flush();
+
+        expect(root().querySelectorAll("[data-gg-list] [data-avatar]")).toHaveLength(1);
+        expect(detailEl().querySelector("[data-gg-member=\"101\"] [data-avatar]")).not.toBeNull();
+        expect(detailEl().querySelector("[data-gg-member=\"102\"] [data-avatar]")).toBeNull();
+        expect(detailEl().querySelector("[data-gg-removed=\"103\"] [data-avatar]")).not.toBeNull();
+        // Someone the viewer may see opens their card (FR2); no row here is itself a button.
+        expect(root().querySelector("[data-gg-list] [data-person-avatar=\"120\"]")).not.toBeNull();
+    });
+
     it("shows a skeleton while loading", async () => {
         let release;
         server({ "GET /": () => new Promise((resolve) => (release = resolve)) });

@@ -48,7 +48,8 @@ foreach ($list['rows'] as $r) {
     $rows[] = [
         'id'      => $id,
         'cells'   => [
-            'subject' => ['html' => '<span class="font-semibold text-[#1A1C1E]">' . esc($r['title']) . '</span><span class="block text-xs text-[#646464]">' . esc($r['label']) . ($r['student_name'] ? ' · ' . esc($r['student_name']) : '') . '</span>'],
+            'subject' => ['html' => '<span class="font-semibold text-[#1A1C1E]">' . esc($r['title']) . '</span><span class="block text-xs text-[#646464]">' . esc($r['label'])
+                . ($r['student_name'] ? ' · ' . (($r['student_avatar'] ?? null) !== null ? '<span class="mr-1 inline-flex align-middle">' . view('components/avatar', $r['student_avatar'] + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) . '</span>' : '') . esc($r['student_name']) : '') . '</span>'],
             'with'    => ['html' => esc($with ?: '—') . '<span class="block text-xs text-[#646464]">' . esc($withRole) . '</span>'],
             'due'     => ['html' => esc($when($r['due_on'])) . ($r['due_date'] === null ? '<span class="block text-xs text-[#646464]">no date set</span>' : '')],
             'status'  => ['html' => $status . ($r['passed_to'] ? '<span class="mt-1 block text-xs text-[#646464]">Passed to ' . esc($r['passed_to']['name']) . ($r['passed_to']['status'] === 'done' ? ' (done)' : '') . '</span>' : '')],

@@ -116,6 +116,36 @@ describe("a message bubble", () => {
 
     });
 
+    it("puts the sender's avatar from the JSON beside their name, interactive when the server says so", () => {
+
+        const avatar = { id: 2, name: "Ana Reyes", initials: "AR", colour: "#B91C1C", photoUrl: "/p64.jpg", photoUrlLg: null, interactive: true };
+        const button = messageNode(message({ avatar }), { mine: false }).querySelector("[data-person-avatar]");
+
+        expect(button.tagName).toBe("BUTTON");
+        expect(button.dataset.personAvatar).toBe("2");
+        expect(button.querySelector("img").getAttribute("src")).toBe("/p64.jpg");
+
+    });
+
+    it("draws a hidden sender's avatar as decoration only, beside the visible name", () => {
+
+        const avatar = { id: 2, name: "Prof. Reyes", initials: "PR", colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive: false };
+        const node = messageNode(message({ avatar }), { mine: false });
+
+        expect(node.querySelector("[data-person-avatar]")).toBeNull();
+        expect(node.querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+        expect(node.textContent).toContain("Prof. Reyes · Instructor");
+
+    });
+
+    it("has no avatar on my own messages", () => {
+
+        const avatar = { id: 2, name: "Me", initials: "ME", colour: "#B91C1C", photoUrl: null, interactive: true };
+
+        expect(messageNode(message({ mine: true, avatar }), { mine: true }).querySelector("[data-avatar]")).toBeNull();
+
+    });
+
     it("renders hostile text and names as text, not markup", () => {
 
         const node = messageNode(message({ sender_name: "<b>x</b>", body: "<img src=x onerror=alert(1)>" }), { mine: false });
@@ -197,6 +227,19 @@ describe("a conversation row", () => {
         expect(conversationRow(row({ type: "course" }), { selected: false }).querySelector("[data-avatar]").className).toContain("rounded-lg");
         expect(conversationRow(row({ type: "group" }), { selected: false }).querySelector("[data-avatar]").className).toContain("bg-accent");
         expect(conversationRow(row(), { selected: false }).querySelector("[data-avatar]").className).toContain("rounded-full");
+
+    });
+
+    it("draws the other person's avatar from the JSON in a direct row, decorative since the row is a button", () => {
+
+        const avatar = { id: 9, name: "Ana Reyes", initials: "AR", colour: "#1D4ED8", photoUrl: "/p64.jpg", photoUrlLg: null, interactive: true };
+        const node = conversationRow(row({ avatar }), { selected: false });
+        const el = node.querySelector("[data-avatar]");
+
+        expect(node.querySelector("button")).toBeNull();
+        expect(el.getAttribute("aria-hidden")).toBe("true");
+        expect(el.className).toContain("rounded-full");
+        expect(el.querySelector("img").getAttribute("src")).toBe("/p64.jpg");
 
     });
 

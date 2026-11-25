@@ -12,7 +12,7 @@ $canSwitchRole = count($userRoles) > 1;
 */
 $profile = current_user_profile($user);
 
-$fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+$fullName = person_display_name($profile);
 
 $email = $profile['email'] ?? ($user->email ?? '');
 
@@ -22,17 +22,18 @@ $studentMeta = $userRole === 'student'
     ? implode(' · ', array_filter([$profile['student_number'] ?? null, $profile['program_code'] ?? null]))
     : '';
 
-$avatarUrl = base_url('assets/images/placeholder/profile.png');
+// The same initials-or-photo avatar as everywhere else; a login with no profile row falls back to its name.
+$avatarPerson = (new \App\Services\Profiles\AvatarData())->forMany([(int) $user->id])[(int) $user->id]
+    ?? ['id' => (int) $user->id, 'name' => $displayName];
 
 // The Apps menu and the phone block draw the same tiles; work them (and their badges) out once.
 $headerApps = $userRole === 'institutional_admin' ? [] : global_apps($userRole);
 
-// Not built yet — shown so the menu's shape is settled, but inert. "My Profile" is real for the
-// roles that have a profile page (a student's, to read; a parent's, with their email choices).
+// "My Profile" and Settings are real for every role; Help & Support is not built.
 $accountLinks = [
-    ['label' => 'My Profile', 'icon' => 'user', 'url' => in_array($userRole, ['student', 'parent'], true) ? site_url($userRole . '/profile') : null],
-    ['label' => 'Settings', 'icon' => 'settings'],
-    ['label' => 'Help & Support', 'icon' => 'help'],
+    ['label' => 'My Profile', 'icon' => 'user', 'url' => site_url('profile')],
+    ['label' => 'Settings', 'icon' => 'settings', 'url' => site_url('settings')],
+    ['label' => 'Help & Support', 'icon' => 'help', 'soon' => 'Coming soon'],
 ];
 ?>
 <header
@@ -220,10 +221,7 @@ $accountLinks = [
                 aria-expanded="false"
                 aria-controls="profile-menu-panel"
                 class="max-sm:hidden h-11 flex items-center gap-5 p-1 pr-3 border border-gray-300 rounded-4xl cursor-pointer transition duration-150 hover:-translate-y-0.5 hover:border-brand/50 hover:bg-white hover:shadow-md active:translate-y-0 active:scale-95 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100 aria-expanded:border-brand aria-expanded:bg-brand/10 aria-expanded:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/55 focus-visible:ring-offset-2">
-                <img
-                    class="h-full w-auto rounded-full"
-                    src="<?= $avatarUrl ?>"
-                    alt="">
+                <?= view('components/avatar', ['person' => $avatarPerson, 'size' => 'sm'], ['saveData' => false]) ?>
 
                 <!-- arrow-down svg -->
                 <svg
@@ -308,10 +306,7 @@ $accountLinks = [
                 <!-- Identity -->
                 <div class="flex items-center gap-3 bg-brand-tint px-4 py-4">
 
-                    <img
-                        class="h-12 w-12 shrink-0 rounded-full object-cover"
-                        src="<?= $avatarUrl ?>"
-                        alt="Profile photo of <?= esc($displayName, 'attr') ?>">
+                    <?= view('components/avatar', ['person' => $avatarPerson, 'size' => 'md'], ['saveData' => false]) ?>
 
                     <div class="flex min-w-0 flex-col gap-0.5">
 
@@ -402,7 +397,7 @@ $accountLinks = [
 
                             <span class="flex-1"><?= esc($link['label']) ?></span>
 
-                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400">Soon</span>
+                            <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400"><?= esc($link['soon'] ?? 'Soon') ?></span>
 
                         </span>
 

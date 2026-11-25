@@ -417,4 +417,15 @@ final class AdminInstitutionTabsTest extends RouteTestCase
         $this->assertStringNotContainsString('<b>Mallory</b>', $body);
         $this->assertStringContainsString('&lt;b&gt;Mallory', $body);
     }
+
+    public function testTheAuditTabShowsANonInteractiveAvatarForTheActor(): void
+    {
+        $actor = $this->member('instructor', 'Ivy', 'Actor', 'ivy@acme.example', $this->institution);
+        service('auditLogger')->log('institution.updated', $actor, ['institution_id' => $this->institution, 'target_type' => 'institution', 'target_id' => $this->institution]);
+
+        $body = $this->body("admin/institutions/{$this->institution}/audit");
+
+        $this->assertStringContainsString('data-avatar', $body);
+        $this->assertStringNotContainsString('data-person-avatar', $body);
+    }
 }

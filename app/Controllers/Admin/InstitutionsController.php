@@ -11,6 +11,7 @@ use App\Services\Audit\AuditLogSearch;
 use App\Services\Institutions\InstitutionFilters;
 use App\Services\Institutions\InstitutionService;
 use App\Services\Institutions\InvitationService;
+use App\Services\Profiles\AvatarData;
 use App\Services\Subscriptions\PlanService;
 use App\Services\Subscriptions\SubscriptionLifecycle;
 use App\Services\Subscriptions\SubscriptionService;
@@ -103,6 +104,7 @@ class InstitutionsController extends BaseController
             'user'             => auth()->user(),
             'auditInstitution' => $institution,
             'auditRows'        => $entries['rows'],
+            'auditAvatars'     => (new AvatarData())->forViewer(auth()->user(), array_values(array_filter(array_map('intval', array_column($entries['rows'], 'actor_user_id'))))),
             'auditTotal'       => $entries['total'],
         ]);
     }

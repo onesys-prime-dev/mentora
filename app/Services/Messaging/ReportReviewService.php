@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -14,6 +15,10 @@ use CodeIgniter\Shield\Entities\User;
  * chat or a group; a direct message is never moderated, so a report of one can
  * only be dismissed or marked as actioned. Audit entries hold ids and the
  * outcome, never text.
+ *
+ * An official screen, so people are named by their legal name as the rest of the
+ * moderation UI does; only the avatars beside the names go through
+ * AvatarData::forViewer (photo and card only for people the admin may see).
  */
 class ReportReviewService
 {
@@ -35,7 +40,7 @@ class ReportReviewService
     /**
      * Reports of the administrator's institution, newest first. No message text and no note.
      *
-     * @return list<array{id: int, reason: string, status: string, created_at: string, conversation_type: string, conversation_name: string, reporter_name: string}>
+     * @return list<array{id: int, reason: string, status: string, created_at: string, conversation_type: string, conversation_name: string, reporter_name: string, reporter_avatar: array{person: array<string, mixed>, interactive: bool}|null}>
      */
     public function list(User $admin, string $status = 'open'): array
     {
@@ -50,13 +55,16 @@ class ReportReviewService
             ->join('messages m', 'm.id = r.message_id')->join('conversations c', 'c.id = m.conversation_id')
             ->where('r.institution_id', $institution)->where('r.status', $status)->orderBy('r.id', 'DESC')->limit(200)->get()->getResultArray();
 
-        $names = ConversationPresenter::names(array_map('intval', array_column($rows, 'reporter_id')));
+        $ids     = array_values(array_unique(array_map('intval', array_column($rows, 'reporter_id'))));
+        $names   = ConversationPresenter::names($ids);
+        $avatars = (new AvatarData())->forViewer($admin, $ids);
 
         return array_map(static fn (array $r): array => [
             'id' => (int) $r['id'], 'reason' => (string) $r['reason'], 'status' => (string) $r['status'], 'created_at' => (string) $r['created_at'],
             'conversation_type' => (string) $r['type'],
             'conversation_name' => $r['type'] === 'group' ? (string) $r['title'] : ($r['type'] === 'course' ? 'Course chat' : 'Direct message'),
             'reporter_name'     => $names[(int) $r['reporter_id']] ?? 'Former member',
+            'reporter_avatar'   => $avatars[(int) $r['reporter_id']] ?? null,
         ], $rows);
     }
 
@@ -79,6 +87,13 @@ class ReportReviewService
         $snapshot       = $decoded === null ? null : json_decode($decoded, true);
         $note           = $report['note_enc'] === null ? null : $this->cipher->decrypt((string) $report['note_enc'], $conversationId, $reporterId);
         $removed        = $report['removed_at'] !== null;
+        $lines          = is_array($snapshot) && is_array($snapshot['messages'] ?? null) ? $snapshot['messages'] : [];
+        $avatars        = (new AvatarData())->forViewer($admin, array_values(array_unique(array_map(static fn ($l): int => (int) ($l['sender_id'] ?? 0), $lines))));
+
+        foreach ($lines as &$line) {
+            $line['avatar'] = $avatars[(int) ($line['sender_id'] ?? 0)] ?? null;
+        }
+        unset($line);
 
         return [
             'id'                => (int) $report['id'],
@@ -87,7 +102,7 @@ class ReportReviewService
             'status'            => (string) $report['status'],
             'created_at'        => (string) $report['created_at'],
             'conversation_type' => (string) $report['type'],
-            'snapshot'          => is_array($snapshot) && is_array($snapshot['messages'] ?? null) ? $snapshot['messages'] : [],
+            'snapshot'          => $lines,
             'reported_id'       => (int) $report['message_id'],
             'removed'           => $removed,
             'can_remove'        => $this->canRemove($report),

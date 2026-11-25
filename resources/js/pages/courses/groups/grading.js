@@ -5,6 +5,7 @@ import { showLoadError } from "../../../shared/spa/error-state.js";
 
 import { fetchGroupGrading, fetchGroupGradingDetail, sendGroupGrading } from "./api.js";
 import { NETWORK, onSubmit } from "./board.js";
+import { renderAvatar } from "../../../shared/avatar.js";
 import { badge, escapeHtml, formatDateTime, SMALL } from "./detail.js";
 import { renderDetailSkeleton } from "./skeleton.js";
 
@@ -190,7 +191,7 @@ function renderList(view) {
     const solo = ungroupedPolicy === "solo" && typeof view.gradeStudent === "function";
     const free = ungrouped.map((s) => `
         <li class="flex items-center justify-between gap-2 text-sm text-[#3D3D3D]">
-            <span class="truncate">${escapeHtml(s.name)}</span>
+            <span class="flex min-w-0 items-center gap-1.5">${face(s)}<span class="truncate">${escapeHtml(s.name)}</span></span>
             ${solo && s.hasSubmission ? `<button type="button" class="${SMALL} text-brand hover:bg-brand-tint" data-gg-student="${s.student_user_id}" aria-label="Grade ${escapeHtml(s.name)}'s own work">Grade</button>` : ""}
         </li>`).join("");
 
@@ -342,11 +343,18 @@ function memberHeading(d) {
 
 }
 
+/** A member's xs avatar as on the Groups tab chips: it opens their card only when the JSON says the viewer may (FR2). */
+function face(person) {
+
+    return person.avatar ? renderAvatar(person.avatar, "xs", { decorative: true }).outerHTML : "";
+
+}
+
 function memberRow(view, m, write) {
 
     const d = view.detail;
     const sid = m.student_user_id;
-    const name = `<b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${m.isLeader ? " <span aria-hidden=\"true\">★</span><span class=\"sr-only\">(leader)</span>" : ""}`;
+    const name = `${face(m)}<b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${m.isLeader ? " <span aria-hidden=\"true\">★</span><span class=\"sr-only\">(leader)</span>" : ""}`;
     const flags = [m.pending && !view.decided.has(sid) ? badge("Joined after grading", "warning") : "", m.excused ? badge("Excused", "neutral") : ""].join("");
     const own = m.submission ? `<details class="text-sm"><summary class="cursor-pointer text-brand pointer-coarse:min-h-11">Their work, ${escapeHtml(formatDateTime(m.submission.submittedAt))}${m.submission.isLate ? " · late" : ""}</summary><div class="pt-2">${m.submission.workHtml}</div></details>` : "";
     let body;
@@ -406,7 +414,7 @@ function removedRow(view, m) {
 
     return `
         <li class="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 py-3 first:border-t-0" data-gg-removed="${sid}">
-            <span class="flex flex-wrap items-center gap-1.5"><b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${badge("No longer in the group", "neutral")}${m.excused ? badge("Excused", "neutral") : ""}</span>
+            <span class="flex flex-wrap items-center gap-1.5">${face(m)}<b class="text-sm font-semibold text-[#1A1C1E]">${escapeHtml(m.name)}</b>${badge("No longer in the group", "neutral")}${m.excused ? badge("Excused", "neutral") : ""}</span>
             <span class="flex flex-wrap items-center gap-2">
                 ${m.final === null ? "" : badge(`Score ${fmt(m.final)} / ${fmt(view.detail.totalPoints)}`, "neutral")}
                 ${view.detail.flags.canWrite ? `<button type="button" class="${SMALL} border border-brand text-brand hover:bg-brand-tint max-sm:w-full" data-gg-action="drop" data-student="${sid}" aria-label="Keep or excuse ${escapeHtml(m.name)}'s score">Keep or excuse…</button>` : ""}

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -120,9 +121,10 @@ class MessageActions
     }
 
     /**
-     * Who reacted with what, by display name. Null when the conversation or message is not the person's.
+     * Who reacted with what: names as the person may see each reactor, and each one's avatar in the same order
+     * (one AvatarData::forViewer lookup). Null when the conversation or message is not the person's.
      *
-     * @return array<string, list<string>>|null
+     * @return array{reactors: array<string, list<string>>, avatars: array<string, list<array<string, mixed>|null>>}|null
      */
     public function reactors(User $user, int $conversationId, int $messageId): ?array
     {
@@ -130,14 +132,15 @@ class MessageActions
             return null;
         }
 
-        $rows  = db_connect()->table('message_reactions')->where('message_id', $messageId)->orderBy('created_at')->orderBy('id')->get()->getResultArray();
-        $names = ConversationPresenter::names(array_map(static fn (array $r): int => (int) $r['user_id'], $rows));
-        $out   = [];
+        $rows    = db_connect()->table('message_reactions')->where('message_id', $messageId)->orderBy('created_at')->orderBy('id')->get()->getResultArray();
+        $avatars = (new AvatarData())->forViewerJson($user, array_values(array_unique(array_map(static fn (array $r): int => (int) $r['user_id'], $rows))));
+        $out     = ['reactors' => [], 'avatars' => []];
 
         foreach (self::PALETTE as $emoji) {
             foreach ($rows as $row) {
                 if ($row['emoji'] === $emoji) {
-                    $out[$emoji][] = $names[(int) $row['user_id']] ?? 'Former member';
+                    $out['reactors'][$emoji][] = $avatars[(int) $row['user_id']]['name'] ?? 'Former member';
+                    $out['avatars'][$emoji][]  = $avatars[(int) $row['user_id']] ?? null;
                 }
             }
         }

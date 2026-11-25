@@ -265,4 +265,20 @@ final class InstitutionAuditLogPageTest extends RouteTestCase
         $this->assertSame('Signed in', InstitutionAuditLog::label('auth.login'));
         $this->assertSame('Offering status changed', InstitutionAuditLog::label('offering.status_changed'));
     }
+
+    public function testTheActorHasAnInteractiveAvatarBesideTheName(): void
+    {
+        $this->entry();
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->admin->id . '"', $body);
+
+        // Beside the name in the Who cell, not at the start of the When cell.
+        $doc = new DOMDocument();
+        @$doc->loadHTML($body);
+        $xpath = new DOMXPath($doc);
+        $this->assertSame(1, $xpath->query('//td[@data-label="Who"]//*[@data-person-avatar="' . $this->admin->id . '"]')->length);
+        $this->assertSame(0, $xpath->query('//td[@data-label="When"]//*[@data-avatar]')->length);
+    }
 }

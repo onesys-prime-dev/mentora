@@ -8,6 +8,7 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\DeanFactory;
 use Tests\Support\FakeEmail;
 use Tests\Support\PeopleFactory;
 use Tests\Support\SisFixture;
@@ -449,5 +450,120 @@ final class PeopleServiceTest extends DatabaseTestCase
         }
 
         $this->assertCount(2, $this->service->byIds($this->institution, [(int) $ivy->id, (int) $this->actor->id, 999999]));
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Home department (Task 6.3)
+    |--------------------------------------------------------------------------
+    */
+
+    private function department(int $institution, string $tag): int
+    {
+        ['college' => $college] = DeanFactory::college($tag, $institution);
+
+        return DeanFactory::department($college, $tag);
+    }
+
+    private function home(User $user): mixed
+    {
+        return db_connect()->table('user_profiles')->where('user_id', $user->id)->get()->getRow('home_department_id');
+    }
+
+    private function edit(User $user, array $extra): void
+    {
+        $this->service->update($this->institution, (int) $user->id, ['first_name' => 'Ivy', 'last_name' => 'Person', 'email' => (string) $user->email] + $extra, $this->actor);
+    }
+
+    public function testAHomeDepartmentIsSetClearedAndAudited(): void
+    {
+        $ivy  = $this->person('instructor', 'Ivy');
+        $dept = $this->department($this->institution, 'HD1');
+
+        $this->edit($ivy, ['home_department_id' => (string) $dept]);
+        $this->assertSame($dept, (int) $this->home($ivy));
+
+        $entry = db_connect()->table('audit_logs')->where('action', 'profile.home_department_set')->get()->getRowArray();
+        $this->assertSame((int) $this->actor->id, (int) $entry['actor_user_id']);
+        $this->assertSame((int) $ivy->id, (int) $entry['target_id']);
+        $this->assertStringContainsString((string) $dept, (string) $entry['new_values']);
+
+        $this->edit($ivy, ['home_department_id' => '']);
+        $this->assertNull($this->home($ivy));
+        $this->assertSame(2, db_connect()->table('audit_logs')->where('action', 'profile.home_department_set')->countAllResults());
+    }
+
+    public function testAForeignDepartmentIsRefusedWithAFieldErrorAndNothingChanges(): void
+    {
+        $ivy     = $this->person('instructor', 'Ivy');
+        $foreign = $this->department($this->other, 'HD2');
+
+        $e = $this->refused(fn () => $this->edit($ivy, ['home_department_id' => (string) $foreign, 'first_name' => 'Changed']));
+
+        $this->assertArrayHasKey('home_department_id', $e->errors());
+        $this->assertNull($this->home($ivy));
+        $this->assertSame('Ivy', db_connect()->table('user_profiles')->where('user_id', $ivy->id)->get()->getRow('first_name'));
+    }
+
+    public function testAnAbsentFieldLeavesTheHomeDepartmentAlone(): void
+    {
+        $ivy  = $this->person('instructor', 'Ivy');
+        $dept = $this->department($this->institution, 'HD3');
+
+        $this->edit($ivy, ['home_department_id' => (string) $dept]);
+        $this->edit($ivy, []);
+        $this->assertSame($dept, (int) $this->home($ivy));
+    }
+
+    public function testAHomeDepartmentForAPersonWhoIsNotStaffIsAFieldError(): void
+    {
+        $ann  = $this->person('student', 'Ann');
+        $dept = $this->department($this->institution, 'HD4');
+
+        $e = $this->refused(fn () => $this->edit($ann, ['home_department_id' => (string) $dept]));
+
+        $this->assertArrayHasKey('home_department_id', $e->errors());
+        $this->assertNull($this->home($ann));
+        // An empty value from the form (the field is hidden for them) is not an error.
+        $this->edit($ann, ['home_department_id' => '']);
+    }
+
+    public function testAnAdministratorCannotChangeTheirOwnNameOrEmailHere(): void
+    {
+        $own = ['first_name' => 'Ada', 'last_name' => 'Admin', 'email' => 'ada@people.test'];
+
+        foreach (['first_name' => 'Adele', 'last_name' => 'Smith', 'email' => 'ada.new@people.test'] as $field => $value) {
+            $e = $this->refused(fn () => $this->service->update($this->institution, (int) $this->actor->id, [$field => $value] + $own, $this->actor));
+            $this->assertSame([$field => 'Use Request a correction on your profile.'], $e->errors(), $field);
+        }
+
+        $this->assertSame(0, $this->audit('user.updated'));
+        $this->assertSame('ada@people.test', (string) db_connect()->table('auth_identities')->where('user_id', $this->actor->id)->get()->getRow('secret'));
+    }
+
+    public function testAnAdministratorStillSetsTheirOwnHomeDepartment(): void
+    {
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $this->actor->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        $dept = $this->department($this->institution, 'HD5');
+
+        $this->service->update($this->institution, (int) $this->actor->id, ['first_name' => ' Ada ', 'last_name' => 'Admin', 'email' => 'ADA@people.test', 'home_department_id' => (string) $dept], $this->actor);
+
+        $this->assertSame($dept, (int) $this->home($this->actor));
+    }
+
+    public function testChangingTheEmailTellsTheOldAddress(): void
+    {
+        $ann = $this->person('student', 'Ann');
+        $this->mailer->sent = [];
+
+        $this->service->update($this->institution, (int) $ann->id, ['first_name' => 'Ann', 'last_name' => 'Person', 'email' => 'ann.new@people.test'], $this->actor);
+
+        $this->assertSame('ann@people.test', $this->mailer->sent[0]['to']);
+        $this->assertStringContainsString('was changed to ann.new@people.test by your school', $this->mailer->sent[0]['message']);
+        $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'profile.email_changed_by_admin')->countAllResults());
+
+        $this->mailer->sent = [];
+        $this->service->update($this->institution, (int) $ann->id, ['first_name' => 'Anne', 'last_name' => 'Person', 'email' => 'ann.new@people.test'], $this->actor);
+        $this->assertSame([], $this->mailer->sent);
     }
 }

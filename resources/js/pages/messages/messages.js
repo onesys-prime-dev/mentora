@@ -19,6 +19,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { renderAvatar } from "../../shared/avatar.js";
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
 import { createGroupPicker, MAX_MEMBERS } from "./group.js";
@@ -251,8 +252,20 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         $("[data-role=head-name]").textContent = c?.name ?? "Conversation";
         $("[data-role=head-sub]").textContent = !c ? "" : c.subtitle ? `About ${c.subtitle}` : c.type === "course" ? "Course chat" : c.type === "group" ? "Group" : "Direct message";
-        avatar.textContent = c?.initials ?? "";
-        avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+        // A direct chat's head is the other person's avatar from the server: a way into their profile when they may be seen.
+        if (c?.avatar) {
+            avatar.replaceChildren(renderAvatar(c.avatar, "sm", { decorative: true }));
+            avatar.className = "flex flex-none";
+            if (c.avatar.interactive === true) {
+                avatar.removeAttribute("aria-hidden");
+            } else {
+                avatar.setAttribute("aria-hidden", "true");
+            }
+        } else {
+            avatar.textContent = c?.initials ?? "";
+            avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+            avatar.setAttribute("aria-hidden", "true");
+        }
 
         const canPost = c === null || c.can_post !== false;
         const locked = Number(c?.is_locked) === 1;
@@ -874,14 +887,18 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
             const name = document.createElement("span");
             const meta = document.createElement("span");
+            const words = document.createElement("span");
 
             button.type = "button";
-            button.className = "flex w-full flex-col rounded-lg px-3 py-2 text-left hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.className = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             name.className = "text-sm font-semibold text-gray-900";
             name.textContent = entry.name;
             meta.className = "text-xs text-[#646464]";
             meta.textContent = entry.subject_name ? `${ROLE_WORDS[entry.role] ?? entry.role} · about ${entry.subject_name}` : (ROLE_WORDS[entry.role] ?? entry.role);
-            button.append(name, meta);
+            words.className = "flex min-w-0 flex-col";
+            words.append(name, meta);
+            // Inside the choice button, so never a button itself: decoration beside the name.
+            button.append(...(entry.avatar ? [renderAvatar({ ...entry.avatar, interactive: false }, "sm", { decorative: true })] : []), words);
             button.addEventListener("click", () => picker.pick(entry));
             item.append(button);
 
@@ -985,42 +1002,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     });
 
-    const prefsEmail = $("[data-role=prefs-email]");
-    const prefsQuiet = $("[data-role=prefs-quiet]");
-    const prefsStart = $("[data-role=prefs-start]");
-    const prefsEnd = $("[data-role=prefs-end]");
-    const prefsNote = $("[data-role=prefs-note]");
-
+    // The email switch and quiet hours moved to Settings (D15); this dialog keeps the blocked people.
     const settings = createSettings({ root, api });
 
-    $("[data-role=prefs-open]")?.addEventListener("click", async () => {
-        settings.sync();
-        prefsNote.textContent = "";
-
-        const { status, data } = await api.preferences();
-
-        if (status !== 200 || !data) {
-            prefsNote.textContent = "Couldn't load your settings.";
-
-            return;
-        }
-
-        prefsEmail.checked = data.preferences.email_alerts;
-        prefsStart.value = data.preferences.quiet_start ?? "";
-        prefsEnd.value = data.preferences.quiet_end ?? "";
-        prefsQuiet.hidden = !data.quiet_hours_allowed;
-    });
-
-    $("[data-role=prefs-save]")?.addEventListener("click", async () => {
-        const hours = !prefsQuiet.hidden;
-        const result = await api.savePreferences({
-            email_alerts: prefsEmail.checked,
-            quiet_start: hours ? prefsStart.value || null : null,
-            quiet_end: hours ? prefsEnd.value || null : null,
-        });
-
-        prefsNote.textContent = result.status === 200 ? "Saved." : result.status === 422 ? "Check the times." : describeFailure(result, "Couldn't save your settings. Try again.");
-    });
+    $("[data-role=prefs-open]")?.addEventListener("click", () => settings.sync());
 
     // ---- starting a staff group ----------------------------------------
     // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.
@@ -1051,8 +1036,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
 
             button.type = "button";
-            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
-            button.textContent = entry.name;
+            button.className = "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            // Inside the choice button, so never a button itself: decoration beside the name.
+            button.append(...(entry.avatar ? [renderAvatar({ ...entry.avatar, interactive: false }, "xs", { decorative: true })] : []), entry.name);
             button.title = ROLE_WORDS[entry.role] ?? entry.role;
             button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
             // The pick redraws the results and chips, so the tapped button goes: focus stays in the dialog, on the search.
@@ -1279,10 +1265,20 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const entries = Object.entries(data.reactors ?? {}).filter(([e]) => !emoji || e === emoji);
 
-        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name) => {
+        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name, i) => {
             const item = document.createElement("li");
+            const avatar = data.avatars?.[e]?.[i];
 
-            item.textContent = `${e} ${name}`;
+            item.className = "flex items-center gap-2";
+            item.append(`${e} `);
+
+            // The server's avatar (AvatarData::forViewer), in the same order as the names; decoration only, so no
+            // person card opens over the open dialog.
+            if (avatar) {
+                item.append(renderAvatar({ ...avatar, interactive: false }, "xs", { decorative: true }));
+            }
+
+            item.append(name);
 
             return item;
         })));

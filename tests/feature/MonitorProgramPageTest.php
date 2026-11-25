@@ -147,6 +147,51 @@ final class MonitorProgramPageTest extends RouteTestCase
         $result->assertSee('Never active');
     }
 
+    public function testAtRiskStudentsHaveGatedAvatarsBesideTheirLegalNamesFromOneLookup(): void
+    {
+        CourseFactory::items(CourseFactory::unit(CourseFactory::module($this->mine)), array_fill(0, 2, []));
+
+        $seen   = CourseFactory::user('student');
+        $hidden = CourseFactory::user('student');
+        db_connect()->table('user_profiles')->insert(['user_id' => $seen->id, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->insert(['user_id' => $hidden->id, 'first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+        CourseFactory::enroll($this->mine, $seen);
+        CourseFactory::enroll($this->mine, $hidden);
+        CourseFactory::members($this->mine, [$this->chair, $seen]);
+        // In the course but in no institution: the chairperson may not open this student's card.
+        CourseFactory::members($this->mine, [$hidden], false);
+
+        $lookups = function (): array {
+            $n = 0;
+            $l = static function (\CodeIgniter\Database\Query $q) use (&$n): void {
+                $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+            };
+            $this->loggedInAs($this->chair);
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $body = $this->get('chairperson/monitor-program')->response()->getBody();
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return [$n, $body];
+        };
+        [$few, $body] = $lookups();
+
+        $this->assertStringContainsString('data-person-avatar="' . $seen->id . '"', $body);
+        // The text a reader sees (no tags or attributes, so the avatar's own label does not count).
+        $visible = html_entity_decode(strip_tags(preg_replace('#<(script|template)[ >].*?</(script|template)>#s', '', $body)));
+        $this->assertStringContainsString('Juan Dela Cruz', $visible, 'a monitoring list keeps the legal name');
+        $this->assertStringNotContainsString('Jun Dela Cruz', $visible);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden->id . '"', $body);
+        $this->assertStringContainsString('Hal Hidden', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body);
+
+        for ($i = 0; $i < 3; $i++) {
+            $more = CourseFactory::user('student');
+            CourseFactory::enroll($this->mine, $more);
+            CourseFactory::members($this->mine, [$more]);
+        }
+        $this->assertLessThanOrEqual($few, $lookups()[0], 'one avatar lookup for the page, not one per student');
+    }
+
     public function testThePublishedGradeAverageAppearsOnThePage(): void
     {
         $schemeId = GradeFactory::scheme($this->mine);

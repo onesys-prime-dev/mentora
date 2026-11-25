@@ -10,6 +10,9 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\PeopleService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\CorrectionRequestService;
+use App\Services\Profiles\ProfileModeration;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UserExport;
 use App\Services\Users\UserFilters;
@@ -53,16 +56,19 @@ class PeopleController extends BaseController
             'reauthDialog'       => true,
             'peopleView'         => $view,
             'peopleRows'         => $result['rows'],
+            'peopleAvatars'      => (new AvatarData())->forViewer(auth()->user(), array_map('intval', array_column($result['rows'], 'id'))),
             'peopleTotal'        => $result['total'],
             'peoplePages'        => $result['pages'],
             'peopleFilters'      => $result['filters'],
             'peopleInvitations'  => $this->people->invitations($institutionId),
             'peopleOpen'         => $this->people->openInvitations($institutionId),
             'peopleRoles'        => PeopleService::ROLES,
+            'peopleDepartments'  => $this->people->departments($institutionId),
             'peopleRoleLabels'   => UserFilters::ROLE_LABELS,
             'peopleSeats'        => (new PlanLimits())->report($institutionId)['seats'],
             'peopleCanEdit'      => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'peopleCanViewAs'    => (bool) auth()->user()->can('institution.impersonate'),
+            'peopleRequests'     => (new CorrectionRequestService())->countFor(auth()->user()),
         ]);
     }
 
@@ -80,6 +86,17 @@ class PeopleController extends BaseController
     public function update(int $id): ResponseInterface|RedirectResponse
     {
         return $this->run(fn (int $inst) => $this->people->update($inst, $id, $this->input(), auth()->user()), 'The details were saved.', self::BACK);
+    }
+
+    public function clear(int $id): ResponseInterface|RedirectResponse
+    {
+        $field = (string) ($this->input()['field'] ?? '');
+
+        return $this->run(
+            fn () => (new ProfileModeration())->clearField($id, $field, auth()->user()),
+            'Cleared. They were told that your school did it.',
+            "people/{$id}",
+        );
     }
 
     public function deactivate(int $id): ResponseInterface|RedirectResponse

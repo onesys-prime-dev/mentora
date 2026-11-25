@@ -14,6 +14,7 @@ use App\Models\Courses\DiscussionReadModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Files\FileModel;
+use App\Services\Profiles\AvatarData;
 use App\Services\Storage\StorageService;
 
 /**
@@ -213,9 +214,12 @@ class DiscussionService
 
         $moderates = $isInstructor && ! \App\Services\Courses\CourseAbilities::viewOnly($user, 'discussions');
 
+        $threads = array_slice($rows, 0, self::PAGE_SIZE);
+        $avatars = (new AvatarData())->forViewer($user, array_map('intval', array_column($threads, 'author_id')));
+
         $threads = array_map(
-            fn (array $t) => $t + $this->threadPermissions($t, $user, $moderates),
-            array_slice($rows, 0, self::PAGE_SIZE)
+            fn (array $t) => ['author_name' => $avatars[(int) $t['author_id']]['person']['name'] ?? $t['author_name']] + $t + $this->threadPermissions($t, $user, $moderates) + ['author_avatar' => $avatars[(int) $t['author_id']] ?? null],
+            $threads
         );
 
         return ['threads' => $threads, 'has_more' => $hasMore, 'page' => $page, 'is_instructor' => $isInstructor];
@@ -242,6 +246,8 @@ class DiscussionService
         $counts = $this->reactionModel->retrieveCounts($threadId);
         $own = $this->reactionModel->retrieveOwn($threadId, (int) $user->id);
         $attachments = $this->attachmentModel->retrieveForThread($threadId);
+        // Every author on the page at once: no profile query per avatar.
+        $avatars = (new AvatarData())->forViewer($user, array_map('intval', [$thread['author_id'], ...array_column($replies, 'author_id')]));
 
         $withUrl = fn (array $files) => array_map(
             fn (array $f) => $f + ['url' => $this->storageService->url((int) $f['id'])],
@@ -258,14 +264,19 @@ class DiscussionService
             $reply['attachments'] = $withUrl($attachments['replies'][$id] ?? []);
             $reply['is_answer'] = (int) $thread['answer_reply_id'] === $id;
             $reply['can_delete'] = $isAuthor || $moderates;
+            $reply['author_avatar'] = $avatars[(int) $reply['author_id']] ?? null;
+            $reply['author_name'] = $avatars[(int) $reply['author_id']]['person']['name'] ?? $reply['author_name'];
 
         }
         unset($reply);
 
+        // The gated name: preferred only for people this viewer may see (FR5).
+        $thread['author_name'] = $avatars[(int) $thread['author_id']]['person']['name'] ?? $thread['author_name'];
         $thread = $thread + $this->threadPermissions($thread, $user, $moderates) + [
             'reaction_counts' => $counts['thread'],
             'own_reaction' => $own['thread'],
             'attachments' => $withUrl($attachments['thread']),
+            'author_avatar' => $avatars[(int) $thread['author_id']] ?? null,
         ];
 
         // Opening it is what clears "unread" — the view above already carries
@@ -468,6 +479,8 @@ class DiscussionService
         $row['own_reaction'] = null;
         $row['is_answer'] = false;
         $row['can_delete'] = true;
+        $row['author_avatar'] = (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null;
+        $row['author_name'] = $row['author_avatar']['person']['name'] ?? $row['author_name'];
         $row['attachments'] = array_map(
             fn (array $f) => $f + ['url' => $this->storageService->url((int) $f['id'])],
             $files

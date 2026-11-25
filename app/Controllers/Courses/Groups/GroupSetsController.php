@@ -12,6 +12,7 @@ use App\Services\Groups\GroupLimits;
 use App\Services\Groups\GroupMembershipService;
 use App\Services\Groups\GroupSetService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -50,7 +51,6 @@ class GroupSetsController extends BaseController
         $placed  = [];
 
         foreach ($members as $m) {
-            $byGroup[(int) $m['group_id']][] = ['student_user_id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
             $placed[(int) $m['student_user_id']] = true;
         }
 
@@ -62,11 +62,19 @@ class GroupSetsController extends BaseController
             ->join('user_profiles p', 'p.user_id = u.id', 'left')
             ->whereIn('u.id', $free)->orderBy('name', 'ASC')->get()->getResultArray();
 
+        // One lookup for the set: every member's avatar as this viewer may see them (FR2).
+        $avatars = (new AvatarData())->forViewerJson(auth()->user(), [...array_keys($placed), ...array_map('intval', array_column($ungrouped, 'student_user_id'))]);
+        $person  = static fn (array $s): array => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null];
+
+        foreach ($members as $m) {
+            $byGroup[(int) $m['group_id']][] = $person($m);
+        }
+
         return $this->response->setJSON([
             'success'   => true,
             'set'       => $set,
-            'groups'    => array_map(static fn (array $g) => ['id' => (int) $g['id'], 'name' => $g['name'], 'members' => $byGroup[(int) $g['id']] ?? []], $groups),
-            'ungrouped' => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name']], $ungrouped),
+            'groups'    => array_map(static fn (array $g) => ['id' => (int) $g['id'], 'name' => $g['name'], 'members' => AvatarData::sortByName($byGroup[(int) $g['id']] ?? [])], $groups),
+            'ungrouped' => AvatarData::sortByName(array_map($person, $ungrouped)),
             'limits'    => ['max_members' => GroupLimits::MAX_MEMBERS, 'max_groups' => GroupLimits::MAX_GROUPS_PER_ACTIVITY, 'max_sets' => GroupLimits::MAX_SETS_PER_OFFERING],
         ]);
     }
@@ -161,11 +169,13 @@ class GroupSetsController extends BaseController
                 ->select("u.id, COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username) AS name", false)
                 ->join('user_profiles p', 'p.user_id = u.id', 'left')
                 ->whereIn('u.id', $ids)->get()->getResultArray(), 'name', 'id');
-            $person = static fn (int $id): array => ['student_user_id' => $id, 'name' => (string) ($names[$id] ?? '')];
+            // One lookup for the preview: each proposed member's avatar and name as this viewer may see them (FR2).
+            $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', $ids));
+            $person  = static fn (int $id): array => ['student_user_id' => $id, 'name' => $avatars[$id]['name'] ?? (string) ($names[$id] ?? ''), 'avatar' => $avatars[$id] ?? null];
 
             return [
-                'groups'    => array_map(static fn (array $g) => ['members' => array_map($person, $g)], $result['groups']),
-                'ungrouped' => array_map($person, $result['ungrouped']),
+                'groups'    => array_map(static fn (array $g) => ['members' => AvatarData::sortByName(array_map($person, $g))], $result['groups']),
+                'ungrouped' => AvatarData::sortByName(array_map($person, $result['ungrouped'])),
                 'conflicts' => $result['conflicts'],
                 'replaces'  => (new StudentGroupModel())->where('set_id', $setId)->countAllResults(),
             ];

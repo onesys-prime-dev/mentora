@@ -5,6 +5,7 @@
  * @var array<string, mixed>       $section
  * @var list<array<string, mixed>> $sectionCourses     its offerings (not archived), with instructors and enrolled counts
  * @var list<array<string, mixed>> $sectionStudents    its members, with how many of its courses they hold a place in
+ * @var array<int, array<string, mixed>> $sectionAvatars AvatarData::forViewer for its members
  * @var list<array<string, mixed>> $sectionAvailable   active courses it does not take yet
  * @var bool                       $sectionCanEdit
  */
@@ -54,6 +55,8 @@ foreach ($sectionCourses as $c) {
 $studentRows = [];
 
 foreach ($sectionStudents as $st) {
+    // The social name: preferred first name only when this viewer may see the student (FR5).
+    $st['name'] = ($sectionAvatars ?? [])[(int) $st['id']]['person']['name'] ?? $st['name'];
     $actions = '';
 
     if ($canEdit) {
@@ -68,6 +71,7 @@ foreach ($sectionStudents as $st) {
     $studentRows[] = [
         'id'      => $st['id'],
         'label'   => $st['name'],
+        'person'  => ($sectionAvatars ?? [])[(int) $st['id']] ?? null,
         'cells'   => [
             'name'   => ['html' => '<span class="font-medium">' . esc($st['name']) . '</span>' . ($st['email'] !== '' && $st['email'] !== $st['name'] ? '<span class="block text-xs text-[#646464]">' . esc($st['email']) . '</span>' : '')],
             'number' => $st['student_number'] !== '' ? $st['student_number'] : '—',

@@ -57,7 +57,10 @@ $authorName = trim((string) $thread['author_name']) !== '' ? trim((string) $thre
 
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#767676]">
 
-        <span class="font-semibold text-[#646464]"><?= esc($authorName) ?></span>
+        <span class="flex items-center gap-1.5">
+            <?= view('components/avatar', ($thread['author_avatar'] ?? ['person' => ['id' => (int) ($thread['author_id'] ?? 0), 'name' => $authorName], 'interactive' => false]) + ['size' => 'xs'], ['saveData' => false]) ?>
+            <span class="font-semibold text-[#646464]"><?= esc($authorName) ?></span>
+        </span>
 
         <?php if ($thread['author_role'] === 'instructor'): ?>
             <?= view('components/status-badge', ['tone' => 'info', 'label' => 'Instructor'], ['saveData' => false]) ?>

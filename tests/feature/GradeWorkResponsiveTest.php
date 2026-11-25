@@ -178,6 +178,70 @@ final class GradeWorkResponsiveTest extends RouteTestCase
         $this->assertContains('sm:text-sm', $this->classes($feedback));
     }
 
+    public function testStudentsGetAvatarsAndOnlyThoseTheInstructorMaySeeOpenACard(): void
+    {
+        // Enrolled but in no institution: the instructor may not open this student's card.
+        $outsider = CourseFactory::user('student');
+        db_connect()->table('user_profiles')->insert(['user_id' => $outsider->id, 'first_name' => 'Out', 'last_name' => 'Sider']);
+        CourseFactory::enroll($this->offering, $outsider);
+
+        $xpath = $this->page($this->assignment());
+
+        $this->assertGreaterThan(0, $xpath->query('//button[@data-person-avatar="' . $this->student->id . '"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-person-avatar="' . $outsider->id . '"]')->length);
+        $this->assertStringContainsString('Out Sider', $xpath->document->textContent);
+        $this->assertSame(0, $xpath->query('//img[contains(@src, "placeholder/profile.png")]')->length);
+    }
+
+    public function testTheAssessmentHeaderShowsTheRealAuthorAndDateOrNoBylineAtAll(): void
+    {
+        $outsider = CourseFactory::user('instructor');
+        db_connect()->table('user_profiles')->insert(['user_id' => $outsider->id, 'first_name' => 'Out', 'last_name' => 'Sider']);
+        $assessment = $this->assignment();
+        db_connect()->table('assessments')->where('id', $assessment)->update(['created_at' => '2026-03-04 09:05:00']);
+        $this->loggedInAs($this->teacher);
+
+        $html = (new \App\Services\Courses\Assessments\AssessmentService())->viewAssessment($this->teacher, $assessment)['html'];
+        $this->assertStringContainsString('data-person-avatar="' . $this->teacher->id . '"', $html);
+        $this->assertStringContainsString('Instructor Person', $html);
+        $this->assertStringContainsString('March 4, 2026', $html);
+        $this->assertStringNotContainsString('Jalen Brunson', $html);
+        $this->assertStringNotContainsString('June 22, 2026', $html);
+        $this->assertStringNotContainsString('placeholder/profile.png', $html);
+
+        // An author the viewer may not open keeps the name, with no card.
+        db_connect()->table('assessments')->where('id', $assessment)->update(['created_by' => $outsider->id]);
+        $html = (new \App\Services\Courses\Assessments\AssessmentService())->viewAssessment($this->teacher, $assessment)['html'];
+        $this->assertStringNotContainsString('data-person-avatar="' . $outsider->id . '"', $html);
+        $this->assertStringContainsString('Out Sider', $html);
+
+        // No author at all: no byline, and never the old stub.
+        $header = view('pages/courses/features/assessments/partials/view-header', [
+            'user' => $this->teacher, 'authorAvatar' => null, 'currentUnit' => ['title' => 'U'],
+            'currentAssessment' => ['title' => 'T', 'assessment_type' => 'assignment', 'status' => 'published', 'learning_completion' => null],
+        ], ['saveData' => false]);
+        $this->assertStringNotContainsString('Jalen Brunson', $header);
+        $this->assertStringNotContainsString('data-byline', $header);
+    }
+
+    public function testTheLearningItemHeaderNamesTheCoursesInstructorOrShowsNoBylineAtAll(): void
+    {
+        $module = CourseFactory::module($this->offering);
+        [$item] = CourseFactory::items(CourseFactory::unit($module), [['title' => 'Read me']]);
+        $this->loggedInAs($this->student);
+
+        $html = (new \App\Services\Courses\ModuleService())->viewLearningItem($this->student, $this->offering, $item)['html'];
+        $this->assertStringContainsString('Instructor: Instructor Person', $html);
+        $this->assertStringContainsString('data-person-avatar="' . $this->teacher->id . '"', $html);
+        $this->assertStringNotContainsString('Jalen Brunson', $html);
+        $this->assertStringNotContainsString('placeholder/profile.png', $html);
+
+        db_connect()->table('instructor_assignments')->where('offering_id', $this->offering)->delete();
+        $html = (new \App\Services\Courses\ModuleService())->viewLearningItem($this->student, $this->offering, $item)['html'];
+        $this->assertStringNotContainsString('Instructor: ', $html);
+        $this->assertStringNotContainsString('data-byline', $html);
+    }
+
     public function testAStudentWithoutASubmissionGetsTheEmptyStateAndADisabledSave(): void
     {
         $xpath = $this->page($this->assignment());

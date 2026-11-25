@@ -1,0 +1,61 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Profiles;
+
+/**
+ * "Recent security activity" in Settings (D16): the person's own security changes and what an administrator did
+ * to their account, read from the audit log. Every such entry targets the person's user row, so one query on the
+ * (target_type, target_id) index finds them; profile edits (`profile.updated`) and the person's own photo changes
+ * are not security events and are left out.
+ */
+class SecurityActivity
+{
+    /** The audit actions shown, with what the owner reads. Each one targets the person it concerns. */
+    private const LABELS = [
+        'profile.password_changed'        => 'Password changed',
+        'profile.two_factor_on'           => 'Two-step sign-in turned on',
+        'profile.two_factor_off'          => 'Two-step sign-in turned off',
+        'profile.signed_out_others'       => 'Signed out of all other devices',
+        'profile.photo_removed_by_admin'  => 'Your photo was removed by your school',
+        'profile.photo_uploaded_by_admin' => 'An administrator added a profile photo',
+        'user.deactivated'                => 'Your account was deactivated',
+        'user.reactivated'                => 'Your account was reactivated',
+        'user.signed_out'                 => 'An administrator signed you out of every device',
+        'user.password_reset_sent'        => 'An administrator sent you a password reset link',
+        'user.welcome_link_sent'          => 'An administrator sent you a welcome link',
+        'user.password_reset'             => 'Password reset with an emailed link',
+        'user.roles_changed'              => 'Your roles were changed',
+        'user.updated'                    => 'An administrator updated your name or email',
+        'profile.correction_approved'     => 'Your correction was approved',
+        'profile.correction_rejected'     => 'Your correction was not approved',
+        'profile.email_changed'           => 'Email address changed',
+        'profile.email_changed_by_import' => "Your email was changed by your school's SIS import",
+        'profile.field_cleared_by_admin'  => 'An administrator cleared a profile field',
+        'profile.official_updated'        => 'Official details updated',
+    ];
+
+    /** @return list<array{action: string, label: string, at: string, by_admin: bool}> newest first */
+    public function recent(int $userId, int $days = 90): array
+    {
+        $rows = db_connect()->table('audit_logs')
+            ->select('action, actor_user_id, created_at')
+            ->where('target_type', 'user')
+            ->where('target_id', (string) $userId) // the column is a string: an int would skip the index
+            ->whereIn('action', array_keys(self::LABELS))
+            ->where('created_at >=', date('Y-m-d H:i:s', time() - $days * 86400))
+            ->orderBy('created_at', 'DESC')->orderBy('id', 'DESC')
+            ->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => [
+            'action' => $row['action'],
+            // A reset link asked for from the person's own Settings, not sent by the school.
+            'label'  => $row['action'] === 'user.password_reset_sent' && (int) $row['actor_user_id'] === $userId
+                ? 'You asked for a password reset link'
+                : self::LABELS[$row['action']],
+            'at'     => $row['created_at'],
+            'by_admin' => (int) $row['actor_user_id'] !== $userId,
+        ], $rows);
+    }
+}

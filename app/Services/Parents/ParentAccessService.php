@@ -6,6 +6,7 @@ namespace App\Services\Parents;
 
 use App\Models\Courses\EnrollmentModel;
 use App\Services\Subscriptions\PlanLimits;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -72,18 +73,46 @@ class ParentAccessService
             return [];
         }
 
-        $rows = db_connect()->table('parent_student_links l')
-            ->distinct()
+        $rows = $this->liveLinkQuery()
             ->select('l.parent_user_id AS parent_id, l.institution_id')
-            ->join('users p', 'p.id = l.parent_user_id AND p.deleted_at IS NULL AND p.active = 1', 'inner', false)
-            ->join('auth_groups_users g', "g.user_id = p.id AND g.`group` = 'parent'", 'inner', false)
-            ->join('institution_users pi', 'pi.user_id = l.parent_user_id AND pi.institution_id = l.institution_id', 'inner', false)
-            ->join('institution_users si', 'si.user_id = l.student_user_id AND si.institution_id = l.institution_id', 'inner', false)
-            ->join('users s', 's.id = l.student_user_id AND s.deleted_at IS NULL', 'inner', false)
             ->where('l.student_user_id', $studentId)
             ->get()->getResultArray();
 
         return array_map(static fn (array $row): array => ['parent_id' => (int) $row['parent_id'], 'institution_id' => (int) $row['institution_id']], $rows);
+    }
+
+    /**
+     * The live links (by parentsOf()'s rules) between any of these parents and any of these students, in one query.
+     *
+     * @param list<int> $parentIds
+     * @param list<int> $studentIds
+     *
+     * @return list<array{parent_id: int, student_id: int}>
+     */
+    public function liveLinks(array $parentIds, array $studentIds): array
+    {
+        if ($parentIds === [] || $studentIds === []) {
+            return [];
+        }
+
+        $rows = $this->liveLinkQuery()
+            ->select('l.parent_user_id AS parent_id, l.student_user_id AS student_id')
+            ->whereIn('l.parent_user_id', $parentIds)
+            ->whereIn('l.student_user_id', $studentIds)
+            ->get()->getResultArray();
+
+        return array_map(static fn (array $row): array => ['parent_id' => (int) $row['parent_id'], 'student_id' => (int) $row['student_id']], $rows);
+    }
+
+    private function liveLinkQuery(): BaseBuilder
+    {
+        return db_connect()->table('parent_student_links l')
+            ->distinct()
+            ->join('users p', 'p.id = l.parent_user_id AND p.deleted_at IS NULL AND p.active = 1', 'inner', false)
+            ->join('auth_groups_users g', "g.user_id = p.id AND g.`group` = 'parent'", 'inner', false)
+            ->join('institution_users pi', 'pi.user_id = l.parent_user_id AND pi.institution_id = l.institution_id', 'inner', false)
+            ->join('institution_users si', 'si.user_id = l.student_user_id AND si.institution_id = l.institution_id', 'inner', false)
+            ->join('users s', 's.id = l.student_user_id AND s.deleted_at IS NULL', 'inner', false);
     }
 
     /**

@@ -132,6 +132,7 @@ class GradesController extends BaseController
         $selected = $byId[$overview->defaultSectionId($sections, $requestedSection)] ?? null;
 
         // The At risk count is everyone, whatever reason is picked; the list keeps only that reason.
+        $risk   = (new GradesAtRisk())->shownTo($user, $risk);
         $atRisk = $reason === null ? $risk : array_values(array_filter(
             $risk,
             static fn (array $row): bool => in_array($reason, array_column($row['reasons'], 'kind'), true),
@@ -313,6 +314,7 @@ class GradesController extends BaseController
         }
 
         // The At risk count is everyone, whatever reason is picked; the list keeps only that reason.
+        $risk   = (new GradesAtRisk())->shownTo($user, $risk);
         $atRisk = $reason === null ? $risk : array_values(array_filter(
             $risk,
             static fn (array $row): bool => in_array($reason, array_column($row['reasons'], 'kind'), true),
@@ -433,6 +435,7 @@ class GradesController extends BaseController
         }
 
         // The At risk count is everyone, whatever reason is picked; the list keeps only that reason.
+        $risk   = (new GradesAtRisk())->shownTo($user, $risk);
         $atRisk = $reason === null ? $risk : array_values(array_filter(
             $risk,
             static fn (array $row): bool => in_array($reason, array_column($row['reasons'], 'kind'), true),

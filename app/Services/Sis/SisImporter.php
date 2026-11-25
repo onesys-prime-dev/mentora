@@ -16,6 +16,7 @@ use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
 use App\Services\Notifications\MailOutbox;
 use App\Services\Notifications\NotificationTriggers;
+use App\Services\Profiles\EmailChangeService;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UsernameGenerator;
 use CodeIgniter\Shield\Entities\User;
@@ -114,6 +115,9 @@ class SisImporter
 
     private ?User $actor = null;
 
+    /** @var list<array{id: int|string, code: string, name: string}>|null the institution's departments, loaded once per run */
+    private ?array $departments = null;
+
     public function __construct(
         private readonly ?SisConnectionService $connections = null,
         private readonly ?SisRunLog $runs = null,
@@ -136,6 +140,7 @@ class SisImporter
         $this->actor         = $actor;
         $this->upload        = false;
         $this->newSections   = [];
+        $this->departments   = null;
 
         $institution = (new InstitutionModel())->find($institutionId) ?? throw new InvalidArgumentException('That institution does not exist.');
         $connections = $this->connections ?? new SisConnectionService();
@@ -284,8 +289,40 @@ class SisImporter
             $mapped = SisMapper::person($record);
             $item   = ($this->upload ? $mapped['email'] : $mapped['external_id']) . ' (row ' . ($batch->rows[$i] ?? '?') . ')';
 
+            $mapped['home_department_id'] = $this->homeDepartment($dataset, $item, $mapped['home_department'], $role);
+
             $this->person($dataset, $item, $mapped, $role);
         }
+    }
+
+    /** A department of this institution by name or by code (ignoring case); an unknown or ambiguous one is reported and ignored. */
+    private function homeDepartment(string $dataset, string $item, ?string $wanted, string $role): ?int
+    {
+        if ($wanted === null || $role !== 'instructor') {
+            return null;
+        }
+
+        $rows = $this->departments ??= db_connect()->table('departments d')->select('d.id, d.code, d.name')->join('colleges c', 'c.id = d.college_id')
+            ->where('c.institution_id', $this->institutionId)->get()->getResultArray();
+        $lower = mb_strtolower($wanted);
+
+        foreach ([['name'], ['code']] as [$column]) {
+            $found = array_values(array_filter($rows, static fn (array $r): bool => mb_strtolower((string) $r[$column]) === $lower));
+
+            if (count($found) === 1) {
+                return (int) $found[0]['id'];
+            }
+
+            if (count($found) > 1) {
+                $this->issues[] = ['dataset' => $dataset, 'item' => $item, 'reason' => "Home department \"{$wanted}\" matches more than one department, so it was not set."];
+
+                return null;
+            }
+        }
+
+        $this->issues[] = ['dataset' => $dataset, 'item' => $item, 'reason' => "Home department \"{$wanted}\" is not a department of this institution, so it was not set."];
+
+        return null;
     }
 
     /**
@@ -343,7 +380,7 @@ class SisImporter
 
         $profile = $db->table('user_profiles')->where('user_id', $userId)->get()->getRowArray() ?? [];
         $current = $profile + ['email' => (string) ($db->table('auth_identities')->select('secret')->where('user_id', $userId)->where('type', 'email_password')->get()->getRowArray()['secret'] ?? '')];
-        $changes = SisMapper::changes($current, $m, ['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'student_number']);
+        $changes = SisMapper::changes($current, $m, ['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'student_number', 'home_department_id']);
 
         if ($changes === []) {
             $this->counts[$dataset]['skipped']++;
@@ -365,6 +402,10 @@ class SisImporter
             }
 
             $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $changes['email'], 'updated_at' => $this->stamp()]);
+            (new EmailChangeService())->cancelOpen($userId);
+            service('auditLogger')->log('profile.email_changed_by_import', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['changed' => true]]);
+            // Queued (the job mails the OLD address); a preview's rows are rolled back with the rest of it.
+            $current['email'] === '' || (new MailOutbox())->tell($this->institutionId, $userId, MailOutbox::EMAIL_CHANGED, $current['email'], $this->now);
             unset($changes['email']);
         }
 
@@ -378,6 +419,10 @@ class SisImporter
 
             if ($saved === false) {
                 throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
+            }
+
+            if (array_key_exists('home_department_id', $changes)) {
+                $this->auditHomeDepartment($userId, $changes['home_department_id']);
             }
         }
 
@@ -423,6 +468,10 @@ class SisImporter
             throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
         }
 
+        if (($m['home_department_id'] ?? null) !== null) {
+            $this->auditHomeDepartment((int) $user->id, $m['home_department_id']);
+        }
+
         $stamp = $this->stamp();
 
         if (! db_connect()->table('institution_users')->insert(['institution_id' => $this->institutionId, 'user_id' => $user->id, 'created_at' => $stamp, 'updated_at' => $stamp])) {
@@ -437,6 +486,12 @@ class SisImporter
 
         // A new account has no password yet: it is emailed a link to choose one.
         (new MailOutbox())->tell($this->institutionId, (int) $user->id, MailOutbox::WELCOME, $role, $this->now);
+    }
+
+    /** The same entry People writes when an administrator sets it; a preview's is rolled back with the run. */
+    private function auditHomeDepartment(int $userId, mixed $departmentId): void
+    {
+        service('auditLogger')->log('profile.home_department_set', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['department_id' => $departmentId === null ? null : (int) $departmentId]]);
     }
 
     /**
@@ -456,6 +511,7 @@ class SisImporter
             'suffix'                        => $m['suffix'],
             'student_number'                => $m['student_number'],
             'student_number_institution_id' => $this->issuer($m['student_number']),
+            'home_department_id'            => $m['home_department_id'] ?? null,
         ];
     }
 
@@ -1349,17 +1405,7 @@ class SisImporter
     /** A student number is unique within the institution that issued it (QA MISS-DB-01); the database refuses a duplicate too. */
     private function numberTaken(?string $number, ?int $userId): bool
     {
-        if ($number === null) {
-            return false;
-        }
-
-        $query = db_connect()->table('user_profiles')->where('student_number_institution_id', $this->institutionId)->where('student_number', $number);
-
-        if ($userId !== null) {
-            $query->where('user_id !=', $userId);
-        }
-
-        return $query->countAllResults() > 0;
+        return StudentNumbers::taken($number, $this->institutionId, $userId);
     }
 
     /** The institution recorded beside a student number: this one, or none when there is no number. */

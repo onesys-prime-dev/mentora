@@ -50,6 +50,7 @@ class EnrolmentsController extends BaseController
             'user'          => auth()->user(),
             'rosterOffering' => $result['offering'],
             'rosterRows'    => $result['rows'],
+            'rosterAvatars' => (new \App\Services\Profiles\AvatarData())->forViewer(auth()->user(), array_column($result['rows'], 'student_id')),
             'rosterTotal'   => $result['total'],
             'rosterPages'   => $result['pages'],
             'rosterPage'    => $result['page'],

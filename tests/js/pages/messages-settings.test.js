@@ -53,17 +53,17 @@ describe("Settings", () => {
     });
 });
 
-// Unblock redraws the list, so its button is gone: focus moves to the dialog's Save instead of falling to the page.
+// Unblock redraws the list, so its button is gone: focus moves to the dialog's Settings link instead of falling to the page.
 describe("focus after Unblock", () => {
-    it("moves to Save once the person is unblocked", async () => {
+    it("moves to the Settings link once the person is unblocked", async () => {
         const b = build({ blocked: [{ id: 5, name: "Ann Lee" }] });
-        b.root.insertAdjacentHTML("beforeend", '<button type="button" data-role="prefs-save">Save</button>');
+        b.root.insertAdjacentHTML("beforeend", '<a href="/settings#notifications" data-role="prefs-settings-link">Settings</a>');
 
         b.settings.sync();
         await vi.waitFor(() => expect(b.q("[data-unblock='5']")).not.toBeNull());
         b.q("[data-unblock='5']").focus();
         b.q("[data-unblock='5']").click();
 
-        await vi.waitFor(() => expect(document.activeElement).toBe(b.q("[data-role=prefs-save]")));
+        await vi.waitFor(() => expect(document.activeElement).toBe(b.q("[data-role=prefs-settings-link]")));
     });
 });

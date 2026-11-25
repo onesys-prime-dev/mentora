@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -200,10 +201,14 @@ class MessageService
             $rows = array_reverse($rows);
         }
 
+        $pins    = $this->pinnedRows($userId, $conversationId, $first);
+        // One lookup for the page: the messages' senders, the quoted ones and the pinned ones (FR2, FR5).
+        $avatars = $this->avatarsFor($user, [...$rows, ...$pins]);
+
         return [
-            'messages' => $this->presentRows($rows, $user, $conversation),
+            'messages' => $this->presentRows($rows, $user, $conversation, $avatars),
             'has_more' => $more,
-            'pinned'   => $this->pinnedPreviews($userId, $conversationId, $first),
+            'pinned'   => $this->pinnedPreviews($pins, $conversationId, $avatars),
             'my_last'  => $this->myLastSeen($userId, $conversationId),
         ];
     }
@@ -354,12 +359,13 @@ class MessageService
      * Presents rows of one chat for the viewer: what they may do is worked out once for the chat, and the reactions
      * of all the rows are loaded in one query.
      *
-     * @param list<array<string, mixed>> $rows         `messages` rows
-     * @param array<string, mixed>       $conversation a `conversations` row
+     * @param list<array<string, mixed>>                $rows         `messages` rows
+     * @param array<string, mixed>                      $conversation a `conversations` row
+     * @param array<int, array<string, mixed>>|null     $avatars      avatarsFor() of these rows when the caller has it
      *
      * @return list<array<string, mixed>>
      */
-    private function presentRows(array $rows, User $user, array $conversation): array
+    private function presentRows(array $rows, User $user, array $conversation, ?array $avatars = null): array
     {
         if ($rows === []) {
             return [];
@@ -372,6 +378,7 @@ class MessageService
             'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
             'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
             'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
+            'avatars'   => $avatars ?? $this->avatarsFor($user, $rows),
         ];
 
         return array_map(fn (array $row): array => $this->present($row, $userId, $view), $rows);
@@ -379,7 +386,7 @@ class MessageService
 
     /**
      * @param array<string, mixed>                                                                                                  $row  a `messages` row
-     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>} $view what the viewer may do and the reactions of the page
+     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>, avatars?: array<int, array<string, mixed>>} $view what the viewer may do, the reactions and the senders' avatars of the page
      *
      * @return array<string, mixed>
      */
@@ -404,9 +411,10 @@ class MessageService
 
         return [
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
-            'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
+            'sender_name' => $view['avatars'][(int) $row['sender_id']]['name'] ?? $sender['name'], 'sender_role' => $sender['role'],
+            'avatar' => (int) $row['sender_id'] === $userId ? null : ($view['avatars'][(int) $row['sender_id']] ?? null),
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
-            'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
+            'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId, $view['avatars'] ?? []),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
             'can_bump'            => MessageActions::canBump($row, $userId, $this->switchOn((int) $row['conversation_id'], 'bump')),
@@ -485,22 +493,55 @@ class MessageService
     }
 
     /**
-     * The pinned messages the viewer can see, newest pin first: sender and the first 80 characters, decrypted here.
+     * Everyone who wrote these messages or the messages they quote, the viewer included (their own quotes and pins
+     * show their preferred name), as this viewer may see them (FR2): one forViewerJson lookup, whose names are the
+     * gated ones (FR5).
      *
-     * @return list<array{id: int, sender_name: string, text: string}>
+     * @param list<array<string, mixed>> $rows `messages` rows
+     *
+     * @return array<int, array<string, mixed>>
      */
-    private function pinnedPreviews(int $userId, int $conversationId, int $floor): array
+    private function avatarsFor(User $user, array $rows): array
     {
-        $rows = db_connect()->table('messages m')->select('m.*')
+        $quoted = array_values(array_filter(array_map('intval', array_column($rows, 'reply_to_message_id'))));
+        $ids    = array_column($rows, 'sender_id');
+
+        if ($quoted !== []) {
+            array_push($ids, ...array_column(db_connect()->table('messages')->select('sender_id')->whereIn('id', $quoted)->get()->getResultArray(), 'sender_id'));
+        }
+
+        return (new AvatarData())->forViewerJson($user, array_values(array_unique(array_map('intval', $ids))));
+    }
+
+    /**
+     * The pinned messages the viewer can see, newest pin first.
+     *
+     * @return list<array<string, mixed>> `messages` rows
+     */
+    private function pinnedRows(int $userId, int $conversationId, int $floor): array
+    {
+        return db_connect()->table('messages m')->select('m.*')
             ->where(['m.conversation_id' => $conversationId, 'm.removed_at' => null, 'm.deleted_everyone_at' => null])
             ->where('m.pinned_at IS NOT NULL', null, false)->where('m.id >=', $floor)
             ->where('NOT EXISTS (SELECT 1 FROM message_hidden h WHERE h.message_id = m.id AND h.user_id = ' . $userId . ')', null, false)
             ->orderBy('m.pinned_at', 'DESC')->orderBy('m.id', 'DESC')->get()->getResultArray();
+    }
+
+    /**
+     * The pinned messages: sender and the first 80 characters, decrypted here.
+     *
+     * @param list<array<string, mixed>>       $rows    pinnedRows()
+     * @param array<int, array<string, mixed>> $avatars the page's avatarsFor()
+     *
+     * @return list<array{id: int, sender_name: string, text: string}>
+     */
+    private function pinnedPreviews(array $rows, int $conversationId, array $avatars): array
+    {
         $out = [];
 
         foreach ($rows as $row) {
             $plain = $this->cipher->decrypt((string) $row['body_enc'], $conversationId, (int) $row['sender_id']) ?? 'Message unavailable';
-            $out[] = ['id' => (int) $row['id'], 'sender_name' => $this->sender((int) $row['sender_id'])['name'], 'text' => self::preview($plain)];
+            $out[] = ['id' => (int) $row['id'], 'sender_name' => $avatars[(int) $row['sender_id']]['name'] ?? $this->sender((int) $row['sender_id'])['name'], 'text' => self::preview($plain)];
         }
 
         return $out;
@@ -509,9 +550,11 @@ class MessageService
     /**
      * The quoted original of a reply: who wrote it and its first 80 characters, decrypted here on the server.
      *
+     * @param array<int, array<string, mixed>> $avatars the page's avatarsFor(), for the gated sender name
+     *
      * @return array{id: int, sender_name: string, text: string}|null
      */
-    private function quote(mixed $originalId, int $viewerId): ?array
+    private function quote(mixed $originalId, int $viewerId, array $avatars = []): ?array
     {
         if ($originalId === null) {
             return null;
@@ -530,7 +573,7 @@ class MessageService
             $text  = self::preview($plain);
         }
 
-        return ['id' => (int) $orig['id'], 'sender_name' => $this->sender((int) $orig['sender_id'])['name'], 'text' => $text];
+        return ['id' => (int) $orig['id'], 'sender_name' => $avatars[(int) $orig['sender_id']]['name'] ?? $this->sender((int) $orig['sender_id'])['name'], 'text' => $text];
     }
 
     /**

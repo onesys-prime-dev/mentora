@@ -436,6 +436,15 @@ function bindDialogForm(form) {
 
         event.preventDefault();
 
+        // A button that needs a field only it uses (Reject needs a note, Approve does not): asked here, refused by the server too.
+        const needs = event.submitter?.dataset?.requires;
+
+        if (needs && String(form.elements.namedItem(needs)?.value ?? "").trim() === "") {
+            applyFieldErrors(form, { [needs]: event.submitter.dataset.requiresMessage ?? "Fill this in." });
+
+            return;
+        }
+
         // form.elements also holds submit buttons outside the form linked by form="..." (a full-screen dialog's top action).
         const buttons = Array.from(form.elements).filter((el) => el.type === "submit");
 
@@ -445,8 +454,11 @@ function bindDialogForm(form) {
         buttons.forEach((b) => (b.disabled = true));
         form.setAttribute("aria-busy", "true");
 
+        // A button with its own formaction (Reject beside Approve) posts there, as the browser would.
+        const action = event.submitter?.getAttribute("formaction") || form.action;
+
         const send = async () => {
-            const response = await fetch(form.action, {
+            const response = await fetch(action, {
                 method: (form.method || "post").toUpperCase(),
                 body: new FormData(form),
                 // A form marked data-stay is answered where it is: no redirect, no message left for the next page.
@@ -621,6 +633,25 @@ export function fillDialog(dialogEl, trigger) {
         if (field && "readOnly" in field) {
             field.readOnly = true;
             field.dataset.wasLocked = "1";
+        }
+    }
+
+    // Fields that do not apply to this row (data-dialog-hide='["name"]') are hidden and not sent.
+    let hidden;
+
+    try {
+        hidden = data.dialogHide ? JSON.parse(data.dialogHide) : [];
+    } catch {
+        hidden = [];
+    }
+
+    for (const box of dialogEl.querySelectorAll("[data-dialog-field]")) {
+        const off = hidden.includes(box.dataset.dialogField);
+
+        box.hidden = off;
+
+        for (const input of box.querySelectorAll("input, select, textarea")) {
+            input.disabled = off;
         }
     }
 

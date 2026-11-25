@@ -10,6 +10,7 @@ use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InvitationStatus;
 use App\Services\Security\PasswordPolicy;
 use App\Services\Institutions\InvitationToken;
+use App\Services\Profiles\SecurityNotice;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
@@ -74,10 +75,12 @@ class PasswordResetService
             throw new InvalidArgumentException('This account has no email address to send the link to.');
         }
 
+        $actor ??= auth()->user();
         $hours  = (int) (new PlatformSettings())->get('passwordResetValidityHours');
-        $issued = $this->issue($userId, $email, $actor ?? auth()->user(), $now, $hours, 'user.password_reset_sent');
+        $issued = $this->issue($userId, $email, $actor, $now, $hours, 'user.password_reset_sent');
+        $own    = $actor !== null && (int) $actor->id === $userId; // asked for from their own Settings
 
-        return ['email' => $email, 'expires_at' => $issued['expires'], 'email_error' => $this->deliver($issued['id'], $email, $issued['token'], $issued['expires'], $now)];
+        return ['email' => $email, 'expires_at' => $issued['expires'], 'email_error' => $this->deliver($issued['id'], $email, $issued['token'], $issued['expires'], $now, $own)];
     }
 
     /**
@@ -216,7 +219,7 @@ class PasswordResetService
      * @throws InvalidArgumentException a bad link, or a password that is not accepted (the link stays usable then)
      * @throws Throwable                whatever else stopped it; nothing is saved then
      */
-    public function complete(string $token, string $password, ?DateTimeImmutable $now = null): User
+    public function complete(string $token, #[\SensitiveParameter] string $password, ?DateTimeImmutable $now = null): User
     {
         $now ??= new DateTimeImmutable();
 
@@ -231,7 +234,7 @@ class PasswordResetService
             throw new InvalidArgumentException($problem);
         }
 
-        return $this->inTransaction(function () use ($reset, $user, $password, $now): User {
+        $this->inTransaction(function () use ($reset, $user, $password, $now): void {
             $stamp = $now->format('Y-m-d H:i:s');
             $db    = db_connect();
 
@@ -261,9 +264,16 @@ class PasswordResetService
                 'target_id'      => (int) $user->id,
                 'institution_id' => $this->institutionOf((int) $user->id),
             ]);
-
-            return $user;
         });
+
+        // A security event emails the owner (FR8), in case it was not them.
+        SecurityNotice::send(
+            $user,
+            'Your Mentora password was reset',
+            "The password for your Mentora account ({$user->email}) was reset with an emailed link on " . $now->format('M j, Y \a\t g:i A') . ". Every device signed in to your account was signed out.\n\n" . SecurityNotice::ifNotYou(),
+        );
+
+        return $user;
     }
 
     /** Whether the development conveniences apply (the link is also logged). Never true in production or staging. */
@@ -272,7 +282,7 @@ class PasswordResetService
         return ENVIRONMENT === 'development';
     }
 
-    private function deliver(int $resetId, string $to, string $token, string $expires, DateTimeImmutable $now): ?string
+    private function deliver(int $resetId, string $to, string $token, string $expires, DateTimeImmutable $now, bool $own = false): ?string
     {
         $link = site_url('reset-password/' . $token);
 
@@ -290,7 +300,7 @@ class PasswordResetService
             $email->setSubject('Reset your Mentora password');
             $email->setMessage(
                 "Hello,\n\n"
-                . "An administrator has sent you a link to choose a new password for your Mentora account:\n{$link}\n\n"
+                . ($own ? 'You asked for' : 'An administrator has sent you') . " a link to choose a new password for your Mentora account:\n{$link}\n\n"
                 . 'The link works once and expires on ' . substr($expires, 0, 16) . ".\n\n"
                 . "If you were not expecting this, you can ignore this email: your password stays as it is unless the link is used.\n",
             );

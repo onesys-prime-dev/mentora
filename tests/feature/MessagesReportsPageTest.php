@@ -188,4 +188,34 @@ final class MessagesReportsPageTest extends RouteTestCase
         $this->signIn($this->instructor);
         $this->assertStringNotContainsString('messages/reports', $this->open('GET', 'messages')[1]);
     }
+
+    public function testThePagesShowAvatarsBesideTheLegalNames(): void
+    {
+        db_connect()->table('user_profiles')->whereIn('user_id', [$this->child->id, $this->instructor->id])->update(['preferred_first_name' => 'Jun']);
+        $id = $this->report('hello');
+        $this->signIn($this->admin);
+
+        [, $list] = $this->open('GET', 'messages/reports');
+        [, $one]  = $this->open('GET', "messages/reports/{$id}");
+
+        $this->assertStringContainsString('Reported by Kid Child', $list);
+        $this->assertStringContainsString('data-avatar', $list);
+        $this->assertStringNotContainsString('data-person-avatar', $list, 'never a button inside the row link');
+        $this->assertStringContainsString('>Ins Tructor</span>', $one);
+        $this->assertStringContainsString('data-person-avatar="' . $this->instructor->id . '"', $one);
+    }
+
+    public function testAHiddenSendersAvatarIsInertAndTheirPreferredNameIsNowhere(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Zedekiah']);
+        $id = $this->report('hello');
+        db_connect()->table('institution_users')->where('user_id', $this->instructor->id)->delete();
+        $this->signIn($this->admin);
+
+        [, $one] = $this->open('GET', "messages/reports/{$id}");
+
+        $this->assertStringContainsString('>Ins Tructor</span>', $one);
+        $this->assertStringNotContainsString('data-person-avatar="' . $this->instructor->id . '"', $one);
+        $this->assertStringNotContainsString('Zedekiah', $one);
+    }
 }

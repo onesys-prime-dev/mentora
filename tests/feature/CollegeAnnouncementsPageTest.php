@@ -264,6 +264,51 @@ final class CollegeAnnouncementsPageTest extends RouteTestCase
         $this->assertSame(1, substr_count($this->page('student/announcements?level=nonsense', $this->student), 'data-level="'), 'an unknown level falls back to one');
     }
 
+    public function testBylinesShowTheAuthorsGatedNameAndAvatarAndSearchFindsTheShownName(): void
+    {
+        $this->announce();
+        db_connect()->table('announcements')->insert([
+            'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Quiz moved', 'message' => '{"version":1,"blocks":[]}', 'is_pinned' => 0,
+            'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        db_connect()->table('user_profiles')->where('user_id', $this->teacher->id)->update(['preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $this->dean->id)->update(['preferred_first_name' => 'Dee']);
+
+        $course = $this->page('student/announcements?level=course&q=jun', $this->student);
+        $this->assertMatchesRegularExpression('#data-course-announcement>.*?<span[^>]*data-avatar.*?Jun Teacher#s', $course, 'a search finds the name shown');
+        $this->assertDoesNotMatchRegularExpression('#data-course-announcement>(?:(?!</a>).)*<button#s', $course, 'the row is a link: no button inside it');
+        $this->assertStringNotContainsString('Tess Teacher', $course);
+
+        $college = $this->page('student/announcements?level=college', $this->student);
+        $this->assertStringContainsString('data-person-avatar="' . $this->dean->id . '"', $college);
+        $this->assertStringContainsString('Dee Dean', $college);
+    }
+
+    public function testACourseAuthorWithABlankProfileIsBylinedAsInstructor(): void
+    {
+        db_connect()->table('announcements')->insert([
+            'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Quiz moved', 'message' => '{"version":1,"blocks":[]}', 'is_pinned' => 0,
+            'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        db_connect()->table('user_profiles')->where('user_id', $this->teacher->id)->update(['first_name' => '', 'last_name' => '']);
+
+        $this->assertMatchesRegularExpression('#data-course-announcement>.*?IT101 A · Instructor ·#s', $this->page('student/announcements?level=course', $this->student));
+    }
+
+    public function testAHiddenAuthorKeepsTheLegalNameAndAPlainAvatar(): void
+    {
+        $this->announce();
+        db_connect()->table('user_profiles')->where('user_id', $this->dean->id)->update(['preferred_first_name' => 'Zedekiah']);
+        // The dean left the institution: the student may no longer see their profile.
+        db_connect()->table('institution_users')->where('user_id', $this->dean->id)->delete();
+
+        $college = $this->page('student/announcements?level=college', $this->student);
+
+        $this->assertStringContainsString('Dana Dean', $college);
+        $this->assertStringNotContainsString('Zedekiah', $college);
+        $this->assertStringNotContainsString('data-person-avatar="' . $this->dean->id . '"', $college);
+    }
+
     public function testSearchKeepsOnlyWhatMatchesAndKeepsTheFilter(): void
     {
         $this->announce();

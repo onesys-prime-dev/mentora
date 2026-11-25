@@ -70,6 +70,10 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         // Nor are the Grades tile counts an earlier test's page worked out (each test has a fresh cache already).
         \App\Services\Grades\GradesBadge::flush();
 
+        // Nor the header's cached names: ids are reused between classes.
+        helper('navigation');
+        current_user_profile(null, true);
+
         if ($this->isolateTests) {
             $this->emptyTablesOnce();
             self::forgetEarlierQueryFailure();

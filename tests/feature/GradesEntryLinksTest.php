@@ -240,6 +240,15 @@ final class GradesEntryLinksTest extends RouteTestCase
         $this->assertSame('See all', $this->text($x, 'data-see-all'));
     }
 
+    public function testTheAtRiskCardShowsAnAvatarNotThePlaceholder(): void
+    {
+        $teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);
+        $x       = $this->card('at-risk-students', $teacher, ['students' => $this->atRisk()]);
+
+        $this->assertSame(1, $x->query('//*[@data-avatar]')->length);
+        $this->assertSame(0, $x->query('//img[contains(@src, "placeholder/profile.png")]')->length);
+    }
+
     public function testAnEmptyCardHasNothingToSeeAll(): void
     {
         $teacher = PeopleFactory::person('instructor', 'Tess', 'Teacher', null, $this->institution);

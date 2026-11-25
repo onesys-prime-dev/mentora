@@ -109,7 +109,8 @@ test("TC-GAS-06 The card fits a 360 px phone with full-width buttons, and axe fi
     const overflow = await page.evaluate(() => globalThis.document.documentElement.scrollWidth - globalThis.document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
 
-    const box = await card(page).getByRole("button").first().boundingBox();
+    // The card's action buttons are full width; a member's avatar is a button too, and stays a small circle.
+    const box = await card(page).getByRole("button").and(page.locator(":not([data-person-avatar])")).first().boundingBox();
     expect(box.width).toBeGreaterThan(200);
 
     const results = await new AxeBuilder({ page }).include("[data-student-group]").withTags(["wcag2a", "wcag2aa"]).analyze();

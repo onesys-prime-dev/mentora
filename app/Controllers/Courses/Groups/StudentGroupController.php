@@ -13,6 +13,7 @@ use App\Services\Groups\GroupLeaderService;
 use App\Services\Groups\GroupProposalService;
 use App\Services\Groups\GroupSignupService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -27,6 +28,9 @@ class StudentGroupController extends BaseController
 {
     private const NAME = "COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username)";
 
+    /** @var array<int, array<string, mixed>> the response's forViewerJson lookup, filled by groups() */
+    private array $faces = [];
+
     public function show(int $offeringId, int $assessmentId): ResponseInterface
     {
         $this->assessment($offeringId, $assessmentId);
@@ -40,7 +44,9 @@ class StudentGroupController extends BaseController
         $me       = $this->actor();
         $inPool   = in_array($me, (new ActivityGroupService())->pool($configId), true);
         $finalized = (new GradeFinalizationService())->lockRefusal($offeringId) !== null;
-        $groups   = $this->groups($configId);
+        // Classmates I could invite (mode D), named in the same avatar lookup as the groups' members.
+        $invitable = $config['formation_mode'] === 'proposed' && $inPool ? $this->invitable($configId, $me) : [];
+        $groups   = $this->groups($configId, array_column($invitable, 'id'));
         $mine     = null;
 
         foreach ($groups as $g) {
@@ -69,14 +75,17 @@ class StudentGroupController extends BaseController
             'blocked'            => $inPool && $mine === null && $config['ungrouped_policy'] === 'block',
             'offeringFinalized'  => $finalized,
             'canPropose'         => $canPropose,
-            'invitable'          => $canPropose ? $this->invitable($configId, $me) : [],
+            'invitable'          => $canPropose ? AvatarData::sortByName(array_map(fn (array $s): array => [
+                'id' => $s['id'], 'name' => $this->faces[$s['id']]['name'] ?? $s['name'], 'avatar' => $this->faces[$s['id']] ?? null,
+            ], $invitable)) : [],
             'pendingInvitations' => $mine === null ? array_map(static fn (array $i) => ['groupId' => $i['id'], 'name' => $i['name'], 'proposer' => $i['proposer'], 'members' => $i['member_names']],
                 (new GroupProposalService())->pendingInvitationsFor($configId, $me)) : [],
         ];
 
         if ((int) $config['groups_visible'] === 1) {
             $out['otherGroups'] = array_values(array_map(
-                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => $g['members']],
+                // Other groups stay names only: no avatar is drawn for them.
+                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => array_map(static fn (array $m): array => ['id' => $m['id'], 'name' => $m['name']], $g['members'])],
                 array_filter($groups, static fn (array $g) => $g['status'] === 'active' && ($mine === null || $g['id'] !== $mine['id'])),
             ));
         }
@@ -177,7 +186,7 @@ class StudentGroupController extends BaseController
         return $x === null ? null : ['until' => $x['until_at'], 'reason' => $x['reason']];
     }
 
-    /** @return list<array{id:int,name:string}> students of the activity who are in no group (or proposal) yet, except me */
+    /** @return list<array{id:int,name:string}> students of the activity who are in no group (or proposal) yet, except me, by legal name (show() gates them) */
     private function invitable(int $configId, int $me): array
     {
         $grouped = array_map('intval', array_column(db_connect()->table('student_group_members')->select('student_user_id')->where('config_id', $configId)->get()->getResultArray(), 'student_user_id'));
@@ -193,8 +202,12 @@ class StudentGroupController extends BaseController
         return array_map(static fn (array $r) => ['id' => (int) $r['id'], 'name' => (string) $r['name']], $rows);
     }
 
-    /** @return list<array{id:int,name:string,status:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string}>}> */
-    protected function groups(int $configId): array
+    /**
+     * @param list<int> $alsoIds other people this response names (classmates to invite), looked up with the members
+     *
+     * @return list<array{id:int,name:string,status:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string,avatar:?array<string, mixed>}>}>
+     */
+    protected function groups(int $configId, array $alsoIds = []): array
     {
         $members = db_connect()->table('student_group_members m')
             ->select('m.group_id, m.student_user_id, ' . self::NAME . ' AS name', false)
@@ -202,9 +215,11 @@ class StudentGroupController extends BaseController
             ->where('m.config_id', $configId)->orderBy('m.joined_at')->orderBy('m.id')->get()->getResultArray();
 
         $byGroup = [];
+        // One lookup for the response: every member's (and $alsoIds') avatar as this student may see them (FR2).
+        $avatars = $this->faces = (new AvatarData())->forViewerJson(auth()->user(), [...array_map('intval', array_column($members, 'student_user_id')), ...$alsoIds]);
 
         foreach ($members as $m) {
-            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
+            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => $avatars[(int) $m['student_user_id']]['name'] ?? (string) $m['name'], 'avatar' => $avatars[(int) $m['student_user_id']] ?? null];
         }
 
         $rows = db_connect()->table('student_groups')->where('config_id', $configId)->whereIn('status', ['active', 'proposed'])->orderBy('name')->orderBy('id')->get()->getResultArray();
@@ -224,7 +239,7 @@ class StudentGroupController extends BaseController
      * @param array<string, mixed> $g
      * @param array<string, mixed> $config
      *
-     * @return array<string, mixed> id, name, status, members ({id, name} only), frozen, leave/rename/vote rights, leader and, while proposed, the proposal
+     * @return array<string, mixed> id, name, status, members ({id, name, avatar} only), frozen, leave/rename/vote rights, leader and, while proposed, the proposal
      */
     private function mine(array $g, array $config, bool $finalized): array
     {

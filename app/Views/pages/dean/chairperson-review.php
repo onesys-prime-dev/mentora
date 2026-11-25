@@ -44,6 +44,7 @@ foreach ($entries as $e) {
 
     $rows[] = [
         'id'      => (int) $e['id'],
+        'person'  => ($actorAvatars ?? [])[(int) ($e['actor_id'] ?? 0)] ?? null,
         'cells'   => [
             'who'    => $e['actor'] ?: '—',
             'what'   => $e['description'],

@@ -5,7 +5,7 @@
  * out; its colour only repeats it. The table scrolls sideways inside its card with the name column pinned.
  *
  * @var string                     $area
- * @var list<array<string, mixed>> $atRisk
+ * @var list<array<string, mixed>> $atRisk   rows of GradesAtRisk::shownTo (gated name and avatar)
  * @var string|null                $reason
  * @var bool                       $canOpen  default true; false draws the section as plain text
  */
@@ -43,7 +43,14 @@ $chip = [
                 <tbody class="divide-y divide-[#E3E6EE]">
                     <?php foreach ($atRisk as $row): ?>
                         <tr class="bg-white" data-risk-row data-offering-id="<?= (int) $row['offering_id'] ?>" data-student-id="<?= (int) $row['student_id'] ?>">
-                            <th scope="row" class="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-[#1A1C1E]"><?= esc($row['name']) ?></th>
+                            <th scope="row" class="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-[#1A1C1E]">
+                                <span class="flex items-center gap-2">
+                                    <?php if (($row['avatar'] ?? null) !== null): ?>
+                                        <?= view('components/avatar', $row['avatar'] + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) ?>
+                                    <?php endif; ?>
+                                    <span data-risk-name><?= esc($row['name']) ?></span>
+                                </span>
+                            </th>
                             <td class="px-4 py-3">
                                 <?php if ($canOpen): ?>
                                     <a href="<?= esc(site_url("{$area}/courses/{$row['offering_id']}/{$row['slug']}/grades")) ?>" class="rounded font-semibold text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><?= esc($row['section']) ?></a>

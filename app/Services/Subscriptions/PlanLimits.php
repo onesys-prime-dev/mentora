@@ -125,15 +125,36 @@ class PlanLimits
     /** The institution a user belongs to (the first, if several), or null. */
     public function institutionOf(int $userId): ?int
     {
-        $row = db_connect()->table('institution_users')
-            ->select('institution_users.institution_id')
+        return $this->institutionsOf([$userId])[$userId] ?? null;
+    }
+
+    /**
+     * institutionOf() for many people in one query: each one's first membership of a live institution.
+     *
+     * @param list<int> $userIds
+     *
+     * @return array<int, int> user id => institution id; people with none are left out
+     */
+    public function institutionsOf(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $rows = db_connect()->table('institution_users')
+            ->select('institution_users.user_id, institution_users.institution_id')
             ->join('institutions', 'institutions.id = institution_users.institution_id')
-            ->where('institution_users.user_id', $userId)
+            ->whereIn('institution_users.user_id', $userIds)
             ->where('institutions.deleted_at IS NULL', null, false)
             ->orderBy('institution_users.id')
-            ->get()->getRowArray();
+            ->get()->getResultArray();
 
-        return $row === null ? null : (int) $row['institution_id'];
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(int) $row['user_id']] ??= (int) $row['institution_id'];
+        }
+
+        return $out;
     }
 
     /** A message if adding $adding student accounts would go beyond the plan's seats, else null. */

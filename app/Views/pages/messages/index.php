@@ -160,17 +160,10 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'size'  => 'sm',
         'body'  => '<div class="flex flex-col gap-3">'
             . '<div data-role="settings-panel-alerts" class="flex flex-col gap-3">'
-            . '<p class="text-xs text-[#646464]">Notifications and emails say who wrote and where. They never include what was written.</p>'
-            . '<label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11"><input type="checkbox" data-role="prefs-email" class="h-4 w-4 rounded border-gray-300 text-brand focus:ring-brand/40"> Email me about new messages</label>'
-            . '<fieldset data-role="prefs-quiet" hidden class="flex flex-col gap-2"><legend class="text-sm font-semibold text-gray-900">Quiet hours</legend>'
-            . '<p class="text-xs text-[#646464]">Nothing is notified or emailed during these hours; messages still arrive and are counted.</p>'
-            . '<div class="flex flex-wrap items-center gap-2"><label class="text-xs text-gray-600" for="messages-prefs-start">From</label><input id="messages-prefs-start" data-role="prefs-start" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
-            . '<label class="text-xs text-gray-600" for="messages-prefs-end">to</label><input id="messages-prefs-end" data-role="prefs-end" type="time" class="rounded-lg border border-gray-300 px-2 py-1 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div></fieldset>'
+            . '<p class="text-sm text-[#646464]">Email alerts and quiet hours are in <a href="' . esc(site_url('settings')) . '#notifications" data-role="prefs-settings-link" class="font-semibold text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Settings</a>.</p>'
             . '<div class="flex flex-col gap-1"><p class="text-sm font-semibold text-gray-900">Blocked people (<span data-role="blocked-count">0</span>)</p>'
             . '<ul data-role="blocked-list" class="flex flex-col gap-1"></ul>'
             . '<p data-role="blocked-empty" class="text-xs text-[#646464]">No one blocked.</p></div>'
-            . '<p data-role="prefs-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:sticky sm:bottom-0"><button type="button" data-role="prefs-save" class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Save</button></div>'
             . '</div>'
             . '</div>',
     ], ['saveData' => false]) ?>

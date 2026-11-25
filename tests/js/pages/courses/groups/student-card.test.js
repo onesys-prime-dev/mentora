@@ -165,6 +165,21 @@ describe("the card's states", () => {
         expect(card().querySelector("[data-sg-action=toggle-switch]")).not.toBeNull();
     });
 
+    it("puts each member's avatar from the JSON on their chip", async () => {
+        const avatar = (id, name, interactive) => ({ id, name, initials: "XX", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive });
+        server({ "GET /": () => json(inGroup({}, { members: [{ id: 5, name: "Ana Cruz", isMe: true, avatar: avatar(5, "Ana Cruz", true) }, { id: 6, name: "Dee Park", avatar: avatar(6, "Dee Park", false) }] })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+
+        const [ana, dee] = card().querySelectorAll("[data-sg-member]");
+
+        expect(ana.querySelector("button[data-person-avatar=\"5\"]")).not.toBeNull();
+        expect(ana.textContent).toContain("You (Ana Cruz)");
+        expect(dee.querySelector("[data-person-avatar]")).toBeNull();
+        expect(dee.querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+    });
+
     it("hides Leave when the API says canLeave is false, and gives the reason", async () => {
         server({ "GET /": () => json(inGroup({ candidates: [] }, { canLeave: false, canLeaveReason: "Your group has chosen its leader, so members cannot leave. Ask your instructor." })) });
 
@@ -423,6 +438,21 @@ describe("proposals and invitations", () => {
         expect(JSON.parse(sent(fetch, "POST", "/propose")[0][1].body)).toEqual({ name: "Night Owls", invitee_ids: [11] });
         expect(card().querySelector("[data-sg-waiting]").textContent).toContain("Waiting for your instructor to approve");
         expect(card().textContent).toContain("Invited: Ben Ong");
+    });
+
+    it("draws each classmate to invite with their gated avatar as a plain picture inside the tick box's label", async () => {
+        const avatar = (id, name, interactive) => ({ id, name, initials: name[0], colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive });
+        server({ "GET /": () => json(canPropose({ invitable: [{ id: 11, name: "Jun Ong", avatar: avatar(11, "Jun Ong", true) }, { id: 12, name: "Cai Lim", avatar: avatar(12, "Cai Lim", false) }] })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+        click("[data-sg-action=propose]");
+
+        const list = card().querySelector("#sg-propose-dialog [data-sg-invitees]");
+
+        expect(list.querySelectorAll("label [data-avatar][aria-hidden=\"true\"]").length).toBe(2);
+        expect(list.querySelector("button")).toBeNull();
+        expect(list.textContent).toContain("Jun Ong");
     });
 
     it("lists invitations; Accept and Decline send to the group's address and refresh", async () => {

@@ -14,6 +14,8 @@
  * @var array<string, mixed>       $peopleSeats         used / limit / percent / state
  * @var bool                       $peopleCanEdit
  * @var bool                       $peopleCanViewAs
+ * @var array<int, array>          $peopleAvatars       AvatarData::forViewer() entries by user id
+ * @var int                        $peopleRequests      correction requests waiting for this admin
  */
 $base    = 'institution/people';
 $f       = $peopleFilters;
@@ -65,8 +67,8 @@ foreach ($peopleRows as $p) {
     if ($peopleCanEdit) {
         $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-edit"'
             . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
-            . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email']]) . '"'
-            . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
+            . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email'], 'home_department_id' => $p['home_department_id'] ?? null]) . '"' . (($p['staff'] ?? false) ? '' : ' data-dialog-hide="' . $json(['home_department_id']) . '"')
+            . ($p['sis'] || $p['self'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
 
         $values = [];
 
@@ -77,6 +79,13 @@ foreach ($peopleRows as $p) {
         $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-roles"'
             . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
             . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
+
+        if ($p['has_photo'] ?? false) {
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Remove ' . $label . '&#039;s photo?"'
+                . ' data-dialog-text="Their profile shows their initials until they add a photo again. They are told that your school removed it."'
+                . ' data-dialog-label="Remove photo" data-dialog-action="' . $url('/' . $p['id'] . '/photo/remove') . '">Remove photo</button>';
+        }
 
         if ($p['active']) {
             $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
@@ -121,6 +130,7 @@ foreach ($peopleRows as $p) {
     $rows[] = [
         'id'      => $p['id'],
         'label'   => $p['name'],
+        'person'  => ($peopleAvatars ?? [])[(int) $p['id']] ?? null,
         'cells'   => [
             'name'        => ['html' => '<span class="font-medium">' . esc($p['name']) . '</span>' . ($p['self'] ? ' <span class="text-xs text-[#646464]">(you)</span>' : '') . $badges . '<span class="block text-xs text-[#646464]">' . esc($p['email']) . '</span>'],
             'roles'       => implode(', ', $roleNames),
@@ -205,6 +215,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         ['label' => 'People', 'href' => site_url($base), 'active' => $peopleView === 'people'],
         ['label' => 'Invitations', 'href' => site_url($base) . '?view=invitations', 'active' => $peopleView === 'invitations', 'count' => $peopleOpen],
         ['label' => 'Parents', 'href' => site_url($base . '/parents')],
+        ['label' => 'Requests', 'href' => site_url($base . '/requests'), 'count' => $peopleRequests ?? 0],
     ]], ['saveData' => false]) ?>
 
     <?php if ($peopleView === 'people'): ?>
@@ -331,7 +342,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         'Send invitation',
     )], ['saveData' => false]) ?>
 
-    <?= view('components/dialog', ['id' => 'person-edit', 'title' => 'Edit details', 'body' => $form($person(), 'Save')], ['saveData' => false]) ?>
+    <?= view('components/dialog', ['id' => 'person-edit', 'title' => 'Edit details', 'body' => $form($person()
+        . '<div data-dialog-field="home_department_id">' . $field(['name' => 'home_department_id', 'label' => 'Home department', 'type' => 'select', 'options' => ['' => 'None'] + ($peopleDepartments ?? []), 'help' => 'For instructors, chairpersons and deans: shown on their profile. Left empty, an instructor shows where they teach this term.']) . '</div>', 'Save')], ['saveData' => false]) ?>
 
     <?= view('components/dialog', ['id' => 'person-roles', 'title' => 'Change roles', 'body' => $form($roleBoxes, 'Save roles')], ['saveData' => false]) ?>
 
@@ -343,6 +355,8 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
         'confirmLabel' => 'Confirm',
         'tone'         => 'danger',
         'ajax'         => true,
+        // Read only by the photo removal: it comes back to this list, not to the person's page.
+        'fields'       => '<input type="hidden" name="return" value="institution/people">',
     ], ['saveData' => false]) ?>
 <?php endif; ?>
 

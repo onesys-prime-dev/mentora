@@ -77,10 +77,7 @@ $reasonStyles = [
                         data-at-risk-row
                         href="<?= site_url($userRole . '/courses/' . $student['offering_id'] . '/' . $student['slug'] . '/grades?roster=1&student=' . $student['student_id']) ?>">
 
-                        <img
-                            class="w-10 h-10 shrink-0 rounded-full object-cover transition-transform duration-150 group-hover:scale-110"
-                            src="<?= base_url('assets/images/placeholder/profile.png') ?>"
-                            alt="">
+                        <?= view('components/avatar', ['person' => $student['avatar']['person'] ?? ['id' => (int) $student['student_id'], 'name' => $student['name']], 'size' => 'md', 'decorative' => true], ['saveData' => false]) ?>
 
                         <div class="flex flex-col min-w-0 flex-1 gap-1">
                             <div class="flex items-center gap-2 min-w-0">

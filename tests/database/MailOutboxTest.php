@@ -126,6 +126,31 @@ final class MailOutboxTest extends DatabaseTestCase
         $this->assertFalse(MailOutbox::isMuted());
     }
 
+    public function testAMutedRunStillNotesAChangedSignInEmail(): void
+    {
+        $ann = $this->person('student', 'Ann');
+        MailOutbox::context('run-1', true);
+
+        // D26: the old address is always told, even when the administrator chose not to email the upload.
+        $this->assertTrue($this->outbox->tell($this->institution, (int) $ann->id, MailOutbox::EMAIL_CHANGED, 'ann.old@outbox.test', $this->now));
+        $this->assertSame(1, $this->rows());
+    }
+
+    public function testAChangedEmailStoresOnlyTheOldAddressAndTellsItTheCurrentOne(): void
+    {
+        $long = str_repeat('a', 200) . '@' . str_repeat('b', 40) . '.example.com';
+        $ann  = $this->person('student', 'Ann', $long);
+        $old  = str_repeat('c', 120) . '@outbox.test';
+
+        $this->outbox->tell($this->institution, (int) $ann->id, MailOutbox::EMAIL_CHANGED, $old, $this->now);
+        $this->assertSame($old, db_connect()->table('mail_outbox')->get()->getRow('detail'));
+
+        $this->outbox->sendDue($this->later());
+
+        $this->assertSame($old, $this->mail->sent[0]['to']);
+        $this->assertStringContainsString("was changed to {$long} by your school", $this->mail->sent[0]['message']);
+    }
+
     public function testSixChangesToOnePersonAreOneEmail(): void
     {
         $ann = $this->person('student', 'Ann');

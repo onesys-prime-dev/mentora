@@ -4,6 +4,8 @@ namespace App\Services\Courses;
 
 use App\Services\Courses\Assessments\AssessmentOverviewService;
 use App\Services\Courses\Assessments\AssessmentResultService;
+use App\Services\Profiles\AvatarData;
+use CodeIgniter\Shield\Entities\User;
 
 /**
  * The course Overview's "Recent Activity" feed.
@@ -53,6 +55,9 @@ class ActivityFeedService
 
     protected AssessmentOverviewService $labels;
 
+    /** @var array<int, string> people named in this call's events, by id, with their legal names (see who()) */
+    private array $named = [];
+
     public function __construct()
     {
         $this->labels = new AssessmentOverviewService();
@@ -61,9 +66,10 @@ class ActivityFeedService
     /**
      * @param  list<array> $assessmentRows The student's visible assessments,
      *                                     as AssessmentOverviewService builds them
+     * @param  User|null   $viewer         who reads the feed: people are named as they may see them (FR2); null keeps legal names
      * @return list<array{kind: string, title: string, detail: string, when: string, ts: int}>
      */
-    public function forStudent(int $studentId, int $offeringId, array $assessmentRows): array
+    public function forStudent(int $studentId, int $offeringId, array $assessmentRows, ?User $viewer = null): array
     {
         $now = time();
 
@@ -145,13 +151,14 @@ class ActivityFeedService
             $events,
             $this->moduleEvents($offeringId, $since, $now),
             $this->discussionEvents($offeringId, $since, $now, $studentId, false)
-        ));
+        ), $viewer);
     }
 
     /**
+     * @param  User|null $viewer who reads the feed: people are named as they may see them (FR2); null keeps legal names
      * @return list<array{kind: string, title: string, detail: string, when: string, ts: int}>
      */
-    public function forInstructor(int $offeringId): array
+    public function forInstructor(int $offeringId, ?User $viewer = null): array
     {
         $now = time();
 
@@ -165,6 +172,7 @@ class ActivityFeedService
             ->select([
                 's.submitted_at',
                 's.is_late_submission',
+                's.student_id',
                 'a.title',
                 "CONCAT(up.first_name, ' ', up.last_name) AS student_name",
             ])
@@ -188,7 +196,7 @@ class ActivityFeedService
 
             $events[] = $this->event(
                 'submission',
-                $row['student_name'] . ' submitted work',
+                $this->who((int) $row['student_id'], $row['student_name']) . ' submitted work',
                 $row['title'] . ($row['is_late_submission'] ? ' · late' : ''),
                 $row['submitted_at']
             );
@@ -197,7 +205,7 @@ class ActivityFeedService
 
         // Students who joined the section.
         $joined = db_connect()->table('enrollments e')
-            ->select(['e.enrolled_at', "CONCAT(up.first_name, ' ', up.last_name) AS student_name"])
+            ->select(['e.enrolled_at', 'e.student_user_id', "CONCAT(up.first_name, ' ', up.last_name) AS student_name"])
             ->join('user_profiles up', 'up.user_id = e.student_user_id')
             ->where('e.offering_id', $offeringId)
             ->whereIn('e.status', ['enrolled', 'completed'])
@@ -210,18 +218,20 @@ class ActivityFeedService
 
         foreach ($joined as $row) {
 
+            $name = $this->who((int) $row['student_user_id'], $row['student_name']);
+
             $events[] = $this->event(
                 'joined',
-                $row['student_name'] . ' joined the section',
+                $name . ' joined the section',
                 'Enrolled',
                 $row['enrolled_at'],
-                $row['student_name'],
+                $name,
                 'joined'
             );
 
         }
 
-        return $this->finish(array_merge($events, $this->discussionEvents($offeringId, $since, $now, 0, true)));
+        return $this->finish(array_merge($events, $this->discussionEvents($offeringId, $since, $now, 0, true)), $viewer);
     }
 
     /**
@@ -267,7 +277,7 @@ class ActivityFeedService
     protected function discussionEvents(int $offeringId, string $since, int $now, int $exceptUserId, bool $studentsOnly): array
     {
         $builder = db_connect()->table('discussion_threads t')
-            ->select(['t.title', 't.created_at', "CONCAT(up.first_name, ' ', up.last_name) AS author_name"])
+            ->select(['t.title', 't.created_at', 't.author_id', "CONCAT(up.first_name, ' ', up.last_name) AS author_name"])
             ->join('user_profiles up', 'up.user_id = t.author_id', 'left')
             ->join('learning_items li', 'li.id = t.learning_item_id', 'left')
             ->where('t.offering_id', $offeringId)
@@ -293,7 +303,7 @@ class ActivityFeedService
             'discussion',
             'New discussion',
             trim((string) $row['author_name']) !== ''
-                ? $row['title'] . ' · ' . trim((string) $row['author_name'])
+                ? $row['title'] . ' · ' . $this->who((int) $row['author_id'], (string) $row['author_name'])
                 : $row['title'],
             $row['created_at'],
             $row['title']
@@ -331,16 +341,55 @@ class ActivityFeedService
     /**
      * Collapse bulk events, order newest first, cut to LIMIT.
      *
+     * Then names the people in what is kept, as the viewer may see them.
+     *
      * @param  list<array> $events
      * @return list<array>
      */
-    protected function finish(array $events): array
+    protected function finish(array $events, ?User $viewer = null): array
     {
         $events = $this->collapse($events);
 
         usort($events, static fn (array $a, array $b) => $b['ts'] <=> $a['ts']);
 
-        return array_slice($events, 0, self::LIMIT);
+        return $this->name(array_slice($events, 0, self::LIMIT), $viewer);
+    }
+
+    /**
+     * A stand-in for a person's name until name() knows who reads the feed. The unit separator is never part of
+     * a typed name, so the swap cannot touch a title or a message.
+     */
+    protected function who(int $id, string $legal): string
+    {
+        $this->named[$id] = trim($legal);
+
+        return "\x1F{$id}\x1F";
+    }
+
+    /**
+     * Swaps each stand-in for the name the viewer may see (FR2), from one AvatarData::forViewer lookup;
+     * the legal name for anyone hidden, or without a viewer.
+     *
+     * @param  list<array> $events
+     * @return list<array>
+     */
+    protected function name(array $events, ?User $viewer): array
+    {
+        $named       = $this->named;
+        $this->named = [];
+
+        if ($named === []) {
+            return $events;
+        }
+
+        $shown = $viewer === null ? [] : (new AvatarData())->forViewer($viewer, array_keys($named));
+        $swap  = [];
+
+        foreach ($named as $id => $legal) {
+            $swap["\x1F{$id}\x1F"] = $shown[$id]['person']['name'] ?? $legal;
+        }
+
+        return array_map(static fn (array $e): array => ['title' => strtr($e['title'], $swap), 'detail' => strtr($e['detail'], $swap), 'subject' => strtr($e['subject'], $swap)] + $e, $events);
     }
 
     /**

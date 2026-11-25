@@ -159,7 +159,7 @@ if (! function_exists('global_apps')) {
                 ['key' => 'calendar', 'label' => 'Calendar', 'icon' => 'calendar', 'url' => site_url('parent/calendar')],
                 ['key' => 'grades', 'label' => 'Grades', 'icon' => 'grades', 'url' => site_url('parent/grades')],
                 ['key' => 'notifications', 'label' => 'Notifications', 'icon' => 'bell', 'url' => site_url('notifications')],
-                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('parent/profile')],
+                ['key' => 'profile', 'label' => 'Profile', 'icon' => 'user', 'url' => site_url('profile')],
                 ...array_filter([messages_tile($role)]),
             ], $role);
         }
@@ -266,11 +266,36 @@ if (! function_exists('current_user_profile')) {
     /**
      * Name, student number, program and email for the header's account
      * menu. Cached per request — the header renders on every page.
+     * Pass $flush = true to empty the cache (tests reuse user ids between classes).
      */
-    function current_user_profile(User $user): array
+    function current_user_profile(?User $user, bool $flush = false): array
     {
         static $profiles = [];
 
+        if ($flush) {
+            $profiles = [];
+
+            return [];
+        }
+
         return $profiles[$user->id] ??= (new UserProfileModel())->retrieveUserProfile($user) ?? [];
+    }
+}
+
+if (! function_exists('person_display_name')) {
+
+    /**
+     * The social name (FR5): preferred first name + legal last name, or the legal name when no
+     * preferred name is set. Only for a row that is the viewer themself or that ProfilePolicy has
+     * already cleared; another person's name comes from AvatarData::forViewer(). Official places
+     * (grade sheets, exports, gradebook) print the legal name instead.
+     *
+     * @param array<string, mixed> $profileRow user_profiles columns (first_name, last_name, preferred_first_name)
+     */
+    function person_display_name(array $profileRow): string
+    {
+        $first = trim((string) ($profileRow['preferred_first_name'] ?? '')) ?: trim((string) ($profileRow['first_name'] ?? ''));
+
+        return trim($first . ' ' . trim((string) ($profileRow['last_name'] ?? '')));
     }
 }

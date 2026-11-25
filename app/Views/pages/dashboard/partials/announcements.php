@@ -42,10 +42,15 @@ $announcements = $data['announcements'] ?? [];
                         class="group flex items-center gap-3 py-3 px-3 -mx-3 rounded-2xl cursor-pointer transition-colors duration-150 hover:bg-white/45<?= $beyondCap ?>"
                         data-announcement-row>
 
-                        <div class="relative shrink-0">
-                            <div class="w-9 h-9 flex justify-center items-center bg-blue-800 rounded-full transition-transform duration-150 group-hover:scale-110">
-                                <?= icon('message', 'w-5 h-5 text-white') ?>
-                            </div>
+                        <div class="relative shrink-0 transition-transform duration-150 group-hover:scale-110">
+                            <?php // The row is a link, so the author's avatar is a plain picture beside their name, never a button. ?>
+                            <?php if (($announcement['avatar'] ?? null) !== null): ?>
+                                <?= view('components/avatar', ['person' => $announcement['avatar']['person'], 'size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
+                            <?php else: ?>
+                                <div class="w-9 h-9 flex justify-center items-center bg-blue-800 rounded-full">
+                                    <?= icon('message', 'w-5 h-5 text-white') ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
                         <div class="flex flex-col min-w-0 flex-1">

@@ -23,6 +23,16 @@ class UserProfileModel extends Model
         'student_number_institution_id',
         'program_id',
         'active_role',
+        'preferred_first_name',
+        'pronouns',
+        'bio',
+        'office_location',
+        'consultation_hours',
+        'work_phone',
+        'photo_file_id',
+        'home_department_id',
+        'two_factor_opt_in',
+        'checklist_dismissed_at',
     ];
 
     protected $useSoftDeletes = true;
@@ -91,6 +101,16 @@ class UserProfileModel extends Model
                 'user_profiles.last_name',
                 'user_profiles.suffix',
                 'user_profiles.student_number',
+                'user_profiles.preferred_first_name',
+                'user_profiles.pronouns',
+                'user_profiles.bio',
+                'user_profiles.office_location',
+                'user_profiles.consultation_hours',
+                'user_profiles.work_phone',
+                'user_profiles.photo_file_id',
+                'user_profiles.home_department_id',
+                'user_profiles.two_factor_opt_in',
+                'user_profiles.checklist_dismissed_at',
 
                 'programs.name AS program_name',
                 'programs.code AS program_code',

@@ -371,6 +371,44 @@ final class ActivityFeedServiceTest extends DatabaseTestCase
         $this->assertSame(['Student question · Sam Student'], array_column($events, 'detail'));
     }
 
+    public function testPeopleAreNamedAsTheViewerMaySeeThemFromOneLookup(): void
+    {
+        $a      = $this->assessment('Essay');
+        $hidden = $this->person('student', 'Hal', 'Hidden');
+        CourseFactory::enroll($this->offering, $hidden);
+        db_connect()->table('enrollments')->where('student_user_id', $hidden->id)->update(['enrolled_at' => $this->ago('10 days')]);
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $hidden->id)->update(['preferred_first_name' => 'Zedekiah']);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        // In the course but in no institution: no one may see this student's preferred name.
+        CourseFactory::members($this->offering, [$hidden], false);
+        AssessmentFactory::attempt($a, $this->student, 'Submitted', 0.0, ['submitted_at' => $this->ago('2 hours')]);
+        AssessmentFactory::attempt($a, $hidden, 'Submitted', 0.0, ['submitted_at' => $this->ago('1 hour')]);
+        $this->thread('Student question', $this->student, $this->ago('1 day'));
+
+        $lookups = 0;
+        $l       = static function (\CodeIgniter\Database\Query $q) use (&$lookups): void {
+            $lookups += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        \CodeIgniter\Events\Events::on('DBQuery', $l);
+        $events = $this->feed->forInstructor($this->offering, $this->instructor);
+        \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+        $this->assertContains('Jun Student submitted work', $this->titles($events));
+        $this->assertContains('Hal Hidden submitted work', $this->titles($events));
+        $this->assertContains('Jun Student joined the section', $this->titles($events));
+        $this->assertContains('Student question · Jun Student', array_column($events, 'detail'));
+        $this->assertStringNotContainsString('Zedekiah', (string) json_encode($events));
+        $this->assertSame(1, $lookups, 'one lookup for the whole feed');
+
+        // A student hears of a classmate's discussion under the name they may see.
+        $mate = $this->person('student', 'Mae', 'Mate');
+        CourseFactory::enroll($this->offering, $mate);
+        CourseFactory::members($this->offering, [$mate]);
+        $details = array_column($this->feed->forStudent((int) $mate->id, $this->offering, [], $mate), 'detail');
+        $this->assertContains('Student question · Jun Student', $details);
+    }
+
     public function testNothingHappeningIsAnEmptyFeedForBothRoles(): void
     {
         $this->assertSame([], $this->feed->forStudent((int) $this->student->id, $this->offering, []));

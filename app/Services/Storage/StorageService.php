@@ -29,6 +29,7 @@ class StorageService
         'announcement_attachments' => 'file_id',
         'discussion_attachments' => 'file_id',
         'institutions' => 'logo_file_id',
+        'user_profiles' => 'photo_file_id',
     ];
 
     /*

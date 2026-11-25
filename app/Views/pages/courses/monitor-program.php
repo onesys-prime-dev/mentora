@@ -234,11 +234,17 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                     <ul class="flex flex-col divide-y divide-gray-50">
                         <?php foreach ($atRisk as $student): ?>
                             <li class="flex items-center justify-between gap-3 py-2 text-sm">
-                                <div>
-                                    <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= site_url($monitorCourseBase . '/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
-                                        <?= esc($student['name']) ?>
-                                    </a>
-                                    <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
+                                <?php $avatar = ($monitorAvatars ?? [])[(int) ($student['student_id'] ?? 0)] ?? null; ?>
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <?php if ($avatar !== null): ?>
+                                        <?= view('components/avatar', $avatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
+                                    <?php endif; ?>
+                                    <div>
+                                        <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= site_url($monitorCourseBase . '/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? '')) ?>">
+                                            <?= esc($student['name']) ?>
+                                        </a>
+                                        <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
+                                    </div>
                                 </div>
                                 <span class="rounded-full px-2 py-0.5 text-xs font-semibold <?= $student['reason'] === 'inactive' ? 'bg-[#FBE8E2] text-[#A63A18]' : 'bg-[#FFF7E6] text-[#946200]' ?>">
                                     <?= $student['reason'] === 'inactive'
@@ -268,7 +274,8 @@ $percent = static fn (?float $value): string => $value === null ? '—' : rtrim(
                                     <?php else: ?>
                                         <span class="font-semibold text-[#1A1C1E]">—</span>
                                     <?php endif; ?>
-                                    <span class="text-[#646464]"> · <?= $monitorShowActor && ! empty($entry['actor']) ? esc($entry['actor']) . ' · ' : '' ?><?= esc($entry['description']) ?></span>
+                                    <?php $actorAvatar = $monitorShowActor ? (($monitorAvatars ?? [])[(int) ($entry['actor_id'] ?? 0)] ?? null) : null; ?>
+                                    <span class="text-[#646464]"> · <?php if ($actorAvatar !== null): ?><span class="mr-1 inline-flex align-middle"><?= view('components/avatar', $actorAvatar + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) ?></span><?php endif; ?><?= $monitorShowActor && ! empty($entry['actor']) ? esc($entry['actor']) . ' · ' : '' ?><?= esc($entry['description']) ?></span>
                                 </div>
                                 <span class="text-xs text-[#646464]"><?= esc($entry['created_at']) ?></span>
                             </li>

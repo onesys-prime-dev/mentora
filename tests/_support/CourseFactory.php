@@ -110,6 +110,26 @@ final class CourseFactory
         ]);
     }
 
+    /**
+     * Gives users a profile row (if they have none) and, unless $join is false, membership of
+     * the offering's institution, so profile visibility (FR2) can apply to them.
+     */
+    public static function members(int $offeringId, array $users, bool $join = true): void
+    {
+        $db = db_connect();
+        $institutionId = (int) $db->query('SELECT t.institution_id FROM course_offerings o JOIN academic_terms t ON t.id = o.term_id WHERE o.id = ?', [$offeringId])->getRow()->institution_id;
+
+        foreach ($users as $user) {
+            if ($db->table('user_profiles')->where('user_id', $user->id)->countAllResults() === 0) {
+                $db->table('user_profiles')->insert(['user_id' => $user->id, 'first_name' => 'Member', 'last_name' => 'No' . $user->id]);
+            }
+
+            if ($join) {
+                $db->table('institution_users')->insert(['institution_id' => $institutionId, 'user_id' => $user->id, 'created_at' => self::now()]);
+            }
+        }
+    }
+
     public static function assignInstructor(int $offeringId, User $instructor): void
     {
         db_connect()->table('instructor_assignments')->insert([

@@ -245,4 +245,64 @@ final class AnnouncementRoutesTest extends RouteTestCase
         $this->assertSame(422, $result->response()->getStatusCode());
         $this->assertSame(0, db_connect()->table('announcements')->countAllResults());
     }
+
+    public function testAuthorAvatarsOpenTheProfileOnlyForPeopleTheViewerMaySee(): void
+    {
+        // Someone still enrolled who has left the institution: a viewer there may no longer see them (FR2).
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['preferred_first_name' => 'Hiddenname']);
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Shownname']);
+
+        $id = $this->announce('Avatars');
+        $this->api($leaver, 'post', "/{$id}/reply", ['message' => 'From someone who left']);
+        $own = $this->api($this->student, 'post', "/{$id}/reply", ['message' => 'Mine'])['html'];
+
+        $interactive = static fn (string $html, User $u): bool => str_contains($html, 'data-person-avatar="' . $u->id . '"');
+
+        foreach ([$this->api($this->student, 'get')['html'], $this->api($this->student, 'get', '/more?page=1')['html']] as $html) {
+            $this->assertTrue($interactive($html, $this->instructor), 'the author');
+            $this->assertTrue($interactive($html, $this->student), 'their own reply');
+            $this->assertFalse($interactive($html, $leaver));
+            // Author, the leaver's reply, the viewer's reply and the viewer's two reply-row avatars.
+            $this->assertSame(5, substr_count($html, 'data-avatar'));
+            $this->assertStringNotContainsString('Hiddenname', $html, 'a preferred name the viewer may not see');
+            $this->assertStringContainsString('Shownname', $html, 'a visible author keeps their preferred name');
+            $this->assertSame(0, substr_count($html, 'placeholder/profile.png'));
+        }
+
+        $this->assertTrue($interactive($own, $this->student), 'the reply just posted');
+    }
+
+    public function testAuthorNamesArePreferredOnlyForPeopleTheViewerMaySee(): void
+    {
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+
+        $id = $this->announce('Names');
+        $this->api($leaver, 'post', "/{$id}/reply", ['message' => 'From someone who left']);
+        $own = $this->api($this->instructor, 'post', "/{$id}/reply", ['message' => 'Teacher here'])['html'];
+
+        $html = $this->api($this->student, 'get')['html'];
+        $this->assertSame(2, substr_count($html, '>Jun Dela Cruz</span>'), 'the card and the reply');
+        $this->assertStringContainsString('>Hal Hidden</span>', $html, 'a hidden author keeps the legal name');
+        $this->assertStringNotContainsString('Zedekiah', $html);
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $own, 'the reply just posted');
+    }
+
+    public function testTheComposerShowsTheInstructorsOwnInteractiveAvatar(): void
+    {
+        $this->announce('Composer');
+        $html = $this->api($this->instructor, 'get')['html'];
+
+        $this->assertStringContainsString('data-announcement-composer', $html);
+        $this->assertStringContainsString('data-person-avatar="' . $this->instructor->id . '"', $html);
+        $this->assertStringNotContainsString('placeholder/profile.png', $html);
+    }
 }

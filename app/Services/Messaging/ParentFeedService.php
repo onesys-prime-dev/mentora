@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Parents\ParentAccessService;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -31,7 +32,7 @@ class ParentFeedService
     /**
      * Null when the parent may not look: not linked to the child, or the child is not in that offering.
      *
-     * @return array{instructors: list<array{id: int, name: string}>, posts: list<array{id: int, sender_name: string, body: string, created_at: string}>}|null
+     * @return array{instructors: list<array{id: int, name: string}>, posts: list<array{id: int, sender_name: string, body: string, created_at: string, avatar: array{person: array<string, mixed>, interactive: bool}|null}>}|null
      */
     public function feed(User $parent, int $studentId, int $offeringId, int $limit = 30): ?array
     {
@@ -41,8 +42,9 @@ class ParentFeedService
 
         $db          = db_connect();
         $ids         = array_map('intval', array_column($db->table('instructor_assignments')->select('instructor_user_id')->where('offering_id', $offeringId)->get()->getResultArray(), 'instructor_user_id'));
-        $names       = ConversationPresenter::names($ids);
-        $instructors = array_map(static fn (int $id): array => ['id' => $id, 'name' => $names[$id] ?? 'Instructor'], $ids);
+        // Shown as the parent may see each instructor (FR2): one lookup for the buttons and the posts.
+        $avatars     = (new AvatarData())->forViewer($parent, $ids);
+        $instructors = array_map(static fn (int $id): array => ['id' => $id, 'name' => $avatars[$id]['person']['name'] ?? 'Instructor'], $ids);
         $chat        = $db->table('conversations')->select('id')->where(['type' => 'course', 'offering_id' => $offeringId])->get()->getRowArray();
 
         // What the child can see, no more: a child who has left the chat has no feed.
@@ -69,7 +71,8 @@ class ParentFeedService
                 $body = 'Message unavailable';
             }
 
-            $posts[] = ['id' => (int) $row['id'], 'sender_name' => $names[(int) $row['sender_id']] ?? 'Instructor', 'body' => $body, 'created_at' => (string) $row['created_at']];
+            $sender  = $avatars[(int) $row['sender_id']] ?? null;
+            $posts[] = ['id' => (int) $row['id'], 'sender_name' => $sender['person']['name'] ?? 'Instructor', 'body' => $body, 'created_at' => (string) $row['created_at'], 'avatar' => $sender];
         }
 
         return ['instructors' => $instructors, 'posts' => $posts];

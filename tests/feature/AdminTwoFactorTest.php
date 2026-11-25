@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use App\Auth\Actions\AdminEmail2FA;
 use App\Services\Admin\SystemAdminService;
+use App\Services\Profiles\TwoFactorPreference;
+use CodeIgniter\Shield\Models\UserModel;
 use Tests\Support\CourseFactory;
 use Tests\Support\FakeEmail;
+use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
@@ -174,5 +177,29 @@ final class AdminTwoFactorTest extends RouteTestCase
         }
 
         $this->assertSame([], $this->mailer->sent);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Anyone may opt in from Settings (D14)
+    |--------------------------------------------------------------------------
+    */
+
+    public function testSomeoneWhoOptedInIsAskedForACode(): void
+    {
+        $user = PeopleFactory::person('instructor', 'Opt', 'In', 'optin@mentora.test', PeopleFactory::institution('OPT'));
+        $user = model(UserModel::class)->findById($user->id);
+
+        $user->password = self::PASSWORD;
+        model(UserModel::class)->save($user);
+
+        $this->assertFalse((new AdminEmail2FA())->appliesTo($user));
+
+        (new TwoFactorPreference())->optIn($user);
+        $this->mailer->sent = [];
+
+        $this->assertTrue((new AdminEmail2FA())->appliesTo($user));
+        $this->assertStringContainsString('auth/a/show', $this->signIn('optin@mentora.test'));
+        $this->assertFalse(auth()->loggedIn(), 'pending until the code is entered');
     }
 }

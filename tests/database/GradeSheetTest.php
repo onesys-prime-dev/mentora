@@ -211,6 +211,18 @@ final class GradeSheetTest extends DatabaseTestCase
         $this->assertSame('2026-001', $grid[3][1]);
     }
 
+    public function testTheSheetKeepsTheLegalNameNotThePreferredOne(): void
+    {
+        $juan = $this->student('Juan', 'Dela Cruz', '2026-009');
+        db_connect()->table('user_profiles')->where('user_id', $juan->id)->update(['preferred_first_name' => 'Jun']);
+
+        $csv  = $this->exportCsv();
+        $grid = $this->readCsv($csv);
+
+        $this->assertSame('Dela Cruz, Juan', $grid[$this->rowOf($grid, $juan)][2], 'a grade sheet is an official place (FR5)');
+        $this->assertStringNotContainsString('Dela Cruz, Jun,', $csv);
+    }
+
     public function testTheCsvCarriesScoresAndComputedResults(): void
     {
         $grid = $this->readCsv($this->exportCsv());

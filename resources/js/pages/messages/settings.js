@@ -2,8 +2,8 @@
 |--------------------------------------------------------------------------
 | Messages — Settings dialog
 |--------------------------------------------------------------------------
-| "My alerts": the email and quiet-hours form (messages.js), and the people the
-| person has blocked, with Unblock. Chat controls are not here: the institution
+| The people the person has blocked, with Unblock, and a link to Settings for
+| the email switch and quiet hours (D15). Chat controls are not here: the institution
 | administrator sets them in Institution settings, Messages.
 | Text is set with textContent only.
 |--------------------------------------------------------------------------
@@ -61,8 +61,8 @@ export function createSettings({ root, api }) {
                 const result = await api.unblock(p.id);
 
                 if (result.status === 200) {
-                    // The redraw removes this button: focus stays in the dialog, on its Save.
-                    root.querySelector("[data-role=prefs-save]")?.focus();
+                    // The redraw removes this button: focus stays in the dialog, on its link to Settings.
+                    root.querySelector("[data-role=prefs-settings-link]")?.focus();
                     renderBlocked();
                 } else {
                     unblock.disabled = false;

@@ -11,6 +11,7 @@ use App\Models\Courses\AnnouncementAttachmentModel;
 use App\Models\Courses\EnrollmentModel;
 use App\Models\Assignments\InstructorAssignmentModel;
 use App\Models\Files\FileModel;
+use App\Services\Profiles\AvatarData;
 use App\Services\Storage\StorageService;
 
 use CodeIgniter\HTTP\Files\UploadedFile;
@@ -218,12 +219,27 @@ class AnnouncementService
         $ownReactions = $this->reactionModel->retrieveOwnReactions($ids, (int) $user->id);
         $attachmentsByAnnouncement = $this->attachmentModel->retrieveForAnnouncements($ids);
 
+        // Every author on the page at once: no profile query per avatar.
+        $authorIds = array_column($announcements, 'author_id');
+        foreach ($repliesByAnnouncement as $replies) {
+            array_push($authorIds, ...array_column($replies, 'author_id'));
+        }
+        $authorIds[] = (int) $user->id; // the reply row's own avatar
+        $avatars = (new AvatarData())->forViewer($user, array_map('intval', $authorIds));
+
         foreach ($announcements as &$announcement) {
 
             $id = (int) $announcement['id'];
             $isOwner = (int) $announcement['author_id'] === (int) $user->id;
 
-            $announcement['replies'] = $repliesByAnnouncement[$id] ?? [];
+            $announcement['author_avatar'] = $avatars[(int) $announcement['author_id']] ?? null;
+            // The gated name: preferred only for people this viewer may see (FR5).
+            $announcement['author_name'] = $announcement['author_avatar']['person']['name'] ?? $announcement['author_name'];
+            $announcement['viewer_avatar'] = $avatars[(int) $user->id] ?? null;
+            $announcement['replies'] = array_map(
+                fn (array $reply) => ['author_name' => $avatars[(int) $reply['author_id']]['person']['name'] ?? $reply['author_name']] + $reply + ['author_avatar' => $avatars[(int) $reply['author_id']] ?? null],
+                $repliesByAnnouncement[$id] ?? []
+            );
             $announcement['reaction_counts'] = $reactionCounts[$id] ?? [];
             $announcement['own_reaction'] = $ownReactions[$id] ?? null;
             $announcement['attachments'] = array_map(
@@ -457,13 +473,17 @@ class AnnouncementService
 
         $replyId = (int) $this->replyModel->getInsertID();
 
+        $reply                  = $this->replyModel->retrieveOne($replyId);
+        $reply['author_avatar'] = (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null;
+        $reply['author_name']   = $reply['author_avatar']['person']['name'] ?? $reply['author_name'];
+
         // Rendered HTML for just the new reply, not the whole thread — the
         // caller appends it directly for an instant, no-reload reply.
         return [
             'success' => true,
             'reply_id' => $replyId,
             'html' => view('pages/courses/features/announcements/partials/reply', [
-                'reply' => $this->replyModel->retrieveOne($replyId),
+                'reply' => $reply,
                 'userId' => (int) $user->id,
             ]),
         ];

@@ -41,6 +41,8 @@ $labels = ['enrolled' => 'Enrolled', 'dropped' => 'Dropped', 'withdrawn' => 'Wit
 $rows = [];
 
 foreach ($rosterRows as $r) {
+    // The social name: preferred first name only when this viewer may see the student (FR5).
+    $r['name'] = ($rosterAvatars ?? [])[(int) $r['student_id']]['person']['name'] ?? $r['name'];
     $action = '';
 
     if ($canEdit && $r['locked']) {
@@ -55,6 +57,7 @@ foreach ($rosterRows as $r) {
     $rows[] = [
         'id'      => $r['id'],
         'label'   => $r['name'],
+        'person'  => ($rosterAvatars ?? [])[(int) $r['student_id']] ?? null,
         'cells'   => [
             'name'   => ['html' => '<span class="font-medium">' . esc($r['name']) . '</span>' . ($r['email'] !== '' && $r['email'] !== $r['name'] ? '<span class="block text-xs text-[#646464]">' . esc($r['email']) . '</span>' : '')],
             'number' => $r['student_number'] !== '' ? $r['student_number'] : '—',
