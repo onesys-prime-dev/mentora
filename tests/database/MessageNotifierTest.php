@@ -10,10 +10,15 @@ use App\Services\Messaging\MessagePreferences;
 use App\Services\Messaging\MessageService;
 use App\Services\Notifications\NotificationService;
 use CodeIgniter\Config\Services;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
+use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
+use Tests\Support\DeanFactory;
 use Tests\Support\FakeEmail;
 use Tests\Support\ParentScenario;
+use Tests\Support\PeopleFactory;
 
 /**
  * Notifications for new messages: no text, one per thread, held in quiet hours,
@@ -297,5 +302,37 @@ final class MessageNotifierTest extends DatabaseTestCase
         $this->notifier()->notifyReaction($message, (int) $this->parent->id);
 
         $this->assertSame('Jun Dela Cruz reacted to your message.', $this->notices($this->instructor)[0]['body']);
+    }
+
+    public function testNamingTheSenderCostsTheSameForTwoOrTenMembers(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Jun']);
+        $cost = function (int $students): int {
+            $offering = DeanFactory::offering($this->program, $this->term, 'NQ' . $students);
+            CourseFactory::assignInstructor($offering, $this->instructor);
+            for ($i = 0; $i < $students; $i++) {
+                CourseFactory::enroll($offering, PeopleFactory::person('student', 'Mem' . $i, 'Ber', null, $this->institution));
+            }
+            $chat = (int) (new CourseChatSync())->syncOffering($offering)['conversation_id'];
+            $this->plant($chat, $this->instructor, 'hello');
+
+            // Name and visibility lookups only: the per-member bookkeeping is not what this guards.
+            $n = 0;
+            $l = static function (Query $q) use (&$n): void {
+                $sql = $q->getQuery();
+                $n += preg_match('/user_profiles|auth_groups_users|parent_student_links|`users`.*`deleted_at`/', $sql) === 1 && ! str_contains($sql, 'INSERT') ? 1 : 0;
+            };
+            Events::on('DBQuery', $l);
+            $this->assertSame($students, $this->notifier()->notifyConversation($chat));
+            Events::removeListener('DBQuery', $l);
+
+            return $n;
+        };
+
+        $two = $cost(2);
+        $ten = $cost(10);
+
+        $this->assertSame($two, $ten, 'one lookup per send, not per recipient');
+        $this->assertStringStartsWith('Jun Tructor sent you a message', db_connect()->table('notifications')->orderBy('id', 'DESC')->get()->getRowArray()['body']);
     }
 }

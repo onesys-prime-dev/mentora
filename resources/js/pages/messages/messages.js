@@ -1272,9 +1272,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             item.className = "flex items-center gap-2";
             item.append(`${e} `);
 
-            // The server's avatar (AvatarData::forViewer), in the same order as the names.
+            // The server's avatar (AvatarData::forViewer), in the same order as the names; decoration only, so no
+            // person card opens over the open dialog.
             if (avatar) {
-                item.append(renderAvatar(avatar, "xs", { decorative: true }));
+                item.append(renderAvatar({ ...avatar, interactive: false }, "xs", { decorative: true }));
             }
 
             item.append(name);

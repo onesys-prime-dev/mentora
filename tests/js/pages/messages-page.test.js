@@ -836,7 +836,7 @@ describe("starting a conversation", () => {
 
 describe("who reacted", () => {
 
-    it("lists each name with its avatar from the server", async () => {
+    it("lists each name with its avatar from the server, as decoration only (no card over the dialog)", async () => {
 
         const shown = { id: 5, name: "Jun Dela Cruz", initials: "JD", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
         const hidden = { id: 6, name: "Juan Santos", initials: "JS", colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive: false };
@@ -854,9 +854,8 @@ describe("who reacted", () => {
         const items = all("[data-role=who-list] li");
 
         expect(items.map((li) => li.textContent)).toEqual(["👍 JDJun Dela Cruz", "👍 JSJuan Santos"]);
-        expect(items[0].querySelector("button[data-person-avatar='5']")).not.toBeNull();
-        expect(items[1].querySelector("[data-person-avatar]")).toBeNull();
-        expect(items[1].querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+        expect(q("[data-role=who-list] [data-person-avatar]")).toBeNull();
+        expect(items.map((li) => li.querySelector("[data-avatar]").getAttribute("aria-hidden"))).toEqual(["true", "true"]);
 
     });
 

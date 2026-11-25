@@ -94,6 +94,44 @@ final class ProfileContextResolverTest extends DatabaseTestCase
         $this->assertGreaterThan(0, $seen);
     }
 
+    public function testViewersWhoSeeAgreesWithVisibleIdsForEveryPair(): void
+    {
+        $resolver = new ProfileContextResolver();
+        $viewers  = array_values(array_filter($this->allIds(), static fn (int $id): bool => $id !== 999999));
+        $byId     = array_column(array_map(static fn (User $u): array => ['id' => (int) $u->id, 'u' => $u], array_values($this->people)), 'u', 'id');
+        $seen     = 0;
+
+        foreach ($this->allIds() as $subject) {
+            $expected = array_values(array_filter($viewers, static fn (int $v): bool => in_array($subject, $resolver->visibleIds($byId[$v], [$subject]), true)));
+
+            $got = $resolver->viewersWhoSee($subject, [...$viewers, $viewers[0]]); // a repeated viewer is answered once
+            $this->assertSame($expected, $got, "subject {$subject}");
+            $seen += count($got);
+        }
+
+        $this->assertGreaterThan(0, $seen);
+        $this->assertSame([], $resolver->viewersWhoSee((int) $this->people['student']->id, []));
+    }
+
+    public function testViewersWhoSeeUsesAFixedNumberOfQueries(): void
+    {
+        $viewers = [];
+        for ($i = 0; $i < 40; $i++) {
+            $viewers[] = (int) PeopleFactory::person($i % 2 ? 'student' : 'parent', 'Many', 'People', null, $this->inst)->id;
+        }
+
+        $queries = 0;
+        $l       = static function () use (&$queries): void {
+            $queries++;
+        };
+        Events::on('DBQuery', $l);
+        $who = (new ProfileContextResolver())->viewersWhoSee((int) $this->people['student']->id, $viewers);
+        Events::removeListener('DBQuery', $l);
+
+        $this->assertLessThanOrEqual(8, $queries);
+        $this->assertCount(20, $who, 'students see a fellow student; unrelated parents do not');
+    }
+
     public function testTheMatrixCoversVisibleAndHiddenCases(): void
     {
         $r   = new ProfileContextResolver();

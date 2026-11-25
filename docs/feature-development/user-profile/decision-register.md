@@ -228,4 +228,5 @@ Each line: what was decided — why — what it costs if wrong.
 - R17 Preferred names in social places only for viewers who may see the person (else legal); official exports and the gradebook keep legal names. — FR5/D24 privacy — per-site tweaks.
 - R18 Remember-me: signing out everywhere/deactivation deletes remember tokens; a remember-me sign-in starts a fresh session clock (custom session authenticator); the current browser must sign in again after its session ends. — D13 security — a UX trade-off.
 - R19 Responsive screenshot baselines are regenerated on CI only (not locally). — baselines are made on CI's Linux runner — the user runs the workflow.
+- R20 Messages notification text (bell and email) is stored at send time with the name that recipient could see then; a later preferred-name or visibility change does not rewrite old notices. — FR2 + notifications are stored rows — none.
 - Deferred (names only, no leak): recipient/group pickers, who-reacted, notifications, parent feed, message reports, group generator preview, a few dashboard/dean/chair lists, sorting by legal name — see test-strategy.md.
