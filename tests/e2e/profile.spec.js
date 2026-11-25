@@ -89,7 +89,7 @@ test.describe("profile screenshots", () => {
                 await signInAs(page, account, role);
                 await page.goto("/profile");
                 await expect(page.locator("[data-profile-band]")).toBeVisible();
-                const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+                const overflow = await page.evaluate(() => globalThis.document.documentElement.scrollWidth - globalThis.innerWidth);
                 expect(overflow).toBeLessThanOrEqual(0);
                 await page.screenshot({ path: `test-results/profile-screens/${role}-${width}.png`, fullPage: true });
             });

@@ -24,10 +24,10 @@ class AddProfileColumns extends Migration
             'checklist_dismissed_at' => ['type' => 'DATETIME', 'null' => true],
         ]);
 
-        $profiles = $this->db->prefixTable('user_profiles');
+        $profiles = 'user_profiles';
         $this->db->query("ALTER TABLE {$profiles}"
-            . ' ADD CONSTRAINT fk_profile_photo FOREIGN KEY (photo_file_id) REFERENCES ' . $this->db->prefixTable('files') . ' (id) ON DELETE SET NULL ON UPDATE CASCADE,'
-            . ' ADD CONSTRAINT fk_profile_home_department FOREIGN KEY (home_department_id) REFERENCES ' . $this->db->prefixTable('departments') . ' (id) ON DELETE SET NULL ON UPDATE CASCADE');
+            . ' ADD CONSTRAINT fk_profile_photo FOREIGN KEY (photo_file_id) REFERENCES files (id) ON DELETE SET NULL ON UPDATE CASCADE,'
+            . ' ADD CONSTRAINT fk_profile_home_department FOREIGN KEY (home_department_id) REFERENCES departments (id) ON DELETE SET NULL ON UPDATE CASCADE');
 
         $this->forge->addColumn('institutions', [
             'profile_photos_enabled' => ['type' => 'TINYINT', 'constraint' => 1, 'default' => 1],
@@ -38,7 +38,7 @@ class AddProfileColumns extends Migration
     {
         $this->forge->dropColumn('institutions', 'profile_photos_enabled');
 
-        $profiles = $this->db->prefixTable('user_profiles');
+        $profiles = 'user_profiles';
         $this->db->query("ALTER TABLE {$profiles} DROP FOREIGN KEY fk_profile_photo, DROP FOREIGN KEY fk_profile_home_department");
         $this->forge->dropColumn('user_profiles', [
             'preferred_first_name', 'pronouns', 'bio', 'office_location', 'consultation_hours', 'work_phone',

@@ -234,7 +234,7 @@ class MailOutbox
         $old  = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === self::EMAIL_CHANGED));
         $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] !== self::EMAIL_CHANGED));
 
-        $current = $old === [] ? '' : (string) (model(UserModel::class)->findById($userId)?->email ?? '');
+        $current = $old === [] ? '' : (string) model(UserModel::class)->findById($userId)->email;
 
         foreach ($old as $r) {
             // explode: rows queued before the detail held only the old address carried "old new".

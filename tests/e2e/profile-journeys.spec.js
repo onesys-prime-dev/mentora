@@ -221,7 +221,7 @@ test("TC-PRF-20 W8 A parent's per-child email choice is saved", async ({ page })
     expect(await email().isChecked()).toBe(before);
 });
 
-test("TC-PRF-21 W9 An administrator clears someone's bio and they are told", async ({ page, browser }) => {
+test("TC-PRF-21 W9 An administrator clears someone's bio and they are told", async ({ browser }) => {
     const id = idOf(accounts.instructor2);
 
     runSql(`UPDATE user_profiles SET bio = 'Something unsuitable' WHERE user_id = ${id}`);
@@ -316,7 +316,7 @@ test("TC-PRF-25 The profile, settings, person and modal screens pass the accessi
 test.describe("TC-PRF-26 No horizontal overflow", () => {
     for (const [width, height] of [[360, 800], [768, 1024], [1440, 900]]) {
         test(`/profile, /settings and the modal at ${width}`, async ({ page }) => {
-            const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+            const overflow = () => page.evaluate(() => globalThis.document.documentElement.scrollWidth - globalThis.innerWidth);
 
             await page.setViewportSize({ width, height });
             await signInAs(page, accounts.student1, "student");
