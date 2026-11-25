@@ -431,6 +431,8 @@ final class GroupNotifierTest extends DatabaseTestCase
             // up() sets the list as it was then; the later kinds go back in (the photo kind).
             require_once APPPATH . 'Database/Migrations/2026-12-02-000004_AddPhotoKindToMailOutbox.php';
             (new App\Database\Migrations\AddPhotoKindToMailOutbox())->up();
+            require_once APPPATH . 'Database/Migrations/2026-12-02-000005_AddProfileKindsToMailOutbox.php';
+            (new App\Database\Migrations\AddProfileKindsToMailOutbox())->up();
         }
 
         $this->assertStringContainsString("'group'", $type());

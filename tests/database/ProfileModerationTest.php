@@ -64,9 +64,26 @@ final class ProfileModerationTest extends DatabaseTestCase
         $bells = db_connect()->table('notifications')->where('user_id', $this->student->id)->where('type', 'profile.field')->get()->getResultArray();
         $this->assertCount(6, $bells);
         $this->assertContains('Your school cleared your preferred name.', array_column($bells, 'title'));
-        $this->assertCount(6, $this->mailer->sent);
+        $this->assertSame(6, db_connect()->table('mail_outbox')->where('kind', 'field_cleared')->where('user_id', $this->student->id)->countAllResults());
+        (new \App\Services\Notifications\MailOutbox())->sendDue(new DateTimeImmutable('+1 hour'));
+        $this->assertCount(1, $this->mailer->sent);
         $this->assertSame('stu@pm.test', $this->mailer->sent[0]['to']);
         $this->assertStringContainsString('Your school cleared your preferred name.', $this->mailer->sent[0]['message']);
+    }
+
+    public function testTheOwnerEmailGoesThroughTheOutboxAndAnEmptyStringCountsAsEmpty(): void
+    {
+        (new ProfileModeration())->clearField((int) $this->student->id, 'bio', $this->admin);
+
+        $this->assertSame([], $this->mailer->sent);
+        $rows = db_connect()->table('mail_outbox')->where('kind', 'field_cleared')->where('user_id', $this->student->id)->get()->getResultArray();
+        $this->assertCount(1, $rows);
+        $this->assertSame('bio', $rows[0]['detail']);
+
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['pronouns' => '']);
+        (new ProfileModeration())->clearField((int) $this->student->id, 'pronouns', $this->admin);
+        $this->assertSame('', $this->value('pronouns'));
+        $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'profile.field_cleared_by_admin')->countAllResults());
     }
 
     public function testOtherFieldsAreRefusedAndNothingChanges(): void
@@ -87,11 +104,11 @@ final class ProfileModerationTest extends DatabaseTestCase
     public function testAnAlreadyEmptyFieldTellsNobodyAndLogsNothing(): void
     {
         (new ProfileModeration())->clearField((int) $this->student->id, 'bio', $this->admin);
-        $this->mailer->sent = [];
+        $queued = db_connect()->table('mail_outbox')->countAllResults();
 
         (new ProfileModeration())->clearField((int) $this->student->id, 'bio', $this->admin);
 
-        $this->assertSame([], $this->mailer->sent);
+        $this->assertSame($queued, db_connect()->table('mail_outbox')->countAllResults());
         $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'profile.field_cleared_by_admin')->countAllResults());
     }
 

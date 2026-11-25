@@ -237,7 +237,13 @@ class PeopleService
 
         // Only for staff, and only when the form sent it; empty clears it.
         $home = null;
-        $sent = array_key_exists('home_department_id', $input) && array_intersect(self::HOME_DEPARTMENT_ROLES, $person['roles']) !== [];
+        $staff = array_intersect(self::HOME_DEPARTMENT_ROLES, $person['roles']) !== [];
+        $sent  = $staff && array_key_exists('home_department_id', $input);
+
+        // The form hides the field for everyone else, so a department for them is a mistake, not something to drop quietly.
+        if (! $staff && trim((string) ($input['home_department_id'] ?? '')) !== '') {
+            throw StructureException::field('home_department_id', 'Only instructors, chairpersons and deans have a home department.');
+        }
 
         if ($sent && trim((string) $input['home_department_id']) !== '') {
             $home = (int) $input['home_department_id'];

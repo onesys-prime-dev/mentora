@@ -717,15 +717,25 @@ final class SisImporterTest extends DatabaseTestCase
         $this->run_();
         $mailer = FakeEmail::install();
         db_connect()->table('audit_logs')->emptyTable();
+        db_connect()->table('mail_outbox')->emptyTable();
 
-        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\nS2,ben@example.com,Ben,Ng\n");
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\nS2,ben.ng@example.com,Ben,Ng\n");
         $this->run_();
 
-        $this->assertCount(1, $mailer->sent);
-        $this->assertSame('ann@example.com', $mailer->sent[0]['to']);
-        $this->assertStringContainsString('was changed to anna.lee@example.com by your school', $mailer->sent[0]['message']);
+        // Queued, never sent inline: one row per change, the old address kept in the detail.
+        $this->assertSame([], $mailer->sent);
+        $rows = db_connect()->table('mail_outbox')->where('kind', 'email_changed')->get()->getResultArray();
+        $this->assertCount(2, $rows);
+        $this->assertContains('ann@example.com anna.lee@example.com', array_column($rows, 'detail'));
+
+        // The job then mails the OLD address.
+        (new \App\Services\Notifications\MailOutbox())->sendDue($this->now->modify('+1 hour'));
+        $to = array_column($mailer->sent, 'to');
+        $this->assertContains('ann@example.com', $to);
+        $this->assertContains('ben@example.com', $to);
+        $this->assertStringContainsString('was changed to anna.lee@example.com by your school', $mailer->sent[array_search('ann@example.com', $to, true)]['message']);
         $entry = db_connect()->table('audit_logs')->where('action', 'profile.email_changed_by_import')->get()->getResultArray();
-        $this->assertCount(1, $entry);
+        $this->assertCount(2, $entry);
         $this->assertSame((int) $this->actor->id, (int) $entry[0]['actor_user_id']);
     }
 

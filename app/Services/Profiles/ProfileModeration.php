@@ -74,14 +74,21 @@ class ProfileModeration
 
         $db = db_connect();
 
-        if ($db->table('user_profiles')->where('user_id', $subjectId)->where("{$field} IS NOT NULL", null, false)->countAllResults() === 0) {
+        // Filled means not null and not empty, as the clear menu decides what to offer.
+        if ($db->table('user_profiles')->where('user_id', $subjectId)->where("{$field} IS NOT NULL AND {$field} != ''", null, false)->countAllResults() === 0) {
             return;
         }
 
-        $db->table('user_profiles')->where('user_id', $subjectId)->update([$field => null]);
-
         $institution = (new PlanLimits())->institutionOf($subjectId);
+
+        $db->transStart();
+        $db->table('user_profiles')->where('user_id', $subjectId)->update([$field => null]);
         service('auditLogger')->log('profile.field_cleared_by_admin', $admin, ['target_type' => 'user', 'target_id' => $subjectId, 'institution_id' => $institution, 'new' => ['field' => $field]]);
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            throw new \RuntimeException('The field could not be cleared.');
+        }
 
         if ($subjectId === (int) $admin->id) {
             return;
@@ -90,6 +97,12 @@ class ProfileModeration
         $label = self::CLEARABLE[$field];
         $body  = "Your school cleared your {$label}.";
         (new NotificationService())->send($subjectId, 'profile.field', $body, 'You can add it again on your profile.', false, "profile.field:{$subjectId}:{$field}:" . bin2hex(random_bytes(6)), $institution, 'profile');
+
+        if ($institution !== null) {
+            (new MailOutbox())->tell($institution, $subjectId, MailOutbox::FIELD_CLEARED, $label);
+
+            return;
+        }
 
         $owner = model(UserModel::class)->findById($subjectId);
         $owner === null || SecurityNotice::send($owner, "Your {$label} was cleared", $body . "\n\nYou can add it again on your profile. If this wasn't expected, contact your school.\n");

@@ -6,6 +6,7 @@ namespace App\Services\Notifications;
 
 use App\Services\Users\AccountControl;
 use App\Services\Users\PasswordResetService;
+use App\Services\Profiles\SecurityNotice;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
 use DateTimeImmutable;
@@ -43,7 +44,13 @@ class MailOutbox
     /** An administrator removed or added the person's profile photo (detail: removed | added); the bell is sent by ProfileModeration. */
     public const PHOTO = 'photo';
 
-    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP, self::PHOTO];
+    /** The sign-in email was changed by an administrator or an import (detail: "old new"); this one goes to the OLD address (D26). */
+    public const EMAIL_CHANGED = 'email_changed';
+
+    /** An administrator cleared a profile field (detail: the field in words, e.g. "bio"). */
+    public const FIELD_CLEARED = 'field_cleared';
+
+    public const KINDS = [self::WELCOME, self::ENROLLED, self::TEACHING, self::DEAN, self::CHAIRPERSON, self::GROUP, self::PHOTO, self::EMAIL_CHANGED, self::FIELD_CLEARED];
 
     /** How long a row waits so that changes made one after another make one email. */
     public const MERGE_SECONDS = 120;
@@ -222,6 +229,20 @@ class MailOutbox
             return false;
         }
 
+        // A changed sign-in email is told to the address it left, as a notice of its own; the rest is one email to the current address.
+        $old  = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === self::EMAIL_CHANGED));
+        $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] !== self::EMAIL_CHANGED));
+
+        foreach ($old as $r) {
+            [$from, $to] = array_pad(explode(' ', (string) $r['detail'], 2), 2, '');
+            SecurityNotice::emailChangedByAdmin($from, $to, $userId);
+            $db->table('mail_outbox')->where('id', $r['id'])->update(['sent_at' => $stamp, 'last_error' => null]);
+        }
+
+        if ($rows === []) {
+            return $old !== [];
+        }
+
         $ids         = array_map(static fn (array $r): int => (int) $r['id'], $rows);
         $user        = model(UserModel::class)->findById($userId);
         $institution = $db->table('institutions')->where('id', $institutionId)->where('deleted_at IS NULL', null, false)->get()->getRowArray();
@@ -334,6 +355,10 @@ class MailOutbox
 
         foreach ($by[self::PHOTO] ?? [] as $what) {
             $out .= ($what === 'removed' ? 'Your profile photo was removed by your school.' : 'Your school added a profile photo for you.') . "\n\n";
+        }
+
+        foreach ($by[self::FIELD_CLEARED] ?? [] as $label) {
+            $out .= "Your school cleared your {$label}. You can add it again on your profile.\n\n";
         }
 
         $out .= isset($by[self::WELCOME])

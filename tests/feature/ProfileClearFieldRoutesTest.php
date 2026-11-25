@@ -141,6 +141,16 @@ final class ProfileClearFieldRoutesTest extends RouteTestCase
         $this->assertSame('Spam', $this->bio());
     }
 
+    public function testTheEditDialogHidesTheHomeDepartmentForPeopleWhoAreNotStaff(): void
+    {
+        $body = $this->body($this->admin, '/institution/people?q=' . urlencode((string) $this->student->email));
+
+        $this->assertStringContainsString('data-dialog-field="home_department_id"', $body);
+        $this->assertStringContainsString('data-dialog-hide', $body);
+
+        $staff = $this->body($this->admin, '/institution/people?q=' . urlencode((string) $this->instructor->email));
+        $this->assertStringNotContainsString('data-dialog-hide', $staff);
+    }
     public function testTheHomeDepartmentReplacesTeachesInOnTheProfile(): void
     {
         ['college' => $c] = DeanFactory::college('HM', $this->institution);

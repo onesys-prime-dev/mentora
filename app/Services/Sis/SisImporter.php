@@ -16,7 +16,6 @@ use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
 use App\Services\Notifications\MailOutbox;
 use App\Services\Notifications\NotificationTriggers;
-use App\Services\Profiles\SecurityNotice;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UsernameGenerator;
 use CodeIgniter\Shield\Entities\User;
@@ -115,8 +114,8 @@ class SisImporter
 
     private ?User $actor = null;
 
-    /** @var list<array{string, string, int}> old email, new email, user: told once the run is committed */
-    private array $emailNotices = [];
+    /** @var list<array{id: int|string, code: string, name: string}>|null the institution's departments, loaded once per run */
+    private ?array $departments = null;
 
     public function __construct(
         private readonly ?SisConnectionService $connections = null,
@@ -140,7 +139,7 @@ class SisImporter
         $this->actor         = $actor;
         $this->upload        = false;
         $this->newSections   = [];
-        $this->emailNotices  = [];
+        $this->departments   = null;
 
         $institution = (new InstitutionModel())->find($institutionId) ?? throw new InvalidArgumentException('That institution does not exist.');
         $connections = $this->connections ?? new SisConnectionService();
@@ -244,10 +243,6 @@ class SisImporter
                 ]);
 
                 $db->transCommit();
-
-                foreach ($this->emailNotices as [$old, $new, $userId]) {
-                    SecurityNotice::emailChangedByAdmin($old, $new, $userId);
-                }
             } else {
                 $db->transRollback();
             }
@@ -299,14 +294,14 @@ class SisImporter
         }
     }
 
-    /** A department of this institution by exact name or by code; an unknown or ambiguous one is reported and ignored. */
+    /** A department of this institution by name or by code (ignoring case); an unknown or ambiguous one is reported and ignored. */
     private function homeDepartment(string $dataset, string $item, ?string $wanted, string $role): ?int
     {
         if ($wanted === null || $role !== 'instructor') {
             return null;
         }
 
-        $rows = db_connect()->table('departments d')->select('d.id, d.code, d.name')->join('colleges c', 'c.id = d.college_id')
+        $rows = $this->departments ??= db_connect()->table('departments d')->select('d.id, d.code, d.name')->join('colleges c', 'c.id = d.college_id')
             ->where('c.institution_id', $this->institutionId)->get()->getResultArray();
         $lower = mb_strtolower($wanted);
 
@@ -407,7 +402,8 @@ class SisImporter
 
             $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $changes['email'], 'updated_at' => $this->stamp()]);
             service('auditLogger')->log('profile.email_changed_by_import', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['changed' => true]]);
-            $current['email'] === '' || $this->emailNotices[] = [(string) $current['email'], (string) $changes['email'], $userId];
+            // Queued (the job mails the OLD address); a preview's rows are rolled back with the rest of it.
+            $current['email'] === '' || (new MailOutbox())->tell($this->institutionId, $userId, MailOutbox::EMAIL_CHANGED, $current['email'] . ' ' . $changes['email'], $this->now);
             unset($changes['email']);
         }
 

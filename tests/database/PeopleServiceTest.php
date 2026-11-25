@@ -505,18 +505,27 @@ final class PeopleServiceTest extends DatabaseTestCase
         $this->assertSame('Ivy', db_connect()->table('user_profiles')->where('user_id', $ivy->id)->get()->getRow('first_name'));
     }
 
-    public function testAStudentHasNoHomeDepartmentAndAnAbsentFieldLeavesItAlone(): void
+    public function testAnAbsentFieldLeavesTheHomeDepartmentAlone(): void
     {
-        $ann  = $this->person('student', 'Ann');
         $ivy  = $this->person('instructor', 'Ivy');
         $dept = $this->department($this->institution, 'HD3');
-
-        $this->edit($ann, ['home_department_id' => (string) $dept]);
-        $this->assertNull($this->home($ann));
 
         $this->edit($ivy, ['home_department_id' => (string) $dept]);
         $this->edit($ivy, []);
         $this->assertSame($dept, (int) $this->home($ivy));
+    }
+
+    public function testAHomeDepartmentForAPersonWhoIsNotStaffIsAFieldError(): void
+    {
+        $ann  = $this->person('student', 'Ann');
+        $dept = $this->department($this->institution, 'HD4');
+
+        $e = $this->refused(fn () => $this->edit($ann, ['home_department_id' => (string) $dept]));
+
+        $this->assertArrayHasKey('home_department_id', $e->errors());
+        $this->assertNull($this->home($ann));
+        // An empty value from the form (the field is hidden for them) is not an error.
+        $this->edit($ann, ['home_department_id' => '']);
     }
 
     public function testChangingTheEmailTellsTheOldAddress(): void

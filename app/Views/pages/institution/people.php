@@ -66,7 +66,7 @@ foreach ($peopleRows as $p) {
     if ($peopleCanEdit) {
         $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-edit"'
             . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
-            . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email'], 'home_department_id' => $p['home_department_id']]) . '"'
+            . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email'], 'home_department_id' => $p['home_department_id']]) . '"' . ($p['staff'] ? '' : ' data-dialog-hide="' . $json(['home_department_id']) . '"')
             . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
 
         $values = [];
@@ -341,7 +341,7 @@ $seatsText = $peopleSeats['limit'] === null ? 'Student seats: ' . number_format(
     )], ['saveData' => false]) ?>
 
     <?= view('components/dialog', ['id' => 'person-edit', 'title' => 'Edit details', 'body' => $form($person()
-        . $field(['name' => 'home_department_id', 'label' => 'Home department', 'type' => 'select', 'options' => ['' => 'None'] + $peopleDepartments, 'help' => 'For instructors, chairpersons and deans: shown on their profile. Left empty, an instructor shows where they teach this term.']), 'Save')], ['saveData' => false]) ?>
+        . '<div data-dialog-field="home_department_id">' . $field(['name' => 'home_department_id', 'label' => 'Home department', 'type' => 'select', 'options' => ['' => 'None'] + $peopleDepartments, 'help' => 'For instructors, chairpersons and deans: shown on their profile. Left empty, an instructor shows where they teach this term.']) . '</div>', 'Save')], ['saveData' => false]) ?>
 
     <?= view('components/dialog', ['id' => 'person-roles', 'title' => 'Change roles', 'body' => $form($roleBoxes, 'Save roles')], ['saveData' => false]) ?>
 

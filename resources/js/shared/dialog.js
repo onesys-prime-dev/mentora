@@ -636,6 +636,25 @@ export function fillDialog(dialogEl, trigger) {
         }
     }
 
+    // Fields that do not apply to this row (data-dialog-hide='["name"]') are hidden and not sent.
+    let hidden;
+
+    try {
+        hidden = data.dialogHide ? JSON.parse(data.dialogHide) : [];
+    } catch {
+        hidden = [];
+    }
+
+    for (const box of dialogEl.querySelectorAll("[data-dialog-field]")) {
+        const off = hidden.includes(box.dataset.dialogField);
+
+        box.hidden = off;
+
+        for (const input of box.querySelectorAll("input, select, textarea")) {
+            input.disabled = off;
+        }
+    }
+
     const note = dialogEl.querySelector("[data-dialog-lock]");
 
     if (note) {
