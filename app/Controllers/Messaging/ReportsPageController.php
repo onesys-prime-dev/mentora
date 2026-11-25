@@ -72,7 +72,7 @@ class ReportsPageController extends BaseController
 
     private function adminOnly(): void
     {
-        if ((new MessagingContextResolver())->activeRole(auth()->user()) !== 'institutional_admin') {
+        if (! in_array('institutional_admin', (new MessagingContextResolver())->roles(auth()->user()), true)) {
             throw PageNotFoundException::forPageNotFound();
         }
     }

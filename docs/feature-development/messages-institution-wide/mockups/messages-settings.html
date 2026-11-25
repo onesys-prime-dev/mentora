@@ -1,0 +1,61 @@
+<style>
+  .m{font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#1f2937}
+  .dlg{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+  .t{font-weight:700;font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between}
+  .sec{font-weight:600;margin:10px 0 4px}
+  .note{font-size:12px;color:#646464}
+  .time{display:inline-block;border:1px solid #d1d5db;border-radius:8px;padding:3px 8px;font-size:12px}
+  .pill{display:inline-block;border:1px solid #d1d5db;border-radius:999px;padding:2px 10px;font-weight:600;font-size:12px;background:#fff}
+  .brand{background:#0040A6;color:#fff;border-color:#0040A6}
+  .row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f5f5f5}
+  .av{width:24px;height:24px;border-radius:50%;background:#dbe7ff;flex:none}
+  .paused{font-size:10px;font-weight:700;background:#F3F4F6;color:#4B5563;border-radius:999px;padding:1px 6px}
+  .seg{display:inline-flex;border:1px solid #d1d5db;border-radius:999px;overflow:hidden}
+  .seg span{padding:3px 10px;font-size:12px;font-weight:600}
+  .seg .on{background:#0040A6;color:#fff}
+  label{display:block;margin:3px 0}
+</style>
+
+<h2>Screen 6 of 7: your Messages settings (also covers the blocked list)</h2>
+<p class="subtitle">Today's Settings dialog already holds “Email me about new messages”, Quiet hours (staff only) and Blocked people. It gains: quiet hours for everyone with the school default, the new “email me about messages from” choice, and paused blocks. (Moves to /settings later with User Profile.)</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image m"><div class="dlg">
+      <div class="t">Messages settings <span class="note">✕</span></div>
+      <label><input type="checkbox" checked> Email me about new messages</label>
+      <div style="margin-left:22px">
+        <label><input type="radio" checked> from everyone</label>
+        <label><input type="radio"> only from people I've talked to</label>
+      </div>
+      <div class="sec">Quiet hours</div>
+      <label><input type="radio" checked> School default <span class="note">(21:00 to 07:00)</span></label>
+      <label><input type="radio"> My own: <span class="time">22:00</span> to <span class="time">06:30</span></label>
+      <label><input type="radio"> None</label>
+      <div class="sec">Blocked people (2)</div>
+      <div class="row"><span class="av"></span><span style="flex:1">Dan Lopez</span><span class="pill">Unblock</span></div>
+      <div class="row"><span class="av"></span><span style="flex:1">Prof. Ella Tan <span class="paused">Paused</span><div class="note">You share a course, so this block is paused until it ends.</div></span><span class="pill">Unblock</span></div>
+      <div style="text-align:right;margin-top:8px"><span class="pill brand">Save</span></div>
+    </div></div>
+    <div class="card-body"><h3>A · Radios, nested under the email switch</h3><p>Everything readable at a glance; the email choice only appears to matter when email is on. Paused blocks carry a badge and a line explaining why.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image m"><div class="dlg">
+      <div class="t">Messages settings <span class="note">✕</span></div>
+      <div class="sec" style="margin-top:0">Email</div>
+      <div class="seg"><span>Off</span><span class="on">Everyone</span><span>People I've talked to</span></div>
+      <div class="note" style="margin-top:3px">Emails say who wrote and where, never what.</div>
+      <div class="sec">Quiet hours</div>
+      <div class="seg"><span class="on">School default</span><span>My own</span><span>None</span></div>
+      <div class="note" style="margin-top:3px">21:00 to 07:00 · notifications wait, messages still arrive</div>
+      <div class="sec">Blocked people (2)</div>
+      <div class="row"><span class="av"></span><span style="flex:1">Dan Lopez</span><span class="pill">Unblock</span></div>
+      <div class="row"><span class="av"></span><span style="flex:1">Prof. Ella Tan <span class="paused">Paused</span><div class="note">Paused while you share a course.</div></span><span class="pill">Unblock</span></div>
+      <div style="text-align:right;margin-top:8px"><span class="pill brand">Save</span></div>
+    </div></div>
+    <div class="card-body"><h3>B · Two three-way switches</h3><p>Email off/everyone/talked-to as one control (replaces the checkbox); quiet hours default/own/none, with time fields appearing for “My own”. Matches screen 5's switch style.</p></div>
+  </div>
+
+</div>

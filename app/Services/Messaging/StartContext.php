@@ -12,11 +12,13 @@ namespace App\Services\Messaging;
  * sharedCourse: both are active in one non-closed offering.
  * inScope: the sender's department (chairperson) or college (dean)
  *   covers the recipient.
- * linkedChild: the parent's linked child is taught by that instructor or
- *   chaired by that chairperson.
+ * linkedChildAsSenderParent / linkedChildAsRecipientParent: that side, as a
+ *   parent, has a linked child taught by the other side's instructor role or
+ *   chaired by its chairperson role. One fact per direction, so a person never
+ *   speaks as the parent of a child only the other side is linked to.
  * isSelf: sender and recipient are the same person; always refused.
  *
- * The resolver must pass the account's active role, and must never build a
+ * The resolver builds it from every role each account holds, and must never build a
  * context for an `admin` sender or recipient except to have it refused.
  */
 final class StartContext
@@ -28,10 +30,17 @@ final class StartContext
         public readonly bool $sharedCourse = false,
         public readonly bool $sameCollege = false,
         public readonly bool $inScope = false,
-        public readonly bool $linkedChild = false,
+        public readonly bool $linkedChildAsSenderParent = false,
+        public readonly bool $linkedChildAsRecipientParent = false,
         public readonly bool $studentDmEnabled = true,
         public readonly bool $blockedByRecipient = false,
         public readonly bool $isSelf = false,
     ) {
+    }
+
+    /** A child links the pair in either direction. */
+    public function linkedChild(): bool
+    {
+        return $this->linkedChildAsSenderParent || $this->linkedChildAsRecipientParent;
     }
 }

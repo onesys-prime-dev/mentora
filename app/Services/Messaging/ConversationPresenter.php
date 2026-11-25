@@ -43,7 +43,7 @@ class ConversationPresenter
         $institution = $this->resolver->institutionOf($viewer);
         $people      = self::names(array_values(array_filter(array_map('intval', [...array_column($rows, 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
         $courses     = $this->courses(array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
-        $role        = $this->resolver->activeRole($viewer);
+        $viewerParty = $this->resolver->party($viewer);
         $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $blocked     = $this->blockedIds((int) $viewer->id);
         // One lookup for the list: the other person of each direct chat and each subject student, as this viewer
@@ -96,10 +96,10 @@ class ConversationPresenter
             $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && $this->canBlock($other);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
-            $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
+            $row['can_moderate'] = $this->policy->canModerate($teaches ? $viewerParty->withRole('instructor') : $viewerParty, (string) $row['type'], $teaches || $created);
 
             $row['controls']            = ChatControls::forConversation($row);
-            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row);
+            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row, $viewerParty);
 
             $out[] = $row;
         }
@@ -124,7 +124,7 @@ class ConversationPresenter
     {
         $other = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($otherUserId);
 
-        return $other !== null && BlockService::blockableRole($this->resolver->activeRole($other));
+        return $other !== null && BlockService::blockable($this->resolver->roles($other));
     }
 
     /**

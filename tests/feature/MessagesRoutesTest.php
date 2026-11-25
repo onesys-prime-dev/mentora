@@ -208,6 +208,17 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->assertSame([], json_decode($this->api('GET', "conversations/{$id}/messages")->response()->getBody(), true)['messages']);
     }
 
+    /** The read route is registered twice (Routes.php); pins which controller answers: one that needs no message_id. */
+    public function testMarkReadRouteAnswers(): void
+    {
+        $this->signIn($this->student);
+
+        $response = $this->api('POST', "conversations/{$this->conversation}/read")->response();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['ok' => true], json_decode($response->getBody(), true));
+    }
+
     public function testBadSendsAnswerTheirOwnStatus(): void
     {
         $this->signIn($this->student);

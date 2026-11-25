@@ -128,7 +128,7 @@ class PersonProfileController extends BaseController
         if ($subject === null) {
             return false;
         }
-        // D32: the one accepted active_role read in the profile; the same check that starting the conversation makes.
+        // D32: the active-role exception is gone (decisions are on parties now); the same check that starting the conversation makes.
         return (new ConversationService())->resolveDirectStart($viewer, $subject) !== null;
     }
 }

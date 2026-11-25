@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\RoleRank;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -49,7 +50,7 @@ class GroupService
     public function candidates(User $creator, string $query, int $limit = 20): array
     {
         $query       = trim($query);
-        $role        = $this->resolver->activeRole($creator);
+        $role        = self::creatorRole($this->resolver->roles($creator));
         $institution = $this->resolver->institutionOf($creator);
 
         if (! isset(self::MEMBER_ROLES[$role]) || $institution === null || mb_strlen($query) < self::MIN_QUERY) {
@@ -74,7 +75,7 @@ class GroupService
                 continue;
             }
 
-            $found[] = ['id' => (int) $member->id, 'name' => trim($row['first_name'] . ' ' . $row['last_name']), 'role' => $this->resolver->activeRole($member)];
+            $found[] = ['id' => (int) $member->id, 'name' => trim($row['first_name'] . ' ' . $row['last_name']), 'role' => RoleRank::highest($this->resolver->roles($member)) ?? ''];
 
             if (count($found) >= $limit) {
                 break;
@@ -99,7 +100,7 @@ class GroupService
      */
     public function create(User $creator, string $title, array $memberIds): ?array
     {
-        $role        = $this->resolver->activeRole($creator);
+        $role        = self::creatorRole($this->resolver->roles($creator));
         $institution = $this->resolver->institutionOf($creator);
         $title       = self::cleanTitle($title);
 
@@ -158,9 +159,16 @@ class GroupService
         return $clean === '' || mb_strlen($clean) > self::MAX_TITLE ? null : $clean;
     }
 
+    /** Transitional: whoever holds dean or chairperson may start groups; the dean hat wins. */
+    /** @param list<string> $roles */
+    private static function creatorRole(array $roles): string
+    {
+        return in_array('dean', $roles, true) ? 'dean' : (in_array('chairperson', $roles, true) ? 'chairperson' : '');
+    }
+
     private function allowed(User $creator, string $creatorRole, User $member): bool
     {
-        if (! in_array($this->resolver->activeRole($member), self::MEMBER_ROLES[$creatorRole], true)) {
+        if (array_intersect(self::MEMBER_ROLES[$creatorRole], $this->resolver->roles($member)) === []) {
             return false;
         }
 

@@ -55,7 +55,7 @@ class RecipientSearch
             ->where("(up.first_name LIKE {$like} OR up.last_name LIKE {$like} OR CONCAT(up.first_name, ' ', up.last_name) LIKE {$like})", null, false)
             ->orderBy('up.last_name')->orderBy('up.first_name')->limit(self::CANDIDATES)->get()->getResultArray();
 
-        $senderRole = $this->resolver->activeRole($sender);
+        $senderParty = $this->resolver->party($sender);
         $users      = model(UserModel::class);
         $found      = [];
 
@@ -66,16 +66,18 @@ class RecipientSearch
                 continue;
             }
 
-            $role = $this->resolver->activeRole($recipient);
+            $recipientParty = $this->resolver->party($recipient);
+            $role           = $recipientParty->topRole();
+            $shared         = $this->resolver->childSubjects($sender, $senderParty, $recipient, $recipientParty);
 
-            foreach ($this->subjects($sender, $senderRole, $recipient, $role) as $subject) {
+            foreach ([...($shared ?? []), null] as $subject) {
                 $context = $this->resolver->forStart($sender, $recipient, $subject);
 
-                if ($context === null || ! $this->policy->canStart($senderRole, $role, $context)) {
+                if ($context === null || ! $this->policy->canStart($senderParty, $recipientParty, $subject, $context)) {
                     continue;
                 }
 
-                if ($subject !== null && ! $context->linkedChild) {
+                if ($subject !== null && ! $context->linkedChild()) {
                     continue;
                 }
 
@@ -100,23 +102,5 @@ class RecipientSearch
         }
 
         return $found;
-    }
-
-    /**
-     * The children a thread between these two could be about: none named for a
-     * pair without a parent, otherwise each child they share (none shared
-     * means no thread, so an empty list).
-     *
-     * @return list<int|null>
-     */
-    private function subjects(User $sender, string $senderRole, User $recipient, string $recipientRole): array
-    {
-        if (! $this->resolver->aboutAChild($senderRole, $recipientRole)) {
-            return [null];
-        }
-
-        [$parent, $staff, $staffRole] = $senderRole === 'parent' ? [$sender, $recipient, $recipientRole] : [$recipient, $sender, $senderRole];
-
-        return $this->resolver->sharedLinkedChildIds($parent, $staff, $staffRole);
     }
 }

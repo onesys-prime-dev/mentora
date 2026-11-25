@@ -1,0 +1,76 @@
+<style>
+  .m{font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#1f2937}
+  .shell{display:grid;grid-template-columns:150px 1fr;gap:8px;height:380px}
+  .pane{background:#fff;border-radius:16px;border:1px solid #eef0f3;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden;display:flex;flex-direction:column}
+  .ph{display:flex;justify-content:space-between;align-items:center;padding:10px 10px 6px}
+  .t{font-family:Parkinsans,system-ui;font-weight:700;color:#0040A6;font-size:15px}
+  .new{background:#0040A6;color:#fff;border-radius:999px;padding:2px 9px;font-weight:600;font-size:12px}
+  .new.off{background:#cbd5e1;color:#fff}
+  .row{display:flex;gap:6px;align-items:center;padding:6px 10px}
+  .av{width:26px;height:26px;border-radius:50%;background:#dbe7ff;flex:none}
+  .ln{height:7px;border-radius:4px;background:#e5e7eb}
+  .body{flex:1;padding:10px;background:#fafbfc;display:flex;flex-direction:column;gap:6px}
+  .bubble{max-width:75%;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:6px 9px}
+  .comp{border-top:1px solid #f0f0f0;padding:8px 10px;display:flex;gap:6px}
+  .inp{flex:1;border:1px solid #d1d5db;border-radius:10px;padding:6px 9px;color:#9ca3af}
+  .send{background:#0040A6;color:#fff;border-radius:999px;padding:5px 12px;font-weight:600}
+  .warn{background:#FFF8E6;border:1px solid #F5D78E;border-radius:12px;padding:8px 10px}
+  .note{font-size:12px;color:#646464}
+</style>
+
+<h2>Screen 2 of 8: what a restricted or paused person sees</h2>
+<p class="subtitle">Example: an admin restricted Ben from starting new conversations until 30 Nov. (The automatic pause uses the same pattern with “while some reports are reviewed”. A full “no sending” restriction also replaces every reply box except course chats he teaches.)</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="shell">
+        <div class="pane">
+          <div class="ph"><span class="t">Messages</span><span class="new off">+ New</span></div>
+          <div class="warn" style="margin:4px 8px 6px;font-size:12px"><b>You can't start new conversations</b> until 30 Nov, 5:00 PM. <span class="note">Set by your school.</span></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:70%"></div></div></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:55%"></div></div></div>
+        </div>
+        <div class="pane"><div class="body"><div class="bubble">Thanks, see you Monday.</div></div><div class="comp"><div class="inp">Write a reply…</div><span class="send">Send</span></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>A · Notice in the list pane, New greyed out</h3><p>Always visible on the Messages page; replies keep working. Clicking the greyed New repeats the reason.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="warn" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span><b>You can't start new conversations until 30 Nov, 5:00 PM.</b> <span class="note">Replies and course chats still work.</span></span></div>
+      <div class="shell" style="height:330px">
+        <div class="pane">
+          <div class="ph"><span class="t">Messages</span><span class="new">+ New</span></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:70%"></div></div></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:55%"></div></div></div>
+        </div>
+        <div class="pane"><div class="body"><div class="bubble">Thanks, see you Monday.</div></div><div class="comp"><div class="inp">Write a reply…</div><span class="send">Send</span></div></div>
+      </div>
+    </div>
+    <div class="card-body"><h3>B · Full-width strip above both panes</h3><p>Most prominent; New stays clickable and opens a dialog explaining the limit instead of the picker.</p></div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="shell">
+        <div class="pane">
+          <div class="ph"><span class="t">Messages</span><span class="new">+ New</span></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:70%"></div></div></div>
+          <div class="row"><div class="av"></div><div style="flex:1"><div class="ln" style="width:55%"></div></div></div>
+        </div>
+        <div class="pane" style="justify-content:center;align-items:center;padding:16px;text-align:center">
+          <div style="max-width:240px">
+            <div style="font-weight:600">You can't start new conversations right now</div>
+            <div class="note" style="margin:4px 0 10px">Until 30 Nov, 5:00 PM. Replies in your existing conversations and course chats still work.</div>
+            <span class="note">(shown in place of the picker when he presses New)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body"><h3>C · Only when he tries</h3><p>Nothing on screen until he presses New; then the reason appears where the picker would be. Least intrusive, but he only learns by trying.</p></div>
+  </div>
+
+</div>

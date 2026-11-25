@@ -154,12 +154,14 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         CourseFactory::assignInstructor($offering, $instructor);
         db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
 
-        $this->assertTrue($this->resolver->forStart($parent, $instructor, null)->linkedChild);
-        $this->assertTrue($this->resolver->forStart($parent, $instructor, (int) $child->id)->linkedChild);
-        $this->assertTrue($this->resolver->forStart($instructor, $parent, null)->linkedChild);
-        $this->assertTrue($this->resolver->forStart($parent, $chair, null)->linkedChild);
-        $this->assertFalse($this->resolver->forStart($stranger, $instructor, null)->linkedChild);
-        $this->assertFalse($this->resolver->forStart($parent, $instructor, (int) $stranger->id)->linkedChild);
+        $this->assertTrue($this->resolver->forStart($parent, $instructor, null)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($parent, $instructor, null)->linkedChildAsRecipientParent);
+        $this->assertTrue($this->resolver->forStart($parent, $instructor, (int) $child->id)->linkedChildAsSenderParent);
+        $this->assertTrue($this->resolver->forStart($instructor, $parent, null)->linkedChildAsRecipientParent);
+        $this->assertFalse($this->resolver->forStart($instructor, $parent, null)->linkedChildAsSenderParent);
+        $this->assertTrue($this->resolver->forStart($parent, $chair, null)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($stranger, $instructor, null)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($parent, $instructor, (int) $stranger->id)->linkedChildAsSenderParent);
     }
 
     public function testBlockedSelfAndActiveFacts(): void
@@ -184,7 +186,62 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         db_connect()->table('auth_groups_users')->insert(['user_id' => $dean->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
         $dean = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($dean->id);
 
-        $this->assertSame('instructor', $this->resolver->activeRole($dean));
+        $this->assertSame(['instructor'], $this->resolver->party($dean)->roles);
+    }
+
+    private function withGroup(\CodeIgniter\Shield\Entities\User $user, string $group): \CodeIgniter\Shield\Entities\User
+    {
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $user->id, 'group' => $group, 'created_at' => date('Y-m-d H:i:s')]);
+
+        return model(\CodeIgniter\Shield\Models\UserModel::class)->findById($user->id);
+    }
+
+    public function testPartyListsEveryUsableRole(): void
+    {
+        $user  = $this->withGroup($this->person('instructor'), 'parent');
+        $party = $this->resolver->party($user);
+
+        $this->assertEqualsCanonicalizing(['instructor', 'parent'], $party->roles);
+        $this->assertTrue($party->active);
+        $this->assertSame($this->institution, $party->institutionId);
+        $this->assertFalse($party->minor);
+
+        // A dean with no assignment who holds another role keeps only the other role.
+        $dean = $this->withGroup($this->person('dean'), 'instructor');
+        $this->assertSame(['instructor'], $this->resolver->party($dean)->roles);
+        $this->assertSame(['instructor'], $this->resolver->roles($dean));
+    }
+
+    public function testRolesMatchesThePartyWithoutTheAccountLookups(): void
+    {
+        $user = $this->withGroup($this->person('instructor'), 'parent');
+
+        $this->assertEqualsCanonicalizing($this->resolver->party($user)->roles, $this->resolver->roles($user));
+    }
+
+    public function testAnAdminWhoAlsoHoldsAnInstitutionRoleGetsAContext(): void
+    {
+        // Ruling R10: the admin role is ignored beside institution roles.
+        $both    = $this->withGroup($this->person('instructor'), 'admin');
+        $student = $this->person('student');
+
+        $this->assertNotNull($this->resolver->forStart($both, $student, null));
+    }
+
+    public function testPartyIgnoresSavedActiveRole(): void
+    {
+        $user = $this->withGroup($this->person('instructor'), 'parent');
+        db_connect()->table('user_profiles')->where('user_id', $user->id)->update(['active_role' => 'parent']);
+        $student  = $this->person('student');
+        $offering = $this->offering($this->programA, 'PS1');
+        CourseFactory::enroll($offering, $student);
+        CourseFactory::assignInstructor($offering, $user);
+
+        $this->assertEqualsCanonicalizing(['instructor', 'parent'], $this->resolver->party($user)->roles);
+
+        $context = $this->resolver->forStart($user, $student, null);
+        $this->assertTrue($context->sharedCourse);
+        $this->assertTrue((new \App\Services\Messaging\MessagingPolicy())->canStart($this->resolver->party($user), $this->resolver->party($student), null, $context));
     }
 
     public function testTheSystemAdminAndAPersonWithoutAnInstitutionGetNoContext(): void

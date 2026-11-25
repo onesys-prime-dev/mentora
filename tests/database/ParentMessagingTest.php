@@ -121,6 +121,53 @@ final class ParentMessagingTest extends DatabaseTestCase
         }
     }
 
+    private function alsoParent(User $user): User
+    {
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $user->id, 'group' => 'parent', 'created_at' => date('Y-m-d H:i:s')]);
+
+        return model(\CodeIgniter\Shield\Models\UserModel::class)->findById($user->id);
+    }
+
+    public function testAnInstructorWhoIsAlsoAParentStillReachesAStaffColleague(): void
+    {
+        $both = $this->alsoParent($this->instructor);
+
+        $thread = $this->conversations()->startDirect($both, (int) $this->chair->id);
+        $this->assertNotNull($thread);
+        $this->assertNull($thread['subject_student_id']);
+        $this->assertContains((int) $this->chair->id, array_column((new RecipientSearch())->search($both, 'Chair'), 'id'));
+    }
+
+    public function testAChairWhoIsAParentCannotSpeakAsTheParentOfAnotherParentsChild(): void
+    {
+        // S = chair + parent (of nobody here); R = instructor + parent of the child; the child is in S's department.
+        $chair      = $this->alsoParent($this->chair);
+        $instructor = $this->alsoParent($this->instructor);
+        $this->linkParent($instructor, $this->child);
+
+        $this->assertNull($this->conversations()->startDirect($chair, (int) $instructor->id, (int) $this->child->id));
+        $this->assertNotContains((int) $this->child->id, array_column((new RecipientSearch())->search($chair, 'Tructor'), 'subject_student_id'));
+        // The other way round is a real parent thread: R speaks as the child's parent to the child's chairperson.
+        $this->assertNotNull($this->conversations()->startDirect($instructor, (int) $chair->id, (int) $this->child->id));
+    }
+
+    public function testAPureInstructorStillGetsTheChildThreadWithAParentOnly(): void
+    {
+        $thread = $this->conversations()->startDirect($this->instructor, (int) $this->parent->id);
+
+        $this->assertSame((int) $this->child->id, (int) $thread['subject_student_id']);
+    }
+
+    public function testAnInstructorWhoIsAlsoAParentStillGetsTheChildThreadWithAParentOnly(): void
+    {
+        $both = $this->alsoParent($this->instructor);
+
+        $thread = $this->conversations()->startDirect($both, (int) $this->parent->id);
+
+        $this->assertNotNull($thread);
+        $this->assertSame((int) $this->child->id, (int) $thread['subject_student_id']);
+    }
+
     public function testAParentCannotStartWithAStudentAnotherParentADeanOrAnAdmin(): void
     {
         $dean   = DeanFactory::dean($this->institution, $this->college);

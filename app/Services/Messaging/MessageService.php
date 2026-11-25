@@ -577,7 +577,7 @@ class MessageService
     }
 
     /**
-     * The sender's name and active role, for the label above their message.
+     * The sender's name and top role, for the label above their message.
      * Looked up once per sender per request.
      *
      * @return array{name: string, role: string}
@@ -589,7 +589,7 @@ class MessageService
 
             $this->senders[$senderId] = [
                 'name' => ConversationPresenter::names([$senderId])[$senderId] ?? 'Former member',
-                'role' => $user === null ? '' : $this->resolver->activeRole($user),
+                'role' => $user === null ? '' : (\App\Services\Profiles\RoleRank::highest($this->resolver->roles($user)) ?? ''),
             ];
         }
 

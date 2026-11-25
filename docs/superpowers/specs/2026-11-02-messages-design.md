@@ -2,6 +2,8 @@
 
 Status: **draft for approval** · Date: 2026-11-02 · Replaces the placeholder "Inbox" tile.
 
+> **Amended 2026-11-23 by the institution-wide Messages track.** §3.1 (who may start a thread), §3.2 (groups), §3.3 rules 6-8 (blocks, deactivated/impersonation, moderation) and §6.3 (quiet hours) are superseded by `docs/feature-development/messages-institution-wide/requirements.md` (decisions in its `decision-register.md`). Where they disagree, that document wins. The rest of this spec still applies.
+
 Read this whole file before writing code. It is written for a builder who has not seen the conversation behind it.
 Items marked **(my call)** are decisions the author made without being asked; they are listed again in
 "Calls to check" at the end. Everything else was decided by the product owner.

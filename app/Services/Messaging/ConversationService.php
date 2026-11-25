@@ -41,17 +41,22 @@ class ConversationService
             return null;
         }
 
-        $senderRole    = $this->resolver->activeRole($sender);
-        $recipientRole = $this->resolver->activeRole($recipient);
+        $senderParty    = $this->resolver->party($sender);
+        $recipientParty = $this->resolver->party($recipient);
+        $shared         = $this->resolver->childSubjects($sender, $senderParty, $recipient, $recipientParty);
 
         // Only a parent thread is about a child, and it is about exactly one: the one named, or else the only
         // child the parent and the teacher have in common. With several in common the child must be named,
         // so a pair never ends up with a thread per way of asking.
-        if (! $this->resolver->aboutAChild($senderRole, $recipientRole)) {
+        if ($shared === null) {
             $subjectStudentId = null;
         } elseif ($subjectStudentId === null) {
-            [$parent, $staff, $staffRole] = $senderRole === 'parent' ? [$sender, $recipient, $recipientRole] : [$recipient, $sender, $senderRole];
-            $shared                       = $this->resolver->sharedLinkedChildIds($parent, $staff, $staffRole);
+            // Two staff who are also parents are a staff pair first; only if that is refused is the thread about the one shared child.
+            $plain = $this->resolver->forStart($sender, $recipient, null);
+
+            if ($plain !== null && $this->policy->canStart($senderParty, $recipientParty, null, $plain)) {
+                return ['subject_student_id' => null];
+            }
 
             if (count($shared) !== 1) {
                 return null;
@@ -62,12 +67,12 @@ class ConversationService
 
         $context = $this->resolver->forStart($sender, $recipient, $subjectStudentId);
 
-        if ($context === null || ! $this->policy->canStart($senderRole, $recipientRole, $context)) {
+        if ($context === null || ! $this->policy->canStart($senderParty, $recipientParty, $subjectStudentId, $context)) {
             return null;
         }
 
         // A parent thread must name a child the parent can speak for.
-        if ($subjectStudentId !== null && ! $context->linkedChild) {
+        if ($subjectStudentId !== null && ! $context->linkedChild()) {
             return null;
         }
 
@@ -148,13 +153,14 @@ class ConversationService
      */
     public function canModerate(User $user, array $conversation): bool
     {
-        $role       = $this->resolver->activeRole($user);
         $offeringId = $conversation['offering_id'] === null ? null : (int) $conversation['offering_id'];
         $teaches    = $offeringId !== null && $this->resolver->isCourseInstructor((int) $user->id, $offeringId);
         $created    = $conversation['type'] === 'group' && (int) ($conversation['created_by'] ?? 0) === (int) $user->id;
 
+        $party = $this->resolver->party($user);
+
         return $this->policy->canModerate(
-            $role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role),
+            $teaches ? $party->withRole('instructor') : $party,
             (string) $conversation['type'],
             $teaches || $created,
             $this->resolver->institutionOf($user) === (int) $conversation['institution_id'],

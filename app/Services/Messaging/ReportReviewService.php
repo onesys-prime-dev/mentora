@@ -188,11 +188,11 @@ class ReportReviewService
     {
         return $report['status'] === 'open'
             && $report['removed_at'] === null
-            && $this->policy->canModerate('institutional_admin', (string) $report['type'], false);
+            && $this->policy->canModerate(new Party(0, ['institutional_admin'], true, null), (string) $report['type'], false);
     }
 
     private function institutionOf(User $admin): ?int
     {
-        return $this->resolver->activeRole($admin) === 'institutional_admin' ? $this->resolver->institutionOf($admin) : null;
+        return in_array('institutional_admin', $this->resolver->roles($admin), true) ? $this->resolver->institutionOf($admin) : null;
     }
 }

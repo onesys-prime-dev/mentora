@@ -1,0 +1,51 @@
+<style>
+  .m{font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#1A1C1E}
+  .box{background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:14px}
+  .tabs{display:flex;gap:10px;font-size:12px;color:#646464;border-bottom:1px solid #eee;margin-bottom:10px;flex-wrap:wrap}
+  .tabs .on{color:#0040A6;font-weight:600;border-bottom:2px solid #0040A6;padding-bottom:4px}
+  .hd{font-family:Parkinsans,system-ui;font-weight:700;color:#0040A6;margin:6px 0 4px}
+  .p{font-size:12px;color:#3D3D3D;margin-bottom:6px}
+  .opt{border:1px solid #e5e7eb;border-radius:12px;padding:8px 10px;margin-bottom:6px}
+  .opt.sel{border-color:#0040A6;background:#F2F7FF}
+  .seg{display:inline-flex;border:1px solid #d1d5db;border-radius:999px;overflow:hidden}
+  .seg span{padding:5px 12px;font-size:12px;font-weight:600;color:#374151}
+  .seg .on{background:#0040A6;color:#fff}
+  .time{display:inline-block;border:1px solid #d1d5db;border-radius:8px;padding:4px 8px;font-size:12px}
+  .note{font-size:12px;color:#646464}
+</style>
+
+<h2>Screen 5 of 8: institution settings → Messages tab</h2>
+<p class="subtitle">The Messages tab already exists (Students messaging each other: On/Off, and Chat controls). It gains the three-way student setting and default quiet hours. Only the control style differs.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image m"><div class="box">
+      <div class="tabs"><span>Profile</span><span>Security</span><span>Parents</span><span class="on">Messages</span></div>
+      <div class="hd">Students messaging each other</div>
+      <div class="opt"><b>○ Off</b><div class="note">Students can't start conversations with other students. Existing ones stay readable.</div></div>
+      <div class="opt"><b>○ Classmates only</b><div class="note">Only students who share a course.</div></div>
+      <div class="opt sel"><b>● Whole institution</b> <span class="note">(default)</span><div class="note">Any student can message any student. Students marked as minors are still protected.</div></div>
+      <div class="hd" style="margin-top:10px">Default quiet hours</div>
+      <div class="p">For anyone who hasn't set their own. Notifications and emails wait until the end; messages still arrive.</div>
+      <span class="time">21:00</span> to <span class="time">07:00</span> <span class="note">· None</span>
+      <div class="hd" style="margin-top:10px">Chat controls</div><div class="note">(unchanged)</div>
+    </div></div>
+    <div class="card-body"><h3>A · Option cards with a line each</h3><p>Each choice explains what it does, matching the existing explanatory paragraph style. Takes more height.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image m"><div class="box">
+      <div class="tabs"><span>Profile</span><span>Security</span><span>Parents</span><span class="on">Messages</span></div>
+      <div class="hd">Students messaging each other</div>
+      <div class="p">Who a student can start a conversation with. Narrowing it keeps existing conversations readable but stops new posts in the ones that no longer qualify. Students marked as minors are always protected.</div>
+      <div class="seg"><span>Off</span><span>Classmates only</span><span class="on">Whole institution</span></div>
+      <div class="hd" style="margin-top:12px">Default quiet hours</div>
+      <div class="p">For anyone who hasn't set their own.</div>
+      <span class="time">21:00</span> to <span class="time">07:00</span> <span class="note">· None</span>
+      <div class="hd" style="margin-top:10px">Chat controls</div><div class="note">(unchanged)</div>
+    </div></div>
+    <div class="card-body"><h3>B · One paragraph + a segmented switch</h3><p>Compact; the explanation sits in one paragraph above, like today's On/Off radios.</p></div>
+  </div>
+
+</div>

@@ -26,10 +26,14 @@ class BlockService
         $this->resolver = $resolver ?? new MessagingContextResolver();
     }
 
-    /** Whether a person of this active role can be blocked at all. */
-    public static function blockableRole(string $role): bool
+    /**
+     * Whether this person can be blocked at all: holds a role, is not the bare system admin, holds no unblockable role.
+     *
+     * @param list<string> $roles MessagingContextResolver::roles()
+     */
+    public static function blockable(array $roles): bool
     {
-        return $role !== '' && $role !== 'admin' && ! in_array($role, self::UNBLOCKABLE, true);
+        return $roles !== [] && $roles !== ['admin'] && array_intersect(self::UNBLOCKABLE, $roles) === [];
     }
 
     /**
@@ -41,7 +45,7 @@ class BlockService
         $institution = $this->resolver->institutionOf($user);
         $target      = $blockedId < 1 || $blockedId === (int) $user->id ? null : model(UserModel::class)->findById($blockedId);
 
-        if ($institution === null || $target === null || $this->resolver->institutionOf($target) !== $institution || ! self::blockableRole($this->resolver->activeRole($target))) {
+        if ($institution === null || $target === null || $this->resolver->institutionOf($target) !== $institution || ! self::blockable($this->resolver->roles($target))) {
             return false;
         }
 

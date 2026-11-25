@@ -60,11 +60,52 @@ final class MessagingPolicy
     private const UNBLOCKABLE = ['instructor', 'institutional_admin'];
 
     /**
-     * The resolver must pass each account's *active role* (not every role it
-     * holds), must never call this with an `admin` sender or recipient except
-     * to have it refused, and sets StartContext::$isSelf.
+     * Transitional: the parties pick a capacity for the thread, then any pair of held roles valid for it
+     * that passes the START table with the facts allows the start. The resolver refuses the system `admin`,
+     * impersonation and no-institution (no context); the system admin is refused here too.
      */
-    public function canStart(string $senderRole, string $recipientRole, StartContext $c): bool
+    public function canStart(Party $sender, Party $recipient, ?int $subjectStudentId, StartContext $c): bool
+    {
+        if ($sender->isSystemAdmin() || $recipient->isSystemAdmin()) {
+            return false;
+        }
+
+        if ($subjectStudentId !== null) {
+            // Exactly one side speaks as the parent, the other holds a staff role; try both orientations.
+            return ($sender->isParent() && $recipient->isStaff() && $this->anyPair(['parent'], array_intersect($recipient->roles, Party::STAFF_ROLES), $c))
+                || ($recipient->isParent() && $sender->isStaff() && $this->anyPair(array_intersect($sender->roles, Party::STAFF_ROLES), ['parent'], $c));
+        }
+
+        // The institution's administrator may write to a parent outside a child thread; only that one pair.
+        if (in_array('institutional_admin', $sender->roles, true) && $recipient->isParent() && $this->roleStart('institutional_admin', 'parent', $c)) {
+            return true;
+        }
+
+        if ($sender->capacity(false) === null || $recipient->capacity(false) === null) {
+            return false;
+        }
+
+        return $this->anyPair(array_diff($sender->roles, ['parent']), array_diff($recipient->roles, ['parent']), $c);
+    }
+
+    /**
+     * @param list<string> $senderRoles
+     * @param list<string> $recipientRoles
+     */
+    private function anyPair(array $senderRoles, array $recipientRoles, StartContext $c): bool
+    {
+        foreach ($senderRoles as $senderRole) {
+            foreach ($recipientRoles as $recipientRole) {
+                if ($this->roleStart($senderRole, $recipientRole, $c)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function roleStart(string $senderRole, string $recipientRole, StartContext $c): bool
     {
         $requirement = self::START[$senderRole][$recipientRole] ?? null;
 
@@ -89,10 +130,11 @@ final class MessagingPolicy
         }
 
         $facts = [
-            'sharedCourse'   => $c->sharedCourse,
-            'sameCollege' => $c->sameCollege,
-            'inScope'        => $c->inScope,
-            'linkedChild'    => $c->linkedChild,
+            'sharedCourse' => $c->sharedCourse,
+            'sameCollege'  => $c->sameCollege,
+            'inScope'      => $c->inScope,
+            // Each orientation reads the fact for its own parent side.
+            'linkedChild'  => $senderRole === 'parent' ? $c->linkedChildAsSenderParent : $c->linkedChildAsRecipientParent,
         ];
 
         return $requirement === self::NOTHING || $facts[$requirement];
@@ -131,12 +173,12 @@ final class MessagingPolicy
     /**
      * $inScope is "instructor of that course" for a course chat, "created or
      * leads that staff group" for a group. Direct threads are never moderated.
-     * For a `course` chat $role is the person's role in that course (from
-     * CourseMembership::roleIn), not their account role.
+     * Any held role counts (the caller adds `instructor` for someone who teaches the course); the
+     * system admin never moderates.
      */
-    public function canModerate(string $role, string $conversationType, bool $inScope, bool $sameInstitution = true): bool
+    public function canModerate(Party $actor, string $conversationType, bool $inScope, bool $sameInstitution = true): bool
     {
-        if (! $sameInstitution) {
+        if (! $sameInstitution || $actor->isSystemAdmin()) {
             return false;
         }
 
@@ -144,13 +186,13 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($role === 'institutional_admin') {
+        if (in_array('institutional_admin', $actor->roles, true)) {
             return true;
         }
 
         return match ($conversationType) {
-            'course' => $role === 'instructor' && $inScope,
-            'group'  => in_array($role, ['chairperson', 'dean'], true) && $inScope,
+            'course' => in_array('instructor', $actor->roles, true) && $inScope,
+            'group'  => array_intersect(['chairperson', 'dean'], $actor->roles) !== [] && $inScope,
         };
     }
 

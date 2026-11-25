@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Models\Assignments\ChairpersonAssignmentModel;
+use App\Models\Assignments\DeanAssignmentModel;
 use App\Services\Admin\Impersonation;
-use App\Services\Auth\ActiveRoleService;
 use App\Services\Courses\DeanAccessService;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Parents\ParentAccessService;
@@ -20,30 +20,88 @@ use CodeIgniter\Shield\Entities\User;
  * teacher, who has blocked whom, and the state of a conversation for one
  * person. It decides nothing itself; the services pass these contexts to the
  * policy.
- *
- * A person acts under their active role. For the signed-in user that is the
- * session's role; for anyone else it is their saved choice, or their
- * preferred role, so that looking at a recipient never changes their session.
  */
 class MessagingContextResolver
 {
     /** Roles whose block never binds the person they blocked (spec 3.3 rule 6). */
     private const UNBLOCKABLE = ['instructor', 'institutional_admin'];
 
-    public function activeRole(User $user): string
+    /** Every role the account may use, as Messaging decides on it (no active role involved). */
+    public function party(User $user): Party
     {
-        if (auth()->loggedIn() && (int) auth()->id() === (int) $user->id) {
-            return (new ActiveRoleService())->resolve($user);
+        return new Party((int) $user->id, $this->roles($user), $this->accountActive((int) $user->id), $this->institutionOf($user));
+    }
+
+    /** @var array<int, list<string>> roles per user id, for this resolver's lifetime (one request) */
+    private array $roles = [];
+
+    /**
+     * The Shield groups the account may use: all of them, except that a dean with
+     * no active assignment loses `dean` while they hold another role. Cheap (no
+     * account or institution lookups): use it where only the roles matter.
+     *
+     * @return list<string>
+     */
+    public function roles(User $user): array
+    {
+        return $this->roles[(int) $user->id] ??= $this->heldRoles($user);
+    }
+
+    /**
+     * Same rule as the auth module's usable-groups check (app/Services/Auth); keep the two in step.
+     *
+     * @return list<string>
+     */
+    private function heldRoles(User $user): array
+    {
+        $groups = array_values(array_filter($user->getGroups() ?? [], 'is_string'));
+
+        if (! in_array('dean', $groups, true)) {
+            return $groups;
         }
 
-        $groups = (new ActiveRoleService())->usableGroups($user);
-        $saved = db_connect()->table('user_profiles')->select('active_role')->where('user_id', $user->id)->get()->getRowArray()['active_role'] ?? null;
+        $others = array_values(array_diff($groups, ['dean']));
 
-        if (is_string($saved) && in_array($saved, $groups, true)) {
-            return $saved;
+        if ($others === [] || (new DeanAssignmentModel())->collegeOfDean((int) $user->id) !== null) {
+            return $groups;
         }
 
-        return $groups === [] ? '' : ActiveRoleService::preferredRole($groups);
+        return $others;
+    }
+
+    /**
+     * @param list<string> $roles
+     *
+     * @return list<int>
+     */
+    private function unionColleges(User $user, array $roles): array
+    {
+        $ids = [];
+
+        foreach ($roles as $role) {
+            if ($role !== 'parent') {
+                $ids = [...$ids, ...$this->collegeIds($user, $role)];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param list<string> $senderRoles
+     * @param list<string> $recipientRoles
+     */
+    private function anyInScope(User $sender, array $senderRoles, User $recipient, array $recipientRoles): bool
+    {
+        foreach ($senderRoles as $senderRole) {
+            foreach ($recipientRoles as $recipientRole) {
+                if ($this->inScope($sender, $senderRole, $recipient, $recipientRole)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public function institutionOf(User $user): ?int
@@ -62,10 +120,11 @@ class MessagingContextResolver
             return null;
         }
 
-        $senderRole    = $this->activeRole($sender);
-        $recipientRole = $this->activeRole($recipient);
+        // Beside institution roles `admin` is ignored (ruling R10); only the bare system admin is refused.
+        $senderRoles    = array_values(array_diff($this->roles($sender), ['admin']));
+        $recipientRoles = array_values(array_diff($this->roles($recipient), ['admin']));
 
-        if (in_array($senderRole, ['', 'admin'], true) || in_array($recipientRole, ['', 'admin'], true)) {
+        if ($senderRoles === [] || $recipientRoles === []) {
             return null;
         }
 
@@ -79,16 +138,16 @@ class MessagingContextResolver
         $sameInstitution = $senderInstitution === $recipientInstitution;
         $senderId        = (int) $sender->id;
         $recipientId     = (int) $recipient->id;
-        $linked          = $sameInstitution && $this->linkedChild($sender, $senderRole, $recipient, $recipientRole, $subjectStudentId);
 
         return new StartContext(
             sameInstitution: $sameInstitution,
             senderActive: $this->accountActive($senderId),
             recipientActive: $this->accountActive($recipientId),
             sharedCourse: $sameInstitution && $this->sharedCourse($senderId, $recipientId),
-            sameCollege: $sameInstitution && array_intersect($this->collegeIds($sender, $senderRole), $this->collegeIds($recipient, $recipientRole)) !== [],
-            inScope: $sameInstitution && $this->inScope($sender, $senderRole, $recipient, $recipientRole),
-            linkedChild: $linked,
+            sameCollege: $sameInstitution && array_intersect($this->unionColleges($sender, $senderRoles), $this->unionColleges($recipient, $recipientRoles)) !== [],
+            inScope: $sameInstitution && $this->anyInScope($sender, $senderRoles, $recipient, $recipientRoles),
+            linkedChildAsSenderParent: $sameInstitution && $this->linkedChild($sender, $senderRoles, $recipient, $recipientRoles, $subjectStudentId),
+            linkedChildAsRecipientParent: $sameInstitution && $this->linkedChild($recipient, $recipientRoles, $sender, $senderRoles, $subjectStudentId),
             studentDmEnabled: ! $sameInstitution || $this->studentSwitch()->enabled($senderInstitution),
             blockedByRecipient: $this->blocked($recipientId, $senderId),
             isSelf: $senderId === $recipientId,
@@ -112,7 +171,7 @@ class MessagingContextResolver
             if ($other !== null && $this->blocked((int) $other['user_id'], $userId)) {
                 $blocked   = true;
                 $blocker   = model(\CodeIgniter\Shield\Models\UserModel::class)->findById((int) $other['user_id']);
-                $exempt    = $blocker !== null && in_array($this->activeRole($blocker), self::UNBLOCKABLE, true);
+                $exempt    = $blocker !== null && array_intersect($this->roles($blocker), self::UNBLOCKABLE) !== [];
             }
         }
 
@@ -165,7 +224,7 @@ class MessagingContextResolver
         foreach ($ids as $id) {
             $person = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($id);
 
-            if ($person === null || $this->activeRole($person) !== 'student') {
+            if ($person === null || ! $this->party($person)->isStudent()) {
                 return false;
             }
         }
@@ -199,13 +258,29 @@ class MessagingContextResolver
     /**
      * A thread between a parent and an instructor or chairperson is about one of the parent's children. Any
      * other pair that includes a parent (an institutional administrator writing to them, say) is about nobody
-     * in particular.
+     * in particular. Null when the pair is not about a child, else the children they share (any role held).
+     *
+     * @return list<int>|null
      */
-    public function aboutAChild(string $roleA, string $roleB): bool
+    public function childSubjects(User $a, Party $pa, User $b, Party $pb): ?array
     {
-        $staff = ['instructor', 'chairperson'];
+        $about = false;
+        $ids   = [];
 
-        return ($roleA === 'parent' && in_array($roleB, $staff, true)) || ($roleB === 'parent' && in_array($roleA, $staff, true));
+        foreach ([[$a, $pa, $b, $pb], [$b, $pb, $a, $pa]] as [$parent, $parentParty, $staff, $staffParty]) {
+            if (! $parentParty->isParent()) {
+                continue;
+            }
+
+            foreach (['instructor', 'chairperson'] as $role) {
+                if (in_array($role, $staffParty->roles, true)) {
+                    $about = true;
+                    $ids   = [...$ids, ...$this->sharedLinkedChildIds($parent, $staff, $role)];
+                }
+            }
+        }
+
+        return $about ? array_values(array_unique($ids)) : null;
     }
 
     public function isCourseInstructor(int $userId, int $offeringId): bool
@@ -321,20 +396,26 @@ class MessagingContextResolver
     }
 
     /**
-     * A parent and a teacher of one linked child. With $subjectStudentId the
+     * $parent, as a parent, and $staff as the teacher or chairperson of one of
+     * $parent's linked children. One direction only. With $subjectStudentId the
      * child is that one (it must be linked); without it any linked child counts.
+     *
+     * @param list<string> $parentRoles
+     * @param list<string> $staffRoles
      */
-    private function linkedChild(User $sender, string $senderRole, User $recipient, string $recipientRole, ?int $subjectStudentId): bool
+    private function linkedChild(User $parent, array $parentRoles, User $staff, array $staffRoles, ?int $subjectStudentId): bool
     {
-        if ($senderRole === 'parent') {
-            [$parent, $staff, $staffRole] = [$sender, $recipient, $recipientRole];
-        } elseif ($recipientRole === 'parent') {
-            [$parent, $staff, $staffRole] = [$recipient, $sender, $senderRole];
-        } else {
+        if (! in_array('parent', $parentRoles, true)) {
             return false;
         }
 
-        return $this->sharedLinkedChildIds($parent, $staff, $staffRole, $subjectStudentId) !== [];
+        foreach ($staffRoles as $staffRole) {
+            if ($this->sharedLinkedChildIds($parent, $staff, $staffRole, $subjectStudentId) !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
