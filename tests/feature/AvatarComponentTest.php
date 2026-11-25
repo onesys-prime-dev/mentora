@@ -84,6 +84,9 @@ final class AvatarComponentTest extends RouteTestCase
 
         $btn = $this->dom($this->avatar($person, 'md', true))->query('//button[@type="button"][@data-person-avatar="4"][@aria-haspopup="dialog"][starts-with(@aria-label,"Open Ana Reyes")][contains(@aria-label,"profile")]');
         $this->assertSame(1, $btn->length);
+        // The button is the 44 px touch target on coarse pointers; the circle inside keeps its size.
+        $this->assertStringContainsString('pointer-coarse:min-h-11 pointer-coarse:min-w-11', (string) $btn->item(0)?->getAttribute('class'));
+        $this->assertSame(1, $this->dom($this->avatar($person, 'sm', true))->query('//button[@data-person-avatar]/span[@data-avatar][contains(@class,"h-8 w-8")]')->length);
         $this->assertStringNotContainsString('data-person-avatar', $this->avatar($person));
     }
 

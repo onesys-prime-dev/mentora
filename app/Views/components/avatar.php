@@ -38,10 +38,14 @@ $sizeClasses = [
 ][$size] ?? 'h-12 w-12 text-base';
 
 $classes = $sizeClasses . ' shrink-0 inline-flex items-center justify-center overflow-hidden rounded-full font-bold text-white select-none';
-$tag     = $interactive ? 'button' : 'span';
 ?>
-<<?= $tag ?>
-    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" data-person-name="' . esc($name, 'attr') . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : ($decorative ? 'aria-hidden="true"' : '') ?>
+<?php if ($interactive): ?>
+<?php // The button is the touch target (44 px on coarse pointers); the circle inside keeps its size. ?>
+<button type="button" data-person-avatar="<?= $id ?>" data-person-name="<?= esc($name, 'attr') ?>" aria-haspopup="dialog" aria-label="<?= esc('Open ' . $name . "'s profile", 'attr') ?>"
+    class="shrink-0 inline-flex items-center justify-center rounded-full pointer-coarse:min-h-11 pointer-coarse:min-w-11">
+<?php endif; ?>
+<span
+    <?= $decorative ? 'aria-hidden="true"' : '' ?>
     class="<?= $classes ?>"
     style="background-color: <?= $colour ?>"
     data-avatar>
@@ -52,4 +56,7 @@ $tag     = $interactive ? 'button' : 'span';
     <?php else: ?>
         <span role="img" aria-label="<?= esc($name) ?>"><?= esc($initials) ?></span>
     <?php endif; ?>
-</<?= $tag ?>>
+</span>
+<?php if ($interactive): ?>
+</button>
+<?php endif; ?>

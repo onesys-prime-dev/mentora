@@ -48,8 +48,10 @@ describe("renderAvatar", () => {
         expect(el.getAttribute("aria-haspopup")).toBe("dialog");
         expect(el.getAttribute("aria-label")).toBe("Open Ana Reyes's profile");
         expect(el.querySelector("[role=img]")).toBeNull();
-        expect(el.querySelector("span").getAttribute("aria-hidden")).toBe("true");
-        expect(el.hasAttribute("data-avatar")).toBe(true);
+        expect(el.querySelector("[data-avatar] > span").getAttribute("aria-hidden")).toBe("true");
+        // The circle sits inside the button, which is the 44 px touch target on coarse pointers.
+        expect(el.querySelector("[data-avatar]").className).toContain("h-8 w-8");
+        expect(el.className).toContain("pointer-coarse:min-h-11 pointer-coarse:min-w-11");
     });
 
     it("is hidden from screen readers when decorative, with an empty photo alt", () => {

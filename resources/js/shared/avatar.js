@@ -18,19 +18,13 @@ const SIZES = {
 export function renderAvatar(person, size = "md", { decorative = false } = {}) {
     const interactive = person.interactive === true;
     const hidden = decorative && !interactive;
-    const el = document.createElement(interactive ? "button" : "span");
+    const el = document.createElement("span");
     el.className = `${SIZES[size] ?? SIZES.md} shrink-0 inline-flex items-center justify-center overflow-hidden rounded-full font-bold text-white select-none`;
     // Only the fixed set is ever written into the style, as components/avatar does.
     el.style.backgroundColor = COLOURS.includes(person.colour) ? person.colour : COLOURS[person.id % 8];
     el.dataset.avatar = "";
 
-    if (interactive) {
-        el.type = "button";
-        el.dataset.personAvatar = String(person.id);
-        el.dataset.personName = person.name;
-        el.setAttribute("aria-haspopup", "dialog");
-        el.setAttribute("aria-label", `Open ${person.name}'s profile`);
-    } else if (hidden) {
+    if (hidden) {
         el.setAttribute("aria-hidden", "true");
     }
 
@@ -55,5 +49,19 @@ export function renderAvatar(person, size = "md", { decorative = false } = {}) {
         el.append(text);
     }
 
-    return el;
+    if (!interactive) {
+        return el;
+    }
+
+    // The button is the touch target (44 px on coarse pointers); the circle inside keeps its size, as components/avatar.
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "shrink-0 inline-flex items-center justify-center rounded-full pointer-coarse:min-h-11 pointer-coarse:min-w-11";
+    button.dataset.personAvatar = String(person.id);
+    button.dataset.personName = person.name;
+    button.setAttribute("aria-haspopup", "dialog");
+    button.setAttribute("aria-label", `Open ${person.name}'s profile`);
+    button.append(el);
+
+    return button;
 }
