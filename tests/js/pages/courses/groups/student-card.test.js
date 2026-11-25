@@ -440,6 +440,21 @@ describe("proposals and invitations", () => {
         expect(card().textContent).toContain("Invited: Ben Ong");
     });
 
+    it("draws each classmate to invite with their gated avatar as a plain picture inside the tick box's label", async () => {
+        const avatar = (id, name, interactive) => ({ id, name, initials: name[0], colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive });
+        server({ "GET /": () => json(canPropose({ invitable: [{ id: 11, name: "Jun Ong", avatar: avatar(11, "Jun Ong", true) }, { id: 12, name: "Cai Lim", avatar: avatar(12, "Cai Lim", false) }] })) });
+
+        await initializeStudentGroupCard(card());
+        await flush();
+        click("[data-sg-action=propose]");
+
+        const list = card().querySelector("#sg-propose-dialog [data-sg-invitees]");
+
+        expect(list.querySelectorAll("label [data-avatar][aria-hidden=\"true\"]").length).toBe(2);
+        expect(list.querySelector("button")).toBeNull();
+        expect(list.textContent).toContain("Jun Ong");
+    });
+
     it("lists invitations; Accept and Decline send to the group's address and refresh", async () => {
         let answered = null;
         const invitation = { groupId: 40, name: "Night Owls", proposer: "Ana Cruz", members: ["Ana Cruz"] };

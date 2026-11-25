@@ -332,6 +332,32 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->settings(['formation_mode' => 'proposed', 'min_size' => 2, 'max_size' => 3]);
     }
 
+    public function testClassmatesToInviteHaveGatedNamesAndAvatarsSortedByTheNameShownFromOneLookup(): void
+    {
+        $this->proposalMode();
+        CourseFactory::members($this->offering, [$this->me, $this->mate]);
+        // In the course but in no institution: I may not see this classmate's profile.
+        CourseFactory::members($this->offering, [$this->loner], false);
+        db_connect()->table('user_profiles')->where('user_id', $this->mate->id)->update(['first_name' => 'Zack', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $this->loner->id)->update(['first_name' => 'Kim', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+
+        $lookups = 0;
+        $l       = static function (\CodeIgniter\Database\Query $q) use (&$lookups): void {
+            $lookups += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        \CodeIgniter\Events\Events::on('DBQuery', $l);
+        [, $json] = $this->api($this->me, 'GET');
+        \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+        // Legally "Zack" sorts after "Kim"; shown as "Jun" he comes first.
+        $this->assertSame(['Jun Dela Cruz', 'Kim Hidden'], array_column($json['invitable'], 'name'));
+        $this->assertTrue($json['invitable'][0]['avatar']['interactive']);
+        $this->assertFalse($json['invitable'][1]['avatar']['interactive']);
+        $this->assertNull($json['invitable'][1]['avatar']['photoUrl']);
+        $this->assertStringNotContainsString('Zedekiah', (string) json_encode($json));
+        $this->assertSame(1, $lookups, 'one avatar lookup for the response');
+    }
+
     public function testProposeInviteAcceptAndDecline(): void
     {
         $this->proposalMode();
@@ -340,7 +366,7 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertEqualsCanonicalizing([(int) $this->loner->id, (int) $this->mate->id], array_column($json['invitable'], 'id'), 'the ungrouped pool without me or outsiders');
 
         foreach ($json['invitable'] as $s) {
-            $this->assertSame(['id', 'name'], array_keys($s));
+            $this->assertSame(['id', 'name', 'avatar'], array_keys($s));
         }
 
         [$status, $json] = $this->api($this->me, 'POST', '/propose', ['name' => 'Our team', 'invitee_ids' => [(int) $this->mate->id, (int) $this->loner->id]]);
