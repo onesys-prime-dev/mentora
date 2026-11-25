@@ -31,12 +31,21 @@ class CorrectionRequestService
 
     public const ALREADY_DECIDED = 'This request was already decided.';
 
+    /** Submissions a person may make per hour, refused ones included (NFR rate limit; also stops probing values). */
+    public const PER_HOUR = 10;
+
+    public const TOO_MANY = 'Too many requests. Try again later.';
+
     /** field => [min length, max length]; a minimum of 0 means the value may be cleared */
     private const NAME_LENGTHS = ['first_name' => [2, 100], 'middle_name' => [0, 100], 'last_name' => [2, 100], 'suffix' => [0, 20]];
 
     /** @throws ProfileEditException */
     public function submit(User $owner, string $field, string $newValue, string $reason): int
     {
+        if (! service('throttler')->check('correction-' . $owner->id, self::PER_HOUR, HOUR)) {
+            throw new ProfileEditException(self::TOO_MANY, 'field');
+        }
+
         if (! in_array($field, self::FIELDS, true)) {
             throw new ProfileEditException('That detail cannot be corrected here.', 'field');
         }

@@ -63,7 +63,8 @@ final class ProfileRouteSecurityTest extends RouteTestCase
         ['GET', 'messages/api/preferences'],
         ['POST', 'institution/people/{s}/photo'],
         ['POST', 'institution/people/{s}/photo/remove'],
-        ['POST', 'institution/people/{s}/clear'],
+        // A real, filled field, so a 404 is the scope check and not an unknown field.
+        ['POST', 'institution/people/{s}/clear', ['field' => 'bio']],
         ['GET', 'institution/people/requests'],
         ['POST', 'institution/people/requests/{r}/approve'],
         ['POST', 'institution/people/requests/{r}/reject'],
@@ -110,6 +111,7 @@ final class ProfileRouteSecurityTest extends RouteTestCase
             'other_admin'         => PeopleFactory::person('institutional_admin', 'Olga', 'Elsewhere', null, PeopleFactory::institution('RSX')),
         ];
 
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['bio' => 'Spam']);
         $this->request         = $this->correction('institution', $this->institution);
         $this->platformRequest = $this->correction('platform', null);
 
@@ -186,7 +188,7 @@ final class ProfileRouteSecurityTest extends RouteTestCase
     }
 
     /** The status one route answers for one session. */
-    private function answer(array $session, string $verb, string $template): int
+    private function answer(array $session, string $verb, string $template, array $data = []): int
     {
         $_SESSION = $session;
         $this->withSession($session);
@@ -195,7 +197,7 @@ final class ProfileRouteSecurityTest extends RouteTestCase
         $this->withHeaders($verb === 'GET' ? [] : ['Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest']);
 
         try {
-            return $this->call($verb, $this->path($template))->response()->getStatusCode();
+            return $this->call($verb, $this->path($template), $data)->response()->getStatusCode();
         } catch (PageNotFoundException) {
             return 404;
         }
@@ -206,9 +208,11 @@ final class ProfileRouteSecurityTest extends RouteTestCase
     {
         $out = [];
 
-        foreach (self::ROUTES as [$verb, $template]) {
+        foreach (self::ROUTES as $route) {
+            [$verb, $template] = $route;
+
             if (! $postsOnly || $verb === 'POST') {
-                $out["{$verb} {$template}"] = $this->answer($session, $verb, $template);
+                $out["{$verb} {$template}"] = $this->answer($session, $verb, $template, $route[2] ?? []);
             }
         }
 
@@ -289,7 +293,7 @@ final class ProfileRouteSecurityTest extends RouteTestCase
         GET messages/api/preferences                 302 404 301 301 301 301 301 301 301 301 404 301 301   -   -   -
         POST institution/people/{s}/photo            302 302 422 302 302 302 302 302 302 404 403 302 403 403 403 403
         POST institution/people/{s}/photo/remove     302 302 200 302 302 302 302 302 302 404 403 302 403 403 403 403
-        POST institution/people/{s}/clear            302 302 404 302 302 302 302 302 302 404 403 302 403 403 403 403
+        POST institution/people/{s}/clear            302 302 200 302 302 302 302 302 302 404 403 302 403 403 403 403
         GET institution/people/requests              302 302 200 302 302 302 302 302 302 200 302 302 200   -   -   -
         POST institution/people/requests/{r}/approve 302 302 200 302 302 302 302 302 302 404 403 302 403 403 403 403
         POST institution/people/requests/{r}/reject  302 302 200 302 302 302 302 302 302 404 403 302 403 403 403 403

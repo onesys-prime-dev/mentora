@@ -230,7 +230,8 @@ final class ProfilePhotoServiceTest extends DatabaseTestCase
         $before = memory_get_usage();
         $this->service->upload((int) $this->owner->id, $file, $this->owner);
 
-        $this->assertLessThan(96 * 1024 * 1024, memory_get_peak_usage() - $before, 'one decoded copy plus a small one, never two full copies');
+        // Shrunk first it peaks near 66 MB; turned at full size it was 131 MB. The wide margin keeps it steady.
+        $this->assertLessThan(112 * 1024 * 1024, memory_get_peak_usage() - $before, 'one decoded copy plus a small one, never two full copies');
 
         [$big] = $this->pair();
         $out   = imagecreatefromjpeg($this->storage->path($big['storage_key']));

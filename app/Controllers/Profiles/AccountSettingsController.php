@@ -201,6 +201,7 @@ class AccountSettingsController extends BaseController
     private function renewSession(): void
     {
         session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
+        // Only the id changes: the CSRF hash in the data is kept on purpose, so the page's other open forms still post.
         session()->regenerate(true);
     }
 

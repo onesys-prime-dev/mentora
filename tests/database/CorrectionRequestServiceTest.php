@@ -121,6 +121,19 @@ final class CorrectionRequestServiceTest extends DatabaseTestCase
         $this->assertGreaterThan(0, $this->service->submit($this->ann, 'first_name', 'Anne', 'Spelling.'), 'another field is fine');
     }
 
+    public function testTheEleventhSubmissionInAnHourIsRefusedRefusedOnesIncluded(): void
+    {
+        for ($i = 0; $i < CorrectionRequestService::PER_HOUR; $i++) {
+            try {
+                $this->service->submit($this->ann, 'first_name', 'Ann', 'Same.'); // refused, but it counts
+            } catch (ProfileEditException) {
+            }
+        }
+
+        $this->refused(fn () => $this->service->submit($this->ann, 'first_name', 'Anne', 'Spelling.'), 'field', 'Too many requests');
+        $this->assertSame(0, db_connect()->table('profile_correction_requests')->where('user_id', $this->ann->id)->countAllResults());
+    }
+
     public function testAnUnchangedValueIsRefused(): void
     {
         $this->refused(fn () => $this->service->submit($this->ann, 'first_name', 'Ann', 'Same.'), 'new_value', 'already');

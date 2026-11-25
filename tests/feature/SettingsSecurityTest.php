@@ -188,6 +188,8 @@ final class SettingsSecurityTest extends RouteTestCase
         $this->step('POST', 'settings/sign-out-others');
 
         $this->assertSame(App\Services\Profiles\PasswordChangeService::TOO_MANY, session('error'));
+        $this->assertStringEndsWith('settings#devices', $this->step('POST', 'settings/sign-out-others')->response()->getHeaderLine('Location'));
+        $this->assertStringContainsString(App\Services\Profiles\PasswordChangeService::TOO_MANY, $this->page(), 'the page shows why');
         $this->assertSame(5, $this->audits('profile.signed_out_others'));
         $this->assertCount(5, $this->mailer->sent);
     }
