@@ -40,9 +40,11 @@ class ProfileModeration
      * @throws ProfileEditException
      * @throws \App\Exceptions\PlanLimitExceeded
      */
-    public function uploadPhoto(int $subjectId, UploadedFile $file, User $admin): void
+    public function uploadPhoto(int $subjectId, ?UploadedFile $file, User $admin): void
     {
+        // Scope first: another institution's person is a 404 whatever was posted.
         $this->guard($subjectId, $admin);
+        $file ?? throw new ProfileEditException('Choose an image file.', 'photo');
 
         $this->photos()->upload($subjectId, $file, $admin);
         $subjectId === (int) $admin->id || $this->tell($subjectId, 'added', 'Your school added a profile photo for you', 'You can change or remove it on your profile.');

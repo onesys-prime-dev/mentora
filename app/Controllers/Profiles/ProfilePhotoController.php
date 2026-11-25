@@ -65,7 +65,7 @@ class ProfilePhotoController extends BaseController
     /** An institution administrator adds a photo for someone in their institution (people.manage; another institution is a 404). */
     public function adminUpload(int $id): ResponseInterface|RedirectResponse
     {
-        return $this->answer($this->returnTo($id), 'Photo saved', fn () => (new ProfileModeration())->uploadPhoto($id, $this->request->getFile('photo') ?? throw new ProfileEditException('Choose an image file.', 'photo'), auth()->user()));
+        return $this->answer($this->returnTo($id), 'Photo saved', fn () => (new ProfileModeration())->uploadPhoto($id, $this->request->getFile('photo'), auth()->user()));
     }
 
     public function adminRemove(int $id): ResponseInterface|RedirectResponse
