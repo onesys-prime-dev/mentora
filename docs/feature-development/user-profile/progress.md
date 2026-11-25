@@ -44,11 +44,7 @@ User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages
 
 - **Phase 7 complete** 2026-11-25 on `feat/user-profile-p7-avatars` (9f953f6c..22bb643a).
 
-## Next action
-Phase 8 on `feat/user-profile-p8-hardening` (from p7): security sweep, Playwright journeys, docs.
-
-## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
-Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.
+- **Phase 8 complete** 2026-11-25 on `feat/user-profile-p8-hardening` (03b7157a..b76bfa28). **All 8 phases complete.**
 
 ## Next action
-Wait for the user to say to start Phase 1 (plan approval is still implicit; confirm it). Then the steps below. Original note: wait for the Stage 3 → 4 gate (user approval of the plan). Then: user commits the docs on `feat/user-profile`; Claude branches `feat/user-profile-p1-foundation` from it, verifies the branch, records the test baseline, and starts Phase 1 with `superpowers:subagent-driven-development` + TDD.
+User: push the phase branches (the final branch `feat/user-profile-p8-hardening` contains every phase), regenerate the responsive screenshot baselines on CI, and open the PR to `main`. Follow-ups are listed in test-strategy.md (Phase 7 deferrals and known limits).
