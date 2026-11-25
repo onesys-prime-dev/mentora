@@ -218,7 +218,7 @@ class DiscussionService
         $avatars = (new AvatarData())->forViewer($user, array_map('intval', array_column($threads, 'author_id')));
 
         $threads = array_map(
-            fn (array $t) => $t + $this->threadPermissions($t, $user, $moderates) + ['author_avatar' => $avatars[(int) $t['author_id']] ?? null],
+            fn (array $t) => ['author_name' => $avatars[(int) $t['author_id']]['person']['name'] ?? $t['author_name']] + $t + $this->threadPermissions($t, $user, $moderates) + ['author_avatar' => $avatars[(int) $t['author_id']] ?? null],
             $threads
         );
 
@@ -265,10 +265,13 @@ class DiscussionService
             $reply['is_answer'] = (int) $thread['answer_reply_id'] === $id;
             $reply['can_delete'] = $isAuthor || $moderates;
             $reply['author_avatar'] = $avatars[(int) $reply['author_id']] ?? null;
+            $reply['author_name'] = $avatars[(int) $reply['author_id']]['person']['name'] ?? $reply['author_name'];
 
         }
         unset($reply);
 
+        // The gated name: preferred only for people this viewer may see (FR5).
+        $thread['author_name'] = $avatars[(int) $thread['author_id']]['person']['name'] ?? $thread['author_name'];
         $thread = $thread + $this->threadPermissions($thread, $user, $moderates) + [
             'reaction_counts' => $counts['thread'],
             'own_reaction' => $own['thread'],
@@ -477,6 +480,7 @@ class DiscussionService
         $row['is_answer'] = false;
         $row['can_delete'] = true;
         $row['author_avatar'] = (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null;
+        $row['author_name'] = $row['author_avatar']['person']['name'] ?? $row['author_name'];
         $row['attachments'] = array_map(
             fn (array $f) => $f + ['url' => $this->storageService->url((int) $f['id'])],
             $files

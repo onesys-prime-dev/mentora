@@ -344,6 +344,18 @@ final class GradeRoutesTest extends RouteTestCase
         $this->assertStringNotContainsString('data-gradebook-roster-back', $this->send('GET', "{$base}?embedded=1")['json']['html']);
     }
 
+    public function testTheGradebookRosterKeepsTheLegalName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->ann->id)->delete();
+        db_connect()->table('user_profiles')->insert(['user_id' => $this->ann->id, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->as($this->teacher);
+
+        $html = $this->send('GET', "instructor/api/courses/{$this->mine}/grades/roster")['json']['html'];
+
+        $this->assertStringContainsString('Dela Cruz, Juan', $html, 'the gradebook is an official place (FR5)');
+        $this->assertStringNotContainsString('Cruz, Jun', $html);
+    }
+
     public function testTheEditableRosterKeepsItsIntro(): void
     {
         $this->as($this->teacher);

@@ -101,6 +101,7 @@ final class MessagesAvatarsTest extends RouteTestCase
 
         $this->assertFalse($avatar['interactive']);
         $this->assertSame('Ins Tructor', $avatar['name']);
+        $this->assertSame('Ins Tructor', $this->directRow($list)['name'], 'the row title keeps the legal name');
         $this->assertSame('IT', $avatar['initials']);
         $this->assertNull($avatar['photoUrl']);
         $this->assertNull($avatar['photoUrlLg']);
@@ -116,6 +117,15 @@ final class MessagesAvatarsTest extends RouteTestCase
         foreach ([$list, $page] as $json) {
             $this->assertStringNotContainsString('Zedekiah', json_encode($json), 'no preferred name of a hidden person anywhere');
         }
+    }
+
+    public function testAVisiblePersonsPreferredNameTitlesTheChatAndTheirMessages(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->say($this->conversation, (int) $this->instructor->id);
+
+        $this->assertSame('Jun Dela Cruz', $this->directRow($this->getJson($this->student, 'conversations'))['name']);
+        $this->assertSame('Jun Dela Cruz', $this->getJson($this->student, "conversations/{$this->conversation}/messages")['messages'][0]['sender_name']);
     }
 
     public function testEachSendersAvatarIsOnTheirMessagesAndMineHaveNone(): void

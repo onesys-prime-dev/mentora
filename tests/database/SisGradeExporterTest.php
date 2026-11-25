@@ -466,6 +466,18 @@ final class SisGradeExporterTest extends DatabaseTestCase
         $this->assertSame('The grades are not finalized yet', $left['IT101-A (1 student)'] ?? null, 'a section that is not final is one line with a count');
     }
 
+    public function testAPreviewNamesStudentsByTheirLegalName(): void
+    {
+        $juan = SisFixture::student($this->institution, 'S7', 'juan@example.com');
+        db_connect()->table('user_profiles')->where('user_id', $juan->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        SisFixture::grade($this->offering, $juan, 60.0, null, 'Withdrawn');
+
+        $left = $this->leftOut($this->export(true));
+
+        $this->assertArrayHasKey('Juan Dela Cruz · IT101-A', $left, 'the SIS export is an official place (FR5)');
+        $this->assertArrayNotHasKey('Jun Dela Cruz · IT101-A', $left);
+    }
+
     public function testGradesAlreadySentAndUnchangedAreNotListedAsProblems(): void
     {
         $this->export();

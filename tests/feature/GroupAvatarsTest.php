@@ -59,6 +59,7 @@ final class GroupAvatarsTest extends RouteTestCase
         // In the course but in no institution: no one here may open this student's card.
         CourseFactory::members($this->offering, [$this->hidden], false);
         db_connect()->table('user_profiles')->where('user_id', $this->hidden->id)->update(['first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+        db_connect()->table('user_profiles')->where('user_id', $this->mate->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
 
         $sets      = new GroupSetService();
         $this->set = $sets->create($this->offering, ['name' => 'Teams', 'formation_mode' => 'manual', 'min_size' => 1, 'max_size' => 5], (int) $this->teacher->id);
@@ -88,6 +89,10 @@ final class GroupAvatarsTest extends RouteTestCase
     private function assertAvatars(array $members, string $idKey, array $json): void
     {
         $byId = array_column($members, 'avatar', $idKey);
+        // FR5: the member's shown name is the gated one, preferred only for someone the viewer may see.
+        $names = array_column($members, 'name', $idKey);
+        $this->assertSame('Jun Dela Cruz', $names[(int) $this->mate->id]);
+        $this->assertSame('Hal Hidden', $names[(int) $this->hidden->id]);
 
         $this->assertTrue($byId[(int) $this->mate->id]['interactive']);
         $this->assertSame((int) $this->mate->id, $byId[(int) $this->mate->id]['id']);
@@ -119,6 +124,23 @@ final class GroupAvatarsTest extends RouteTestCase
         $json = $this->getJson($this->me, "student/api/courses/{$this->offering}/assessments/{$this->assignment}/my-group");
 
         $this->assertAvatars($json['myGroup']['members'], 'id', $json);
+    }
+
+    public function testGroupGradingGivesEachMemberTheirAvatarAndName(): void
+    {
+        $group = (int) db_connect()->table('student_groups')->where('config_id', $this->config)->get()->getRowArray()['id'];
+        $json  = $this->getJson($this->teacher, "instructor/api/courses/{$this->offering}/assessments/{$this->assignment}/group-grading/{$group}");
+
+        $this->assertAvatars($json['members'], 'student_user_id', $json);
+    }
+
+    public function testGroupGradingGivesUngroupedStudentsTheirAvatarAndName(): void
+    {
+        db_connect()->table('student_group_members')->where('config_id', $this->config)->whereIn('student_user_id', [$this->mate->id, $this->hidden->id])->delete();
+
+        $json = $this->getJson($this->teacher, "instructor/api/courses/{$this->offering}/assessments/{$this->assignment}/group-grading");
+
+        $this->assertAvatars($json['ungrouped'], 'student_user_id', $json);
     }
 
     public function testTheSetDetailLooksAvatarsUpOnceWhateverTheNumberOfMembers(): void

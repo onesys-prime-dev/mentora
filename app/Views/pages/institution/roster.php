@@ -41,6 +41,8 @@ $labels = ['enrolled' => 'Enrolled', 'dropped' => 'Dropped', 'withdrawn' => 'Wit
 $rows = [];
 
 foreach ($rosterRows as $r) {
+    // The social name: preferred first name only when this viewer may see the student (FR5).
+    $r['name'] = ($rosterAvatars ?? [])[(int) $r['student_id']]['person']['name'] ?? $r['name'];
     $action = '';
 
     if ($canEdit && $r['locked']) {

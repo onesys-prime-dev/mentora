@@ -233,9 +233,11 @@ class AnnouncementService
             $isOwner = (int) $announcement['author_id'] === (int) $user->id;
 
             $announcement['author_avatar'] = $avatars[(int) $announcement['author_id']] ?? null;
+            // The gated name: preferred only for people this viewer may see (FR5).
+            $announcement['author_name'] = $announcement['author_avatar']['person']['name'] ?? $announcement['author_name'];
             $announcement['viewer_avatar'] = $avatars[(int) $user->id] ?? null;
             $announcement['replies'] = array_map(
-                fn (array $reply) => $reply + ['author_avatar' => $avatars[(int) $reply['author_id']] ?? null],
+                fn (array $reply) => ['author_name' => $avatars[(int) $reply['author_id']]['person']['name'] ?? $reply['author_name']] + $reply + ['author_avatar' => $avatars[(int) $reply['author_id']] ?? null],
                 $repliesByAnnouncement[$id] ?? []
             );
             $announcement['reaction_counts'] = $reactionCounts[$id] ?? [];
@@ -471,15 +473,17 @@ class AnnouncementService
 
         $replyId = (int) $this->replyModel->getInsertID();
 
+        $reply                  = $this->replyModel->retrieveOne($replyId);
+        $reply['author_avatar'] = (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null;
+        $reply['author_name']   = $reply['author_avatar']['person']['name'] ?? $reply['author_name'];
+
         // Rendered HTML for just the new reply, not the whole thread — the
         // caller appends it directly for an instant, no-reload reply.
         return [
             'success' => true,
             'reply_id' => $replyId,
             'html' => view('pages/courses/features/announcements/partials/reply', [
-                'reply' => $this->replyModel->retrieveOne($replyId) + [
-                    'author_avatar' => (new AvatarData())->forViewer($user, [(int) $user->id])[(int) $user->id] ?? null,
-                ],
+                'reply' => $reply,
                 'userId' => (int) $user->id,
             ]),
         ];

@@ -208,7 +208,7 @@ class StudentGroupController extends BaseController
         $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', array_column($members, 'student_user_id')));
 
         foreach ($members as $m) {
-            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => (string) $m['name'], 'avatar' => $avatars[(int) $m['student_user_id']] ?? null];
+            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => $avatars[(int) $m['student_user_id']]['name'] ?? (string) $m['name'], 'avatar' => $avatars[(int) $m['student_user_id']] ?? null];
         }
 
         $rows = db_connect()->table('student_groups')->where('config_id', $configId)->whereIn('status', ['active', 'proposed'])->orderBy('name')->orderBy('id')->get()->getResultArray();

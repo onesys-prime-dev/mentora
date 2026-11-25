@@ -16,6 +16,7 @@ use App\Services\Courses\CourseAbilities;
 use App\Services\Courses\Grades\GradeFinalizationService;
 use App\Services\Groups\ActivityGroupService;
 use App\Services\Groups\GroupGradingService;
+use App\Services\Profiles\AvatarData;
 use App\Services\Institutions\StructureException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -55,10 +56,13 @@ class GroupGradeController extends BaseController
         $handedIn = $free === [] ? [] : array_map('intval', array_column(db_connect()->table('assessment_submissions')->select('student_id')->distinct()
             ->where('assessment_id', $assessmentId)->where('group_id', null)->whereIn('student_id', $free)->whereIn('status', AssessmentResultService::FINISHED_STATUSES)->get()->getResultArray(), 'student_id'));
 
+        // One lookup for the list: each ungrouped student's avatar and name as this viewer may see them (FR2, FR5).
+        $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', array_column($ungrouped, 'student_user_id')));
+
         return $this->response->setJSON([
             'success'         => true,
             'groups'          => $groups,
-            'ungrouped'       => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name'], 'hasSubmission' => in_array((int) $s['student_user_id'], $handedIn, true)], $ungrouped),
+            'ungrouped'       => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null, 'hasSubmission' => in_array((int) $s['student_user_id'], $handedIn, true)], $ungrouped),
             'ungroupedPolicy' => (string) $config['ungrouped_policy'],
             'blockers'        => $blockers,
             'flags'      => ['canWrite' => $access['canWrite'], 'finalized' => $access['finalized']],
@@ -85,12 +89,16 @@ class GroupGradeController extends BaseController
         $names   = $removed === [] ? [] : array_column(db_connect()->table('users u')->select('u.id, ' . self::NAME . ' AS name', false)
             ->join('user_profiles p', 'p.user_id = u.id', 'left')->whereIn('u.id', $removed)->get()->getResultArray(), 'name', 'id');
 
-        $entry = function (int $studentId, string $name, bool $isRemoved) use ($scores, $handIns, $perMember, $shared, $group): array {
+        // One lookup for the group: every member's avatar and name as this viewer may see them (FR2, FR5).
+        $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', [...$ids, ...$removed]));
+
+        $entry = function (int $studentId, string $name, bool $isRemoved) use ($scores, $handIns, $perMember, $shared, $group, $avatars): array {
             $row = $scores[$studentId] ?? null;
 
             return [
                 'student_user_id'  => $studentId,
-                'name'             => $name,
+                'name'             => $avatars[$studentId]['name'] ?? $name,
+                'avatar'           => $avatars[$studentId] ?? null,
                 'isLeader'         => $group['leader_user_id'] !== null && (int) $group['leader_user_id'] === $studentId,
                 'hasSubmission'    => $perMember ? isset($handIns[$studentId]) : $shared !== null,
                 'submission'       => $perMember && isset($handIns[$studentId]) ? $this->summary($handIns[$studentId]) : null,

@@ -524,4 +524,29 @@ final class DiscussionRoutesTest extends RouteTestCase
         $this->assertTrue($interactive($own, $this->classmate), 'the reply just posted');
         $this->assertStringNotContainsString('placeholder/profile.png', $list . $thread);
     }
+
+    public function testAuthorNamesArePreferredOnlyForPeopleTheViewerMaySee(): void
+    {
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student, $this->classmate]);
+        CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+
+        $id = $this->start($this->student, 'Seen by classmates');
+        $this->start($leaver, 'From someone who left');
+        $own = $this->api($this->student, 'post', "/{$id}/reply", ['body' => 'Me again'])['html'];
+        $this->api($leaver, 'post', "/{$id}/reply", ['body' => 'Leaver here']);
+
+        $list = $this->api($this->classmate, 'get')['html'];
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $list);
+        $this->assertStringContainsString('>Hal Hidden</span>', $list);
+
+        $thread = $this->api($this->classmate, 'get', "/{$id}")['html'];
+        $this->assertSame(2, substr_count($thread, '>Jun Dela Cruz</span>'), 'the opening post and the reply');
+        $this->assertStringContainsString('>Hal Hidden</span>', $thread, 'a hidden author keeps the legal name');
+        $this->assertStringNotContainsString('Zedekiah', $list . $thread);
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $own, 'the reply just posted');
+    }
 }

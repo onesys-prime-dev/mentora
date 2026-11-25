@@ -1,6 +1,6 @@
 <?php
 $profile = current_user_profile($user);
-$fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+$fullName = person_display_name($profile);
 // Their own avatar: opens their own card.
 $me = (int) $user->id;
 $meAvatar = (new \App\Services\Profiles\AvatarData())->forMany([$me])[$me] ?? ['id' => $me, 'name' => $fullName];

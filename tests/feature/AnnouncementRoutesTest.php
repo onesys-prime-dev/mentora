@@ -276,6 +276,26 @@ final class AnnouncementRoutesTest extends RouteTestCase
         $this->assertTrue($interactive($own, $this->student), 'the reply just posted');
     }
 
+    public function testAuthorNamesArePreferredOnlyForPeopleTheViewerMaySee(): void
+    {
+        $leaver = CourseFactory::user('student');
+        CourseFactory::enroll($this->offering, $leaver);
+        CourseFactory::members($this->offering, [$this->instructor, $this->student]);
+        CourseFactory::members($this->offering, [$leaver], false);
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $leaver->id)->update(['first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+
+        $id = $this->announce('Names');
+        $this->api($leaver, 'post', "/{$id}/reply", ['message' => 'From someone who left']);
+        $own = $this->api($this->instructor, 'post', "/{$id}/reply", ['message' => 'Teacher here'])['html'];
+
+        $html = $this->api($this->student, 'get')['html'];
+        $this->assertSame(2, substr_count($html, '>Jun Dela Cruz</span>'), 'the card and the reply');
+        $this->assertStringContainsString('>Hal Hidden</span>', $html, 'a hidden author keeps the legal name');
+        $this->assertStringNotContainsString('Zedekiah', $html);
+        $this->assertStringContainsString('>Jun Dela Cruz</span>', $own, 'the reply just posted');
+    }
+
     public function testTheComposerShowsTheInstructorsOwnInteractiveAvatar(): void
     {
         $this->announce('Composer');

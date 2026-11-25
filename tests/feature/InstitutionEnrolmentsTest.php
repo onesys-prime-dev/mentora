@@ -142,6 +142,15 @@ final class InstitutionEnrolmentsTest extends RouteTestCase
         $this->assertLessThanOrEqual($few + 2, $many, 'avatars are fetched once for the page, not per row');
     }
 
+    public function testTheRosterShowsAStudentsPreferredFirstName(): void
+    {
+        $juan = $this->student('Juan', '2026-001');
+        db_connect()->table('user_profiles')->where('user_id', $juan->id)->update(['last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->step('POST', $this->url(), ['students' => '2026-001']);
+
+        $this->assertStringContainsString('<span class="font-medium">Jun Dela Cruz</span>', $this->page());
+    }
+
     public function testTheEmptyRosterOffersToAddStudents(): void
     {
         $body = $this->page();

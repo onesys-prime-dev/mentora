@@ -12,7 +12,7 @@ $canSwitchRole = count($userRoles) > 1;
 */
 $profile = current_user_profile($user);
 
-$fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+$fullName = person_display_name($profile);
 
 $email = $profile['email'] ?? ($user->email ?? '');
 

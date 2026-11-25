@@ -64,7 +64,7 @@ class GroupSetsController extends BaseController
 
         // One lookup for the set: every member's avatar as this viewer may see them (FR2).
         $avatars = (new AvatarData())->forViewerJson(auth()->user(), [...array_keys($placed), ...array_map('intval', array_column($ungrouped, 'student_user_id'))]);
-        $person  = static fn (array $s): array => ['student_user_id' => (int) $s['student_user_id'], 'name' => (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null];
+        $person  = static fn (array $s): array => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null];
 
         foreach ($members as $m) {
             $byGroup[(int) $m['group_id']][] = $person($m);

@@ -407,7 +407,7 @@ class MessageService
 
         return [
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
-            'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
+            'sender_name' => $view['avatars'][(int) $row['sender_id']]['name'] ?? $sender['name'], 'sender_role' => $sender['role'],
             'avatar' => $view['avatars'][(int) $row['sender_id']] ?? null,
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),

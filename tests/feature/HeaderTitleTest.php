@@ -72,4 +72,18 @@ final class HeaderTitleTest extends RouteTestCase
 
         $this->assertStringContainsString('administration', $body);
     }
+
+    public function testTheHeaderShowsTheViewersOwnPreferredName(): void
+    {
+        $student = PeopleFactory::person('student', 'Juan', 'Dela Cruz', 'juan@hdr.example', PeopleFactory::institution('HDR', 'active', 'Header College'));
+        db_connect()->table('user_profiles')->where('user_id', $student->id)->update(['preferred_first_name' => 'Jun']);
+        current_user_profile(null, true);
+
+        $this->loggedInAs($student);
+        $this->withSession();
+
+        $body = $this->step('GET', 'student/calendar')->response()->getBody();
+
+        $this->assertMatchesRegularExpression('/data-profile-name>\s*Jun Dela Cruz\s*</', $body);
+    }
 }
