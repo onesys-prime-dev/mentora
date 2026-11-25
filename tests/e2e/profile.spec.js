@@ -49,7 +49,9 @@ test("TC-PRF-03 A student's profile shows Studies and Official details with the 
     const official = page.locator("[data-profile-official]");
     await expect(official).toBeVisible();
     await expect(official).toContainText("Managed by your school");
-    await expect(official.getByRole("button")).toHaveCount(0);
+    // Phase 6 added "Request a correction"; official details themselves have no edit pencil.
+    await expect(official.getByRole("button", { name: /^Edit / })).toHaveCount(0);
+    await expect(official.getByRole("button", { name: "Request a correction" })).toBeVisible();
 });
 
 test("TC-PRF-04 \"As a student sees it\" hides Official details and the edit pencils", async ({ page }) => {
