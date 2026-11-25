@@ -23,6 +23,8 @@ class EmailChangeService
 
     public const IN_USE = 'That email address is already in use.';
 
+    public const OTHER_ACCOUNT = 'This link is for another account. Sign out, then open it again.';
+
     /** Whether another account already signs in with this address. */
     public static function taken(string $email, int $userId): bool
     {
@@ -42,14 +44,10 @@ class EmailChangeService
         $now   = date('Y-m-d H:i:s');
 
         $this->inTransaction(function () use ($userId, $newEmail, $requestId, $token, $now): void {
-            $db   = db_connect();
-            $open = static fn () => $db->table('pending_email_changes')->where('user_id', $userId)->where('confirmed_at IS NULL', null, false)->where('expires_at >', $now);
-
             // A newer link replaces the older one: its request can no longer complete.
-            $this->expireRequests(array_filter(array_map('intval', array_column($open()->select('request_id')->get()->getResultArray(), 'request_id')), static fn (int $id): bool => $id > 0 && $id !== $requestId));
-            $open()->update(['expires_at' => $now]);
+            $this->cancelOpen($userId, $requestId);
 
-            $db->table('pending_email_changes')->insert([
+            db_connect()->table('pending_email_changes')->insert([
                 'user_id'    => $userId,
                 'request_id' => $requestId,
                 'new_email'  => $newEmail,
@@ -81,9 +79,9 @@ class EmailChangeService
     }
 
     /**
-     * @return bool true when the email was changed; false for a link that is wrong, used, expired, someone else's, or whose address is taken now
+     * @return bool true when the email was changed; false for a link that is wrong, used, expired, or whose address is taken now
      *
-     * @throws ProfileEditException only when another request wins a race at the same moment (the link opened twice, or the address taken)
+     * @throws ProfileEditException when another account is signed in (OTHER_ACCOUNT), or another request wins a race at the same moment (the link opened twice, or the address taken)
      */
     public function confirm(string $token, ?User $signedIn): bool
     {
@@ -107,7 +105,7 @@ class EmailChangeService
         }
 
         if ($signedIn !== null && (int) $signedIn->id !== $userId) {
-            return false;
+            throw new ProfileEditException(self::OTHER_ACCOUNT);
         }
 
         $owner = model(UserModel::class)->findById($userId);
@@ -147,6 +145,19 @@ class EmailChangeService
             . "If this wasn't you, contact your school.\n");
 
         return true;
+    }
+
+    /**
+     * Ends every open link of the person, and the approved corrections behind them (except $keepRequestId). Also
+     * called when an administrator or an import sets the sign-in email directly, so an older link cannot undo it.
+     */
+    public function cancelOpen(int $userId, ?int $keepRequestId = null): void
+    {
+        $now  = date('Y-m-d H:i:s');
+        $open = static fn () => db_connect()->table('pending_email_changes')->where('user_id', $userId)->where('confirmed_at IS NULL', null, false)->where('expires_at >', $now);
+
+        $this->expireRequests(array_filter(array_map('intval', array_column($open()->select('request_id')->get()->getResultArray(), 'request_id')), static fn (int $id): bool => $id > 0 && $id !== $keepRequestId));
+        $open()->update(['expires_at' => $now]);
     }
 
     /** @param list<int>|array<int, int> $requestIds approved email corrections whose link can no longer be used */

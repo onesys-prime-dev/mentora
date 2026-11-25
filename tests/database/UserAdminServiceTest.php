@@ -211,6 +211,23 @@ final class UserAdminServiceTest extends DatabaseTestCase
         $this->assertStringContainsString('clara@example.com', (string) $entry['new_values']);
     }
 
+    public function testSettingTheEmailDirectlyCancelsAPendingEmailChange(): void
+    {
+        $user = PeopleFactory::person('student', 'Maria', 'Santos', 'maria@example.com', $this->acme);
+        $db = db_connect();
+        $db->table('profile_correction_requests')->insert(['user_id' => (int) $user->id, 'field' => 'email', 'new_value' => 'maria.new@example.com', 'status' => 'approved', 'routed_to' => 'institution']);
+        $request = (int) $db->insertID();
+        (new \App\Services\Profiles\EmailChangeService())->start((int) $user->id, 'maria.new@example.com', $request);
+        $mail = array_values(array_filter($this->mailer->sent, static fn (array $m): bool => $m['to'] === 'maria.new@example.com'));
+        $this->assertSame(1, preg_match('#email-change/([0-9a-f]{64})#', $mail[0]['message'], $m));
+
+        $this->service->update((int) $user->id, ['first_name' => 'Maria', 'last_name' => 'Santos', 'email' => 'maria.school@example.com'], $this->admin);
+
+        $this->assertFalse((new \App\Services\Profiles\EmailChangeService())->confirm($m[1], null), 'the older link is refused');
+        $this->assertSame('maria.school@example.com', (new App\Services\Users\UserDirectory())->find((int) $user->id)['email']);
+        $this->assertSame('expired', $db->table('profile_correction_requests')->where('id', $request)->get()->getRow('status'));
+    }
+
     public function testAnAccountWithoutAProfileGetsOne(): void
     {
         $admin = PeopleFactory::person('admin', 'x', 'y', 'second.admin@example.com');

@@ -11,7 +11,6 @@ use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\HTTP\Files\UploadedFile;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\Shield\Entities\User;
-use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * What an institution's administrator may do to someone else's profile (D6): remove their photo, or
@@ -98,14 +97,8 @@ class ProfileModeration
         $body  = "Your school cleared your {$label}.";
         (new NotificationService())->send($subjectId, 'profile.field', $body, 'You can add it again on your profile.', false, "profile.field:{$subjectId}:{$field}:" . bin2hex(random_bytes(6)), $institution, 'profile');
 
-        if ($institution !== null) {
-            (new MailOutbox())->tell($institution, $subjectId, MailOutbox::FIELD_CLEARED, $label);
-
-            return;
-        }
-
-        $owner = model(UserModel::class)->findById($subjectId);
-        $owner === null || SecurityNotice::send($owner, "Your {$label} was cleared", $body . "\n\nYou can add it again on your profile. If this wasn't expected, contact your school.\n");
+        // guard() keeps the subject in the admin's institution, so there always is one.
+        (new MailOutbox())->tell((int) $institution, $subjectId, MailOutbox::FIELD_CLEARED, $label);
     }
 
     private function guard(int $subjectId, User $admin): void

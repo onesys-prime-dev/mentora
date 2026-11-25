@@ -67,7 +67,7 @@ foreach ($peopleRows as $p) {
         $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-edit"'
             . ' data-dialog-title="Edit ' . $label . '" data-dialog-label="Save" data-dialog-action="' . $url('/' . $p['id']) . '"'
             . ' data-dialog-values="' . $json(['first_name' => $p['first_name'], 'last_name' => $p['last_name'], 'email' => $p['email'], 'home_department_id' => $p['home_department_id']]) . '"' . ($p['staff'] ? '' : ' data-dialog-hide="' . $json(['home_department_id']) . '"')
-            . ($p['sis'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
+            . ($p['sis'] || $p['self'] ? ' data-dialog-locked="' . $json(['first_name', 'last_name', 'email']) . '"' : '') . '>Edit details</button>';
 
         $values = [];
 

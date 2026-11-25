@@ -16,6 +16,7 @@ use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
 use App\Services\Notifications\MailOutbox;
 use App\Services\Notifications\NotificationTriggers;
+use App\Services\Profiles\EmailChangeService;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\UsernameGenerator;
 use CodeIgniter\Shield\Entities\User;
@@ -401,9 +402,10 @@ class SisImporter
             }
 
             $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $changes['email'], 'updated_at' => $this->stamp()]);
+            (new EmailChangeService())->cancelOpen($userId);
             service('auditLogger')->log('profile.email_changed_by_import', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['changed' => true]]);
             // Queued (the job mails the OLD address); a preview's rows are rolled back with the rest of it.
-            $current['email'] === '' || (new MailOutbox())->tell($this->institutionId, $userId, MailOutbox::EMAIL_CHANGED, $current['email'] . ' ' . $changes['email'], $this->now);
+            $current['email'] === '' || (new MailOutbox())->tell($this->institutionId, $userId, MailOutbox::EMAIL_CHANGED, $current['email'], $this->now);
             unset($changes['email']);
         }
 
@@ -417,6 +419,10 @@ class SisImporter
 
             if ($saved === false) {
                 throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
+            }
+
+            if (array_key_exists('home_department_id', $changes)) {
+                $this->auditHomeDepartment($userId, $changes['home_department_id']);
             }
         }
 
@@ -462,6 +468,10 @@ class SisImporter
             throw new RuntimeException('The profile could not be saved: ' . implode(' ', $profiles->errors()));
         }
 
+        if (($m['home_department_id'] ?? null) !== null) {
+            $this->auditHomeDepartment((int) $user->id, $m['home_department_id']);
+        }
+
         $stamp = $this->stamp();
 
         if (! db_connect()->table('institution_users')->insert(['institution_id' => $this->institutionId, 'user_id' => $user->id, 'created_at' => $stamp, 'updated_at' => $stamp])) {
@@ -476,6 +486,12 @@ class SisImporter
 
         // A new account has no password yet: it is emailed a link to choose one.
         (new MailOutbox())->tell($this->institutionId, (int) $user->id, MailOutbox::WELCOME, $role, $this->now);
+    }
+
+    /** The same entry People writes when an administrator sets it; a preview's is rolled back with the run. */
+    private function auditHomeDepartment(int $userId, mixed $departmentId): void
+    {
+        service('auditLogger')->log('profile.home_department_set', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['department_id' => $departmentId === null ? null : (int) $departmentId]]);
     }
 
     /**

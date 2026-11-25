@@ -685,6 +685,26 @@ final class SisImporterTest extends DatabaseTestCase
         $this->assertSame(1, $result->datasets['instructors']['updated']);
     }
 
+    public function testAHomeDepartmentSetByAnImportIsAudited(): void
+    {
+        db_connect()->table('audit_logs')->emptyTable();
+        $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,IT');
+        $this->run_();
+
+        $ivy     = (int) $this->user('ivy@example.com')['user_id'];
+        $entries = static fn (): array => db_connect()->table('audit_logs')->where('action', 'profile.home_department_set')->get()->getResultArray();
+        $this->assertCount(1, $entries(), 'set on the new account');
+        $this->assertSame([(int) $this->actor->id, $ivy], [(int) $entries()[0]['actor_user_id'], (int) $entries()[0]['target_id']]);
+        $this->assertStringContainsString((string) $this->departmentId('IT'), (string) $entries()[0]['new_values']);
+
+        db_connect()->table('user_profiles')->where('user_id', $ivy)->update(['home_department_id' => null]);
+        $this->run_();
+        $this->assertCount(2, $entries(), 'set again on the existing account');
+
+        $this->run_();
+        $this->assertCount(2, $entries(), 'unchanged is not audited');
+    }
+
     public function testAnUnknownHomeDepartmentIsReportedAndIgnored(): void
     {
         $this->instructorCsv(',home_department', 'I1,ivy@example.com,Ivy,Tan,Basket Weaving');
@@ -726,7 +746,7 @@ final class SisImporterTest extends DatabaseTestCase
         $this->assertSame([], $mailer->sent);
         $rows = db_connect()->table('mail_outbox')->where('kind', 'email_changed')->get()->getResultArray();
         $this->assertCount(2, $rows);
-        $this->assertContains('ann@example.com anna.lee@example.com', array_column($rows, 'detail'));
+        $this->assertContains('ann@example.com', array_column($rows, 'detail'));
 
         // The job then mails the OLD address.
         (new \App\Services\Notifications\MailOutbox())->sendDue($this->now->modify('+1 hour'));
@@ -737,6 +757,39 @@ final class SisImporterTest extends DatabaseTestCase
         $entry = db_connect()->table('audit_logs')->where('action', 'profile.email_changed_by_import')->get()->getResultArray();
         $this->assertCount(2, $entry);
         $this->assertSame((int) $this->actor->id, (int) $entry[0]['actor_user_id']);
+    }
+
+    public function testAnImportedEmailChangeCancelsAPendingEmailChange(): void
+    {
+        SisFixture::dropAll($this->institution);
+        $this->run_();
+        $mailer = FakeEmail::install();
+        $ann    = (int) $this->user('ann@example.com')['user_id'];
+        $db = db_connect();
+        $db->table('profile_correction_requests')->insert(['user_id' => $ann, 'field' => 'email', 'new_value' => 'ann.mine@example.com', 'status' => 'approved', 'routed_to' => 'institution']);
+        $request = (int) $db->insertID();
+        (new \App\Services\Profiles\EmailChangeService())->start($ann, 'ann.mine@example.com', $request);
+        $mail = array_values(array_filter($mailer->sent, static fn (array $m): bool => $m['to'] === 'ann.mine@example.com'));
+        $this->assertSame(1, preg_match('#email-change/([0-9a-f]{64})#', $mail[0]['message'], $m));
+
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\n");
+        $this->run_();
+
+        $this->assertFalse((new \App\Services\Profiles\EmailChangeService())->confirm($m[1], null), 'the older link is refused');
+        $this->assertNotNull($this->user('anna.lee@example.com'));
+        $this->assertSame('expired', $db->table('profile_correction_requests')->where('id', $request)->get()->getRow('status'));
+    }
+
+    public function testWithEmailsOffAnEmailChangeIsStillQueued(): void
+    {
+        SisFixture::dropAll($this->institution);
+        $this->run_();
+        db_connect()->table('mail_outbox')->emptyTable();
+
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\n");
+        (new SisImporter(null, null, false))->run($this->institution, $this->actor, false, SisRunLog::MANUAL, $this->now);
+
+        $this->assertSame(['ann@example.com'], array_column(db_connect()->table('mail_outbox')->get()->getResultArray(), 'detail'), 'D26: the old address is always told');
     }
 
     public function testAPreviewOrAnUnchangedEmailSendsNothing(): void

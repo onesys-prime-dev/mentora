@@ -81,6 +81,25 @@ final class SecurityActivityTest extends DatabaseTestCase
         $this->assertSame(['action' => 'profile.password_changed', 'label' => 'Password changed', 'at' => $latest, 'by_admin' => false], $first);
     }
 
+    public function testPhaseSixCorrectionsEmailChangesAndClearedFieldsAreListed(): void
+    {
+        $this->entry('profile.correction_approved', $this->admin, $this->me, $this->daysAgo(1));
+        $this->entry('profile.correction_rejected', $this->admin, $this->me, $this->daysAgo(2));
+        $this->entry('profile.email_changed', $this->me, $this->me, $this->daysAgo(3));
+        $this->entry('profile.email_changed_by_import', $this->admin, $this->me, $this->daysAgo(4));
+        $this->entry('profile.field_cleared_by_admin', $this->admin, $this->me, $this->daysAgo(5));
+        $this->entry('profile.official_updated', $this->me, $this->me, $this->daysAgo(6));
+
+        $this->assertSame([
+            'Your correction was approved',
+            'Your correction was not approved',
+            'Email address changed',
+            "Your email was changed by your school's SIS import",
+            'An administrator cleared a profile field',
+            'Official details updated',
+        ], array_column((new SecurityActivity())->recent($this->me), 'label'));
+    }
+
     public function testEachEntryKnowsWhetherAnAdministratorDidIt(): void
     {
         $this->entry('user.password_reset_sent', $this->admin, $this->me, $this->daysAgo(1));

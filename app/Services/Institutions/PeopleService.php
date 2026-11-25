@@ -235,6 +235,15 @@ class PeopleService
         $person = $this->member($institutionId, $userId);
         $this->person($input);
 
+        // D17: nobody changes their own official identity here; the form only carries first and last name and email.
+        if ($userId === (int) ($actor ?? auth()->user())?->id) {
+            foreach (InvitationInput::person($input) as $field => $value) {
+                if ($value !== (string) $person[$field]) {
+                    throw StructureException::field($field, 'Use Request a correction on your profile.');
+                }
+            }
+        }
+
         // Only for staff, and only when the form sent it; empty clears it.
         $home = null;
         $staff = array_intersect(self::HOME_DEPARTMENT_ROLES, $person['roles']) !== [];

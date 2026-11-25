@@ -528,6 +528,29 @@ final class PeopleServiceTest extends DatabaseTestCase
         $this->edit($ann, ['home_department_id' => '']);
     }
 
+    public function testAnAdministratorCannotChangeTheirOwnNameOrEmailHere(): void
+    {
+        $own = ['first_name' => 'Ada', 'last_name' => 'Admin', 'email' => 'ada@people.test'];
+
+        foreach (['first_name' => 'Adele', 'last_name' => 'Smith', 'email' => 'ada.new@people.test'] as $field => $value) {
+            $e = $this->refused(fn () => $this->service->update($this->institution, (int) $this->actor->id, [$field => $value] + $own, $this->actor));
+            $this->assertSame([$field => 'Use Request a correction on your profile.'], $e->errors(), $field);
+        }
+
+        $this->assertSame(0, $this->audit('user.updated'));
+        $this->assertSame('ada@people.test', (string) db_connect()->table('auth_identities')->where('user_id', $this->actor->id)->get()->getRow('secret'));
+    }
+
+    public function testAnAdministratorStillSetsTheirOwnHomeDepartment(): void
+    {
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $this->actor->id, 'group' => 'instructor', 'created_at' => date('Y-m-d H:i:s')]);
+        $dept = $this->department($this->institution, 'HD5');
+
+        $this->service->update($this->institution, (int) $this->actor->id, ['first_name' => ' Ada ', 'last_name' => 'Admin', 'email' => 'ADA@people.test', 'home_department_id' => (string) $dept], $this->actor);
+
+        $this->assertSame($dept, (int) $this->home($this->actor));
+    }
+
     public function testChangingTheEmailTellsTheOldAddress(): void
     {
         $ann = $this->person('student', 'Ann');

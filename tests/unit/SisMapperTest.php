@@ -49,9 +49,14 @@ final class SisMapperTest extends CIUnitTestCase
     public function testAnUploadedPersonHasNoSisIdAndKeepsMiddleNameAndSuffix(): void
     {
         $this->assertSame(
-            ['external_id' => '', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.', 'email' => 'ann@example.com', 'student_number' => null],
+            ['external_id' => '', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.', 'email' => 'ann@example.com', 'student_number' => null, 'home_department' => null],
             SisMapper::person(['student_number' => '', 'email' => 'ann@example.com', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.']),
         );
+    }
+
+    public function testAnInstructorsHomeDepartmentIsKeptWhenTheColumnCarriesOne(): void
+    {
+        $this->assertSame('IT', SisMapper::person(['external_id' => 'I1', 'first_name' => 'A', 'last_name' => 'B', 'email' => 'a@b.example', 'home_department' => 'IT'])['home_department']);
     }
 
     public function testAnInstructorWithNoSectionTeachesSectionA(): void
@@ -63,7 +68,7 @@ final class SisMapperTest extends CIUnitTestCase
     public function testAPersonIsMappedWithALowerCasedEmailAndAnOptionalStudentNumber(): void
     {
         $this->assertSame(
-            ['external_id' => 'S1', 'first_name' => 'Ann', 'middle_name' => null, 'last_name' => 'Lee', 'suffix' => null, 'email' => 'ann@example.com', 'student_number' => '2026-001'],
+            ['external_id' => 'S1', 'first_name' => 'Ann', 'middle_name' => null, 'last_name' => 'Lee', 'suffix' => null, 'email' => 'ann@example.com', 'student_number' => '2026-001', 'home_department' => null],
             SisMapper::person(['external_id' => 'S1', 'first_name' => 'Ann', 'last_name' => 'Lee', 'email' => 'Ann@Example.COM', 'student_number' => '2026-001']),
         );
 

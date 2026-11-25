@@ -148,6 +148,11 @@ class UsersController extends BaseController
 
     public function update(int $id): RedirectResponse
     {
+        // D17: your own official details change on your profile, where every change is recorded the same way.
+        if ($id === (int) auth()->id()) {
+            return redirect()->to("admin/users/{$id}")->with('error', 'Edit your own details from your profile.');
+        }
+
         return $this->act($id, fn () => $this->users->update($id, $this->request->getPost()), 'Saved.', true);
     }
 

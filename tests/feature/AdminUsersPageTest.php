@@ -443,6 +443,19 @@ final class AdminUsersPageTest extends RouteTestCase
         $this->assertSame(1, $this->auditCount('user.updated'));
     }
 
+    public function testYourOwnNameAndEmailAreEditedFromYourProfile(): void
+    {
+        $this->confirmedPassword();
+        $before = $this->directoryRow($this->admin);
+
+        $this->submit("admin/users/{$this->admin->id}", ['first_name' => 'Changed', 'last_name' => 'Name', 'email' => 'changed.admin@example.com']);
+
+        $this->assertStringContainsString('Edit your own details from your profile.', $this->body("admin/users/{$this->admin->id}"));
+        $this->assertSame($before['email'], $this->directoryRow($this->admin)['email']);
+        $this->assertSame($before['first_name'], $this->directoryRow($this->admin)['first_name']);
+        $this->assertSame(0, $this->auditCount('user.updated'));
+    }
+
     public function testARefusedSaveKeepsWhatWasTyped(): void
     {
         $this->confirmedPassword();

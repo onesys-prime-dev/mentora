@@ -11,6 +11,7 @@ use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InvitationInput;
 use App\Services\Institutions\InvitationService;
+use App\Services\Profiles\EmailChangeService;
 use App\Services\Profiles\SecurityNotice;
 use App\Services\Sis\SisOwnership;
 use App\Services\Subscriptions\PlanLimits;
@@ -162,6 +163,7 @@ class UserAdminService
 
             if ($old['email'] !== $person['email']) {
                 $this->audit('profile.email_changed_by_admin', $actor, $userId, $user, ['new' => ['changed' => true]]);
+                (new EmailChangeService())->cancelOpen($userId);
             }
         });
 

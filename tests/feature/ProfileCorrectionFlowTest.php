@@ -177,7 +177,7 @@ final class ProfileCorrectionFlowTest extends RouteTestCase
         $token = $this->linkTo('ann.new@example.com');
 
         $this->loggedInAs($this->admin);
-        $this->assertStringContainsString('This link has expired or was already used.', (string) $this->step('POST', "email-change/{$token}")->response()->getBody());
+        $this->assertStringContainsString('This link is for another account. Sign out, then open it again.', (string) $this->step('POST', "email-change/{$token}")->response()->getBody());
         $this->assertSame('ann@example.com', $this->email($this->ann), 'a different signed-in user cannot use it');
 
         db_connect()->table('pending_email_changes')->update(['expires_at' => date('Y-m-d H:i:s', time() - 60)]);

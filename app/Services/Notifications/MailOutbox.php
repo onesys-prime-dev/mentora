@@ -44,7 +44,7 @@ class MailOutbox
     /** An administrator removed or added the person's profile photo (detail: removed | added); the bell is sent by ProfileModeration. */
     public const PHOTO = 'photo';
 
-    /** The sign-in email was changed by an administrator or an import (detail: "old new"); this one goes to the OLD address (D26). */
+    /** The sign-in email was changed by an administrator or an import (detail: the OLD address, which is told; the new one is the account's current email). Never muted (D26). */
     public const EMAIL_CHANGED = 'email_changed';
 
     /** An administrator cleared a profile field (detail: the field in words, e.g. "bio"). */
@@ -100,7 +100,8 @@ class MailOutbox
      */
     public function tell(int $institutionId, int $userId, string $kind, string $detail = '', ?DateTimeImmutable $now = null): bool
     {
-        if (self::$muted || ! in_array($kind, self::KINDS, true)) {
+        // A changed sign-in email is a security notice: told even when the run is muted (D26).
+        if ((self::$muted && $kind !== self::EMAIL_CHANGED) || ! in_array($kind, self::KINDS, true)) {
             return false;
         }
 
@@ -233,9 +234,11 @@ class MailOutbox
         $old  = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] === self::EMAIL_CHANGED));
         $rows = array_values(array_filter($rows, static fn (array $r): bool => $r['kind'] !== self::EMAIL_CHANGED));
 
+        $current = $old === [] ? '' : (string) (model(UserModel::class)->findById($userId)?->email ?? '');
+
         foreach ($old as $r) {
-            [$from, $to] = array_pad(explode(' ', (string) $r['detail'], 2), 2, '');
-            SecurityNotice::emailChangedByAdmin($from, $to, $userId);
+            // explode: rows queued before the detail held only the old address carried "old new".
+            SecurityNotice::emailChangedByAdmin(explode(' ', (string) $r['detail'])[0], $current, $userId);
             $db->table('mail_outbox')->where('id', $r['id'])->update(['sent_at' => $stamp, 'last_error' => null]);
         }
 

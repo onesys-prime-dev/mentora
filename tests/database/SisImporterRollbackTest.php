@@ -247,4 +247,16 @@ final class SisImporterRollbackTest extends DatabaseTestCase
         $this->assertSame($queued, db_connect()->table('mail_outbox')->countAllResults());
         $this->assertNotNull(db_connect()->table('auth_identities')->where('secret', 'ann@example.com')->get()->getRowArray());
     }
+
+    public function testAPreviewWithEmailsOffQueuesNoEmailChangeNoticeEither(): void
+    {
+        (new SisImporter())->run($this->institution, $this->actor, true);
+        (new SisImporter())->run($this->institution, $this->actor, false);
+        SisFixture::drop($this->institution, 'students', "external_id,email,first_name,last_name\nS1,anna.lee@example.com,Ann,Lee\n");
+        $queued = db_connect()->table('mail_outbox')->countAllResults();
+
+        (new SisImporter(null, null, false))->run($this->institution, $this->actor, true);
+
+        $this->assertSame($queued, db_connect()->table('mail_outbox')->countAllResults(), 'the preview row is rolled back');
+    }
 }

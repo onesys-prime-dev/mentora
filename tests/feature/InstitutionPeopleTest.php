@@ -112,6 +112,15 @@ final class InstitutionPeopleTest extends RouteTestCase
         $this->assertMatchesRegularExpression('/2 people\s*</', $body);
     }
 
+    public function testYourOwnRowLocksYourNameAndEmailInTheEditDialog(): void
+    {
+        $ann  = $this->person('student', 'Ann');
+        $body = $this->page();
+
+        $this->assertMatchesRegularExpression('#data-dialog-action="[^"]*/institution/people/' . $this->admin->id . '"[^>]*data-dialog-locked=#', $body);
+        $this->assertDoesNotMatchRegularExpression('#data-dialog-action="[^"]*/institution/people/' . $ann->id . '"[^>]*data-dialog-locked=#', $body);
+    }
+
     public function testTheListIsFilteredAndSearched(): void
     {
         $this->person('student', 'Ann');

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Profiles\EmailChangeService;
+use App\Services\Profiles\ProfileEditException;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\DatabaseTestCase;
@@ -121,7 +122,13 @@ final class EmailChangeServiceTest extends DatabaseTestCase
         $token = $this->start();
         $ben   = PeopleFactory::person('student', 'Ben', 'Cruz');
 
-        $this->assertFalse($this->service->confirm($token, $ben));
+        try {
+            $this->service->confirm($token, $ben);
+            $this->fail('a different signed-in user is refused');
+        } catch (ProfileEditException $e) {
+            $this->assertSame(EmailChangeService::OTHER_ACCOUNT, $e->getMessage());
+        }
+
         $this->assertSame('ann@example.com', $this->email());
         $this->assertTrue($this->service->confirm($token, null), 'still usable by its owner');
     }

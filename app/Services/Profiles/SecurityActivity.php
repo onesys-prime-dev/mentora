@@ -12,7 +12,7 @@ namespace App\Services\Profiles;
  */
 class SecurityActivity
 {
-    /** The audit actions shown, with what the owner reads. Phase 6 adds the correction decisions here. */
+    /** The audit actions shown, with what the owner reads. Each one targets the person it concerns. */
     private const LABELS = [
         'profile.password_changed'        => 'Password changed',
         'profile.two_factor_on'           => 'Two-step sign-in turned on',
@@ -28,6 +28,12 @@ class SecurityActivity
         'user.password_reset'             => 'Password reset with an emailed link',
         'user.roles_changed'              => 'Your roles were changed',
         'user.updated'                    => 'An administrator updated your name or email',
+        'profile.correction_approved'     => 'Your correction was approved',
+        'profile.correction_rejected'     => 'Your correction was not approved',
+        'profile.email_changed'           => 'Email address changed',
+        'profile.email_changed_by_import' => "Your email was changed by your school's SIS import",
+        'profile.field_cleared_by_admin'  => 'An administrator cleared a profile field',
+        'profile.official_updated'        => 'Official details updated',
     ];
 
     /** @return list<array{action: string, label: string, at: string, by_admin: bool}> newest first */
