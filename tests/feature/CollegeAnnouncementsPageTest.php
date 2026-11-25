@@ -284,6 +284,17 @@ final class CollegeAnnouncementsPageTest extends RouteTestCase
         $this->assertStringContainsString('Dee Dean', $college);
     }
 
+    public function testACourseAuthorWithABlankProfileIsBylinedAsInstructor(): void
+    {
+        db_connect()->table('announcements')->insert([
+            'offering_id' => $this->offering, 'author_id' => $this->teacher->id, 'subject' => 'Quiz moved', 'message' => '{"version":1,"blocks":[]}', 'is_pinned' => 0,
+            'created_at' => date('Y-m-d H:i:s'), 'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+        db_connect()->table('user_profiles')->where('user_id', $this->teacher->id)->update(['first_name' => '', 'last_name' => '']);
+
+        $this->assertMatchesRegularExpression('#data-course-announcement>.*?IT101 A · Instructor ·#s', $this->page('student/announcements?level=course', $this->student));
+    }
+
     public function testAHiddenAuthorKeepsTheLegalNameAndAPlainAvatar(): void
     {
         $this->announce();

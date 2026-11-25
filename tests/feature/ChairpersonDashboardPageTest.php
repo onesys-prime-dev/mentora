@@ -115,6 +115,10 @@ final class ChairpersonDashboardPageTest extends RouteTestCase
 
         // The workload is an official view: the legal name beside an avatar that opens the card.
         $this->assertMatchesRegularExpression('#data-person-avatar="' . $seen->id . '".*?data-workload-name>Juan Dela Cruz<#s', $body);
+        $doc = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $doc->loadHTML('<?xml encoding="utf-8"?>' . $body);
+        $this->assertSame(['Juan Dela Cruz'], array_map(static fn (DOMNode $n): string => trim($n->textContent), iterator_to_array((new DOMXPath($doc))->query('//*[@data-workload-name]'))), 'the visible workload name is the legal one');
         // An announcement byline is social: the preferred name, the avatar a plain picture inside the row's link.
         $this->assertStringContainsString('Jun Dela Cruz', $body);
         $this->assertStringContainsString('Hal Hidden', $body);

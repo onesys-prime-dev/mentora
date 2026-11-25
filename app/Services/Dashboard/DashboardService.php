@@ -372,7 +372,7 @@ class DashboardService
                 'slug' => url_title($offering['course_title'], '-', true),
                 'code' => $offering['course_code'] . ' - ' . $offering['section_code'],
                 'title' => $row['subject'],
-                'author' => $avatars[(int) $row['author_id']]['person']['name'] ?? (trim((string) $row['author_name']) !== '' ? $row['author_name'] : 'Instructor'),
+                'author' => ($avatars[(int) $row['author_id']]['person']['name'] ?? '') ?: (trim((string) $row['author_name']) !== '' ? $row['author_name'] : 'Instructor'),
                 'avatar' => $avatars[(int) $row['author_id']] ?? null,
                 'posted' => $this->describeEditedAt($row['created_at']),
             ];

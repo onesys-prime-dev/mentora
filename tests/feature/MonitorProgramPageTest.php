@@ -176,8 +176,10 @@ final class MonitorProgramPageTest extends RouteTestCase
         [$few, $body] = $lookups();
 
         $this->assertStringContainsString('data-person-avatar="' . $seen->id . '"', $body);
-        $this->assertStringContainsString('Juan Dela Cruz', $body, 'a monitoring list keeps the legal name');
-        $this->assertStringNotContainsString('Jun Dela Cruz', $body);
+        // The text a reader sees (no tags or attributes, so the avatar's own label does not count).
+        $visible = html_entity_decode(strip_tags(preg_replace('#<(script|template)[ >].*?</(script|template)>#s', '', $body)));
+        $this->assertStringContainsString('Juan Dela Cruz', $visible, 'a monitoring list keeps the legal name');
+        $this->assertStringNotContainsString('Jun Dela Cruz', $visible);
         $this->assertStringNotContainsString('data-person-avatar="' . $hidden->id . '"', $body);
         $this->assertStringContainsString('Hal Hidden', $body);
         $this->assertStringNotContainsString('Zedekiah', $body);

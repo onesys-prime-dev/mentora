@@ -96,6 +96,10 @@ final class TeachingLoadPageTest extends RouteTestCase
         $this->assertStringNotContainsString('data-person-avatar="' . $this->leo->id . '"', $body);
         $this->assertStringContainsString('>Tess Tan</a>', $body, 'an official workload view keeps the legal name');
         $this->assertStringContainsString('>Leo Law</a>', $body);
+        // The text a reader sees (no tags or attributes, so the avatar's own label does not count).
+        $visible = html_entity_decode(strip_tags(preg_replace('#<(script|template)[ >].*?</(script|template)>#s', '', $body)));
+        $this->assertStringContainsString('Tess Tan', $visible);
+        $this->assertStringNotContainsString('Tee Tan', $visible);
         $this->assertStringNotContainsString('Zedekiah', $body);
 
         $it = (int) db_connect()->table('course_offerings')->select('course_offerings.id')->join('courses', 'courses.id = course_offerings.course_id')->where('course_code', 'IT101')->get()->getRow()->id;

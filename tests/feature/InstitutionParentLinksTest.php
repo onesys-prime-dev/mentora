@@ -148,6 +148,12 @@ final class InstitutionParentLinksTest extends RouteTestCase
         $this->assertMatchesRegularExpression('#data-linked-student="\d+">.*?Ann Student#s', $body);
         $this->assertStringContainsString('Bea Student', $body);
         $this->assertStringNotContainsString('<span class="font-medium">Pammy', $body);
+        // The text a reader sees (no tags or attributes, so a visible avatar's own label does not count).
+        $visible = html_entity_decode(strip_tags(preg_replace('#<(script|template)[ >].*?</(script|template)>#s', '', $body)));
+        $this->assertStringContainsString('Pam Parent', $visible);
+        $this->assertStringContainsString('Ann Student', $visible);
+        $this->assertStringNotContainsString('Pammy', $visible);
+        $this->assertStringNotContainsString('Jun Student', $visible);
         $this->assertStringNotContainsString('Zedekiah', $body, 'nothing of a hidden person beyond the legal name');
     }
 

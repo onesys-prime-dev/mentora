@@ -169,6 +169,22 @@ final class StudentDashboardTabsTest extends RouteTestCase
         $this->assertStringContainsString('lg:hidden', $all->item(0)->getAttribute('class'));
     }
 
+    public function testAnAuthorWithABlankProfileIsBylinedAsInstructor(): void
+    {
+        $offering = CourseFactory::offering();
+        $student  = CourseFactory::user('student');
+        $author   = CourseFactory::user('instructor');
+        db_connect()->table('user_profiles')->insert(['user_id' => $author->id, 'first_name' => '', 'last_name' => '']);
+        CourseFactory::enroll($offering, $student);
+        CourseFactory::members($offering, [$student, $author]);
+        db_connect()->table('announcements')->insert(['offering_id' => $offering, 'author_id' => $author->id, 'subject' => 'Blank', 'message' => '{}', 'created_at' => date('Y-m-d H:i:s')]);
+
+        $rows = $this->dashboard($student, 'student/dashboard')->query('//a[@data-announcement-row]');
+
+        $this->assertSame(1, $rows->length);
+        $this->assertStringContainsString('Instructor', $rows->item(0)->textContent, 'never an empty byline');
+    }
+
     public function testAnAnnouncementBylineShowsTheAuthorsGatedNameAndAPlainAvatar(): void
     {
         $offering = CourseFactory::offering();
