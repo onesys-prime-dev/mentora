@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use CodeIgniter\Config\Services;
 use CodeIgniter\Test\CIUnitTestCase;
 
 /**
@@ -16,6 +17,10 @@ final class ComponentViewsTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // The shared renderer keeps the data of every page an earlier test rendered with saveData (a route test's
+        // 'text' would become a lock note's words); a component here starts from none, as it does in a request.
+        Services::resetSingle('renderer');
 
         helper(['icon', 'form', 'url']);
     }
