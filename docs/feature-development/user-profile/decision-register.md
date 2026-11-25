@@ -206,3 +206,26 @@ C1 header avatar keeps opening the account menu; C2 impersonation already read-o
 ## D32: Message button follows the active role until the D10 track (approved 2026-11-23, builder check B2)
 **Decision:** The popover/modal Message button shows exactly when `MessagingPolicy::canStart` allows it, which uses each person's active role. This is the **one accepted exception** to D9 / the "never reads `active_role`" anti-goal, until the single-identity track removes the switcher.
 **Alternatives:** show when any role pair allows (button could promise a conversation Messages refuses).
+
+## Implementation rulings (Stage 4, made by Claude on the user's "decide everything for me", 2026-11-24/25)
+Each line: what was decided — why — what it costs if wrong.
+- R1 Commits: per-task commits on each phase branch (user allowed Claude to commit). — review packages need them — squash before push if one commit per phase is preferred.
+- R2 Avatar colours: 8 fixed colours, each ≥ 4.5:1 against white, chosen by id mod 8. — ui-ux "fixed accessible set" — a palette tweak.
+- R3 FR2 field sets per viewer/subject written as an explicit table; deactivated people show basics only to viewers who could see them active; D31 email/courses follow the student column. — FR2 + D28/D31 + Review Focus 1/7 — one policy table edit.
+- R4 Roles shown per viewer: the student role only with a student grant; the parent role only to staff or the person's own child. — D3/D9/D31 — one policy method.
+- R5 A student's number is not part of what others see; only the owner's Official details show it. — FR2 lists program/year/section/college — add an owner-only field.
+- R6 Legal name (with middle name) shows beneath the preferred name to everyone who may see names. — D24 — drop the middle name in display.
+- R7 Parent profile page kept until Settings existed (Phase 5), then redirected. — each phase stays a working increment — none now.
+- R8 Pronoun list = D24's four values + Custom ≤ 30; "prefer not to say" is stored but never displayed. — D24 — show it if wanted.
+- R9 Preview = what an unrelated student of the same school sees ("Me / As a student sees it"); profile body split into Studies / Contact / Official details cards. — FR2 + mockup — layout tweak.
+- R10 Modal admin row grew per phase: Open in People (needs people.view), photo actions and Clear a field (need people.manage); a deactivated person keeps Open in People for their own admin. — D20/D22/D25 — permission tweak.
+- R11 Message button only when starting would really succeed (one shared check with Messages; two shared children → no button). — D32 rejected a button that fails — none.
+- R12 Photos: one file id column (D6), 64 px copy found by name; square JPEG re-encode; served at /people/{id}/photo/{size} with no-cache + ETag; photos switch hides everywhere centrally. — D6, Review Focus 3 — storage tweak.
+- R13 Settings: password throttle counts every attempt (5/15 min), reset link 3/15 min, sign-out-others 5/15 min, correction requests 10/hour; settings stay usable in a read-only school; quiet hours offered by any quiet role a person holds (not the active one). — D13/D14/D29-C3/NFR, D9 direction — limit values.
+- R14 Email change: confirmation link page asks first, change happens on POST (mail scanners); a system admin's own name changes immediately, email via the link; anyone's own legal name/email can only change through the correction flow (People/Users self-edit locked). — D17/D26 — none.
+- R15 Clearable fields: preferred name, pronouns, bio, office, consultation hours, work phone; home department only for instructor/chair/dean; imports map an optional home_department column; email-change and field-cleared notices go through the mail queue (D26 notice never muted). — D5/D8/D26 — field list.
+- R16 Avatars: one gated lookup per page/response; system-admin pages show non-interactive avatars; dashboard at-risk avatar non-interactive (the row is a link); assessment byline = real author + date, learning item byline = "Instructor: {name}" (old hard-coded byline removed). — FR3/D19 — per-site tweaks.
+- R17 Preferred names in social places only for viewers who may see the person (else legal); official exports and the gradebook keep legal names. — FR5/D24 privacy — per-site tweaks.
+- R18 Remember-me: signing out everywhere/deactivation deletes remember tokens; a remember-me sign-in starts a fresh session clock (custom session authenticator); the current browser must sign in again after its session ends. — D13 security — a UX trade-off.
+- R19 Responsive screenshot baselines are regenerated on CI only (not locally). — baselines are made on CI's Linux runner — the user runs the workflow.
+- Deferred (names only, no leak): recipient/group pickers, who-reacted, notifications, parent feed, message reports, group generator preview, a few dashboard/dean/chair lists, sorting by legal name — see test-strategy.md.
