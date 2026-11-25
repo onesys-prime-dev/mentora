@@ -99,3 +99,10 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - Task 8.2: Playwright journeys TC-PRF-13..26 in `tests/e2e/profile-journeys.spec.js` (W1-W13, axe on /profile, /settings, /people/{id}, the modal and the Requests tab: no serious/critical violations; no horizontal overflow at 360/768/1440). profile*.spec 34/34. Regression parent/messages/menu-placement/institutional-admin 42/44: TC-PRT-02 known pre-existing; TC-IAA-01 is timing-sensitive locally (passes alone in 25.7 s against the local 30 s limit; CI allows 90 s).
 - Final whole-branch review: no Critical; CI blockers (PHPStan, ESLint) fixed.
 - Still to do by the user: regenerate the responsive screenshot baselines on CI (GitHub Actions → Responsive → update_snapshots); screens listed under Phase 7.
+
+### Follow-ups after Phase 8 (2026-11-25) — same branch
+- F1 Messages: recipient and group pickers, who-reacted, parent feed, message reports (legal text, gated avatars) and Messages notifications (sender named once per send; ProfileContextResolver::viewersWhoSee batches the visibility check) — 507bc86d, 35317793.
+- F2 Pages: parents chips, teaching load, chair workload and monitor-program (official: legal text + gated avatars), follow-ups, announcement bylines, at-risk tab, activity feed, group generator preview, classmates you can invite (social: gated names + avatars); lists that show gated names sort by them — 8c4cda84, af12b0fa, 1d16c814, 8cec1229.
+- Suites: phpunit (unit + 8 parts) 10629 OK; vitest 127 files / 1306 OK; ESLint and PHPStan clean.
+- Only open item: paged rosters keep legal-name order (R21).
+
