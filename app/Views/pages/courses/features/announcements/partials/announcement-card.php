@@ -207,7 +207,8 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
     <div class="border-t border-gray-100 px-4 py-4 sm:px-6" data-reply-row>
 
         <button type="button" data-reply-trigger class="flex w-full items-center gap-3 text-left pointer-coarse:min-h-11">
-            <?= view('components/avatar', $viewerAvatar + ['size' => 'sm'], ['saveData' => false]) ?>
+            <?php // Never a button inside the trigger button: decorative here, interactive in the form. ?>
+            <?= view('components/avatar', ['interactive' => false, 'decorative' => true, 'size' => 'sm'] + $viewerAvatar, ['saveData' => false]) ?>
             <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-[#767676] transition hover:border-brand/40">Reply in thread</span>
         </button>
 

@@ -420,5 +420,12 @@ final class AdminAuditLogPageTest extends RouteTestCase
 
         $this->assertStringContainsString('data-avatar', $body);
         $this->assertStringNotContainsString('data-person-avatar', $body);
+
+        // Beside the name in the Actor cell, not at the start of the Time cell.
+        $doc = new DOMDocument();
+        @$doc->loadHTML($body);
+        $xpath = new DOMXPath($doc);
+        $this->assertSame(1, $xpath->query('//td[@data-label="Actor"]//*[@data-avatar]')->length);
+        $this->assertSame(0, $xpath->query('//td[@data-label="Time"]//*[@data-avatar]')->length);
     }
 }

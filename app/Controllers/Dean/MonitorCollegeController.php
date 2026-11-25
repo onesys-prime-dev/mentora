@@ -65,6 +65,11 @@ class MonitorCollegeController extends BaseController
         }
 
         $name = db_connect()->table('colleges')->select('name')->where('id', (int) $college['college_id'])->get()->getRow('name');
+        // One avatar lookup for the page: the at-risk students and the audit actors together.
+        $avatars = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_filter(array_map('intval', [
+            ...array_column($overview['atRisk'], 'student_id'),
+            ...array_column($audit['rows'] ?? [], 'actor_id'),
+        ])))));
 
         return view('pages/dean/monitor-college', [
             'title'          => 'Monitor College',
@@ -80,10 +85,10 @@ class MonitorCollegeController extends BaseController
             'groups'         => $overview['groups'],
             'gradeDistribution' => $overview['gradeDistribution'],
             'atRisk'         => $overview['atRisk'],
-            'atRiskAvatars'  => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($overview['atRisk'], 'student_id'))),
+            'atRiskAvatars'  => $avatars,
             'instructorActivity' => $instructors,
             'audit'          => $audit,
-            'auditAvatars'   => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_filter(array_map('intval', array_column($audit['rows'] ?? [], 'actor_id'))))),
+            'auditAvatars'   => $avatars,
             'auditPage'      => $auditPage,
             'auditPages'     => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
             'previousPage'   => 'dashboard',

@@ -196,6 +196,19 @@ final class InstitutionSectionsTest extends RouteTestCase
         $this->assertMatchesRegularExpression('/Students in the section.*1.*3/s', $body);
     }
 
+    public function testTheStudentListShowsAvatarsAndPreferredFirstNames(): void
+    {
+        $id  = $this->section();
+        $juan = $this->student('Juan', '2026-001');
+        db_connect()->table('user_profiles')->where('user_id', $juan->id)->update(['last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        (new ClassSectionService())->addStudents($this->institution, $id, '2026-001', false, $this->admin);
+
+        $body = $this->step('GET', "institution/sections/{$id}")->response()->getBody();
+
+        $this->assertStringContainsString('data-person-avatar="' . $juan->id . '"', $body);
+        $this->assertStringContainsString('<span class="font-medium">Jun Dela Cruz</span>', $body);
+    }
+
     public function testTheAddStudentsBoxAsksForSuggestionsLeavingOutThoseAlreadyInTheSection(): void
     {
         $id   = $this->section();

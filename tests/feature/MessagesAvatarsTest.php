@@ -164,6 +164,24 @@ final class MessagesAvatarsTest extends RouteTestCase
         $this->assertStringNotContainsString('Jun Dela Cruz', (string) json_encode($page));
     }
 
+    public function testMyOwnQuotedAndPinnedMessagesShowMyPreferredName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['first_name' => 'Maria', 'last_name' => 'Santos', 'preferred_first_name' => 'Mia']);
+        $this->say($this->conversation, (int) $this->student->id);
+        $original = (int) db_connect()->insertID();
+        db_connect()->table('messages')->where('id', $original)->update(['pinned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $this->conversation, 'sender_id' => $this->instructor->id, 'body_enc' => 'x', 'reply_to_message_id' => $original,
+            'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $page = $this->getJson($this->student, "conversations/{$this->conversation}/messages");
+
+        $this->assertSame('Mia Santos', $page['pinned'][0]['sender_name']);
+        $this->assertSame('Mia Santos', $page['messages'][1]['reply']['sender_name']);
+        $this->assertNull($page['messages'][0]['avatar'], 'my own messages still carry no avatar');
+    }
+
     public function testEachSendersAvatarIsOnTheirMessagesAndMineHaveNone(): void
     {
         $this->say($this->conversation, (int) $this->instructor->id);

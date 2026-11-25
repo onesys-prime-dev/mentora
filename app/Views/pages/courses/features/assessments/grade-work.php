@@ -209,14 +209,6 @@ $attemptTabs ??= [];
                         };
 
                         $isActive = (int) $student['student_id'] === (int) ($selectedStudentId ?? 0);
-
-                        $initials = '';
-
-                        foreach (explode(' ', trim($student['student_name'] ?? '')) as $part) {
-                            if ($part !== '') {
-                                $initials .= mb_strtoupper(mb_substr($part, 0, 1));
-                            }
-                        }
                     ?>
 
                     <div

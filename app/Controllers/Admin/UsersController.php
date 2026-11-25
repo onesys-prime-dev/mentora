@@ -47,6 +47,8 @@ class UsersController extends BaseController
         $admin   = auth()->user();
         // Correction requests that reach the platform (D22): no institution, or no other institutional admin there.
         $requests = (new CorrectionRequestService())->pendingFor($admin);
+        // One avatar lookup for the page: the listed users and the people asking for corrections.
+        $avatars = (new AvatarData())->forViewer($admin, array_values(array_unique(array_map('intval', [...array_column($result['rows'], 'id'), ...array_column($requests, 'user_id')]))));
 
         return view('pages/admin/users/index', [
             'title'            => 'Users',
@@ -54,13 +56,13 @@ class UsersController extends BaseController
             'user'             => auth()->user(),
             'userFilters'      => $filters,
             'userRows'         => $result['rows'],
-            'userAvatars'      => (new AvatarData())->forViewer(auth()->user(), array_map('intval', array_column($result['rows'], 'id'))),
+            'userAvatars'      => $avatars,
             'userTotal'        => $result['total'],
             'userPages'        => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'userInstitutions' => $this->institutions(),
             'userSelf'         => (int) auth()->id(),
             'userRequests'     => $requests,
-            'userRequestFaces' => (new AvatarData())->forViewer($admin, array_column($requests, 'user_id')),
+            'userRequestFaces' => $avatars,
             'userCanDecide'    => (bool) $admin->can('users.manage'),
         ]);
     }

@@ -74,6 +74,7 @@ class SectionsController extends BaseController
             'section'        => $detail['section'],
             'sectionCourses' => $detail['courses'],
             'sectionStudents' => $detail['students'],
+            'sectionAvatars' => (new \App\Services\Profiles\AvatarData())->forViewer(auth()->user(), array_map('intval', array_column($detail['students'], 'id'))),
             'sectionAvailable' => $detail['available'],
             'sectionCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
         ]);

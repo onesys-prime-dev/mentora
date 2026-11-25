@@ -58,6 +58,7 @@ $auditRows = $rows;
 $rows      = [];
 
 foreach ($auditRows as $row) {
+    $avatar = $avatars[(int) ($row['actor_user_id'] ?? 0)] ?? null;
     $who = '<span class="[overflow-wrap:anywhere]">' . esc($row['actor_label'] ?? 'system') . '</span>'
         . ($row['impersonator_user_id'] !== null ? '<span class="block text-xs text-[#946200]">via admin #' . esc((string) $row['impersonator_user_id']) . '</span>' : '');
 
@@ -72,7 +73,7 @@ foreach ($auditRows as $row) {
 
     $cells = [
         'created_at'     => (string) $row['created_at'],
-        'actor_label'    => ['html' => $who],
+        'actor_label'    => ['html' => $avatar === null ? $who : '<span class="flex items-center gap-2">' . view('components/avatar', ['person' => $avatar['person'], 'size' => 'xs', 'interactive' => $avatar['interactive'], 'decorative' => true], ['saveData' => false]) . '<span class="min-w-0">' . $who . '</span></span>'],
         'acting_role'    => (string) ($row['acting_role'] ?? '—'),
         'action'         => ['html' => '<span class="font-mono text-xs [overflow-wrap:anywhere]">' . esc($row['action']) . '</span>'],
         'target'         => ['html' => '<span class="[overflow-wrap:anywhere]">' . esc(trim(((string) ($row['target_type'] ?? '')) . ' ' . ((string) ($row['target_id'] ?? ''))) ?: '—') . '</span>'],
@@ -85,7 +86,7 @@ foreach ($auditRows as $row) {
 
     $cells['changes'] = ['html' => $changes];
 
-    $rows[] = ['id' => (string) $row['id'], 'label' => (string) $row['action'], 'cells' => $cells, 'person' => $avatars[(int) ($row['actor_user_id'] ?? 0)] ?? null];
+    $rows[] = ['id' => (string) $row['id'], 'label' => (string) $row['action'], 'cells' => $cells];
 }
 
 $columns = [

@@ -412,7 +412,7 @@ class MessageService
         return [
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
             'sender_name' => $view['avatars'][(int) $row['sender_id']]['name'] ?? $sender['name'], 'sender_role' => $sender['role'],
-            'avatar' => $view['avatars'][(int) $row['sender_id']] ?? null,
+            'avatar' => (int) $row['sender_id'] === $userId ? null : ($view['avatars'][(int) $row['sender_id']] ?? null),
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId, $view['avatars'] ?? []),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
@@ -493,8 +493,9 @@ class MessageService
     }
 
     /**
-     * Everyone else who wrote these messages or the messages they quote, as this viewer may see them (FR2): one
-     * forViewerJson lookup, whose names are the gated ones (FR5).
+     * Everyone who wrote these messages or the messages they quote, the viewer included (their own quotes and pins
+     * show their preferred name), as this viewer may see them (FR2): one forViewerJson lookup, whose names are the
+     * gated ones (FR5).
      *
      * @param list<array<string, mixed>> $rows `messages` rows
      *
@@ -509,7 +510,7 @@ class MessageService
             array_push($ids, ...array_column(db_connect()->table('messages')->select('sender_id')->whereIn('id', $quoted)->get()->getResultArray(), 'sender_id'));
         }
 
-        return (new AvatarData())->forViewerJson($user, array_values(array_diff(array_unique(array_map('intval', $ids)), [(int) $user->id])));
+        return (new AvatarData())->forViewerJson($user, array_values(array_unique(array_map('intval', $ids))));
     }
 
     /**
