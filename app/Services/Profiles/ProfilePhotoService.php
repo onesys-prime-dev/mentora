@@ -31,6 +31,9 @@ class ProfilePhotoService
 
     private const SIZES = [256, 64];
 
+    /** The longest side an upload is worked on at, after decoding. */
+    private const WORK_PIXELS = 1024;
+
     private const FOLDER = 'profile-photos';
 
     /**
@@ -93,6 +96,10 @@ class ProfilePhotoService
         if ($old === null) {
             throw new ProfileEditException('There is no profile to add a photo to.', 'photo');
         }
+
+        // Shrunk before it is turned, so a big photo never needs two full-size copies at once (a 4000 px square is
+        // 64 MB decoded, and the server's memory_limit may be 128 MB).
+        $source = $this->shrink($source);
 
         if ($info['mime'] === 'image/jpeg') {
             $source = $this->upright($source, $temp);
@@ -223,6 +230,16 @@ class ProfilePhotoService
     | Internals
     |--------------------------------------------------------------------------
     */
+
+    /** The image scaled down to at most WORK_PIXELS on its longer side (the stored sizes are far smaller). */
+    private function shrink(\GdImage $img): \GdImage
+    {
+        $w     = imagesx($img);
+        $h     = imagesy($img);
+        $ratio = self::WORK_PIXELS / max($w, $h);
+
+        return $ratio >= 1 ? $img : (imagescale($img, max(1, (int) round($w * $ratio)), max(1, (int) round($h * $ratio))) ?: $img);
+    }
 
     /** A JPEG's EXIF Orientation applied to its pixels, so a sideways phone photo is stored upright. */
     private function upright(\GdImage $img, string $path): \GdImage

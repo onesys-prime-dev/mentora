@@ -10,6 +10,7 @@ use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\InvitationStatus;
 use App\Services\Security\PasswordPolicy;
 use App\Services\Institutions\InvitationToken;
+use App\Services\Profiles\SecurityNotice;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use Config\Email as EmailConfig;
@@ -233,7 +234,7 @@ class PasswordResetService
             throw new InvalidArgumentException($problem);
         }
 
-        return $this->inTransaction(function () use ($reset, $user, $password, $now): User {
+        $this->inTransaction(function () use ($reset, $user, $password, $now): void {
             $stamp = $now->format('Y-m-d H:i:s');
             $db    = db_connect();
 
@@ -263,9 +264,16 @@ class PasswordResetService
                 'target_id'      => (int) $user->id,
                 'institution_id' => $this->institutionOf((int) $user->id),
             ]);
-
-            return $user;
         });
+
+        // A security event emails the owner (FR8), in case it was not them.
+        SecurityNotice::send(
+            $user,
+            'Your Mentora password was reset',
+            "The password for your Mentora account ({$user->email}) was reset with an emailed link on " . $now->format('M j, Y \a\t g:i A') . ". Every device signed in to your account was signed out.\n\n" . SecurityNotice::ifNotYou(),
+        );
+
+        return $user;
     }
 
     /** Whether the development conveniences apply (the link is also logged). Never true in production or staging. */

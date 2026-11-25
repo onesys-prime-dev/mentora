@@ -211,6 +211,33 @@ final class ProfilePhotoServiceTest extends DatabaseTestCase
         $this->assertGreaterThan(150, $low['blue'], 'the bottom is blue');
     }
 
+    public function testALargeSidewaysPhotoIsShrunkBeforeItIsTurnedSoItFitsA128MbLimit(): void
+    {
+        // 4000x4000 decoded is 64 MB; turning it as well would need another 64 MB, past a 128 MB memory_limit.
+        $img = imagecreatetruecolor(4000, 4000);
+        imagefilledrectangle($img, 0, 0, 1999, 3999, imagecolorallocate($img, 255, 0, 0));
+        imagefilledrectangle($img, 2000, 0, 3999, 3999, imagecolorallocate($img, 0, 0, 255));
+        ob_start();
+        imagejpeg($img, null, 90);
+        $jpeg = (string) ob_get_clean();
+        unset($img);
+        $tiff    = 'II*' . chr(0) . pack('V', 8) . pack('v', 1) . pack('vvVvv', 0x0112, 3, 1, 6, 0) . pack('V', 0);
+        $payload = 'Exif' . chr(0) . chr(0) . $tiff;
+        $file    = $this->upload(chr(0xFF) . chr(0xD8) . chr(0xFF) . chr(0xE1) . pack('n', strlen($payload) + 2) . $payload . substr($jpeg, 2), 'me.jpg', 'image/jpeg');
+        unset($jpeg);
+
+        memory_reset_peak_usage();
+        $before = memory_get_usage();
+        $this->service->upload((int) $this->owner->id, $file, $this->owner);
+
+        $this->assertLessThan(96 * 1024 * 1024, memory_get_peak_usage() - $before, 'one decoded copy plus a small one, never two full copies');
+
+        [$big] = $this->pair();
+        $out   = imagecreatefromjpeg($this->storage->path($big['storage_key']));
+        $this->assertGreaterThan(150, imagecolorsforindex($out, imagecolorat($out, 128, 20))['red'], 'still upright: red on top');
+        $this->assertGreaterThan(150, imagecolorsforindex($out, imagecolorat($out, 128, 236))['blue'], 'blue at the bottom');
+    }
+
     public function testTheStoredPhotosCarryNoExif(): void
     {
         // A JPEG with an APP1 Exif segment (minimal TIFF header plus a marker string) right after SOI.

@@ -231,6 +231,19 @@ final class PasswordResetServiceTest extends DatabaseTestCase
         $this->assertNull($control->blockReason((int) $this->person->id, strtotime('2026-10-09 11:00:01')), 'but signing in again works');
     }
 
+    public function testCompletingEmailsTheOwnerANotice(): void
+    {
+        $this->service->send((int) $this->person->id, $this->admin, $this->now);
+        $this->service->complete($this->lastToken(), self::STRONG, $this->now->modify('+1 hour'));
+
+        $this->assertCount(2, $this->mailer->sent, 'the link, then the notice');
+        $notice = $this->mailer->sent[1];
+        $this->assertSame('ivo@example.com', $notice['to']);
+        $this->assertSame('Your Mentora password was reset', $notice['subject']);
+        $this->assertStringContainsString('Oct 9, 2026 at 11:00 AM', $notice['message']);
+        $this->assertStringNotContainsString(self::STRONG, $notice['message']);
+    }
+
     public function testTheLinkWorksOnce(): void
     {
         $this->service->send((int) $this->person->id, $this->admin, $this->now);

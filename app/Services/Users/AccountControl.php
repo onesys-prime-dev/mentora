@@ -36,6 +36,7 @@ class AccountControl
         db_connect()->table('users')->where('id', $userId)->update(['active' => 0]);
 
         $this->write($userId, ['deactivated_at' => $stamp, 'sessions_valid_from' => $stamp], $stamp);
+        $this->forgetRememberedBrowsers($userId);
     }
 
     /** Switches an account back on. Sessions ended earlier stay ended. */
@@ -52,6 +53,16 @@ class AccountControl
         $stamp = $this->stamp($now);
 
         $this->write($userId, ['sessions_valid_from' => $stamp], $stamp);
+        $this->forgetRememberedBrowsers($userId);
+    }
+
+    /**
+     * A remember-me sign-in starts a new session, so a remembered browser would come straight back after a
+     * sign-out; its tokens go with the sessions.
+     */
+    private function forgetRememberedBrowsers(int $userId): void
+    {
+        db_connect()->table(config('Auth')->tables['remember_tokens'])->where('user_id', $userId)->delete();
     }
 
     /** Whether the account has been switched off by an administrator. */

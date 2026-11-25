@@ -122,8 +122,8 @@ class AccountSettingsController extends BaseController
             return redirect()->to(site_url(self::PAGE) . '#password')->with('errors', [$e->field => $e->getMessage()]);
         }
 
-        // The change ended every session; this one began "after" it, so it stays (Review Focus 5).
-        session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
+        // The change ended every session; this one began "after" it, so it stays (Review Focus 5), under a new id.
+        $this->renewSession();
 
         return redirect()->to(site_url(self::PAGE))->with('message', 'Password changed');
     }
@@ -173,12 +173,17 @@ class AccountSettingsController extends BaseController
     {
         $user = auth()->user();
 
+        // Each one emails the owner, so a stolen session cannot flood their inbox.
+        if (! service('throttler')->check('sign-out-others-' . $user->id, PasswordChangeService::ATTEMPTS, PasswordChangeService::WINDOW)) {
+            return redirect()->to(site_url(self::PAGE) . '#devices')->with('error', PasswordChangeService::TOO_MANY);
+        }
+
         // The sign-out and its audit entry happen together or not at all.
         $this->inTransaction(static function () use ($user): void {
             (new AccountControl())->signOutEverywhere((int) $user->id);
             service('auditLogger')->log('profile.signed_out_others', $user, ['target_type' => 'user', 'target_id' => (int) $user->id]);
         });
-        session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
+        $this->renewSession();
 
         SecurityNotice::send(
             $user,
@@ -187,6 +192,16 @@ class AccountSettingsController extends BaseController
         );
 
         return redirect()->to(site_url(self::PAGE))->with('message', 'Signed out of all other devices');
+    }
+
+    /**
+     * After every other session was ended: this one counts as begun after it, and gets a new id (the old id may be
+     * what someone else holds). The data, its start time included, moves to the new id.
+     */
+    private function renewSession(): void
+    {
+        session()->set(AccountStateFilter::SIGNED_IN_AT, time() + 1);
+        session()->regenerate(true);
     }
 
     /**

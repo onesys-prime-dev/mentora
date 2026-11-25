@@ -14,13 +14,13 @@ declare(strict_types=1);
 namespace Config;
 
 use App\Auth\Actions\AdminEmail2FA;
+use App\Auth\SessionAuthenticator;
 use CodeIgniter\Shield\Config\Auth as ShieldAuth;
 use CodeIgniter\Shield\Authentication\Actions\ActionInterface;
 use CodeIgniter\Shield\Authentication\AuthenticatorInterface;
 use CodeIgniter\Shield\Authentication\Authenticators\AccessTokens;
 use CodeIgniter\Shield\Authentication\Authenticators\HmacSha256;
 use CodeIgniter\Shield\Authentication\Authenticators\JWT;
-use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Authentication\Passwords\CompositionValidator;
 use CodeIgniter\Shield\Authentication\Passwords\DictionaryValidator;
 use CodeIgniter\Shield\Authentication\Passwords\NothingPersonalValidator;
@@ -122,7 +122,7 @@ class Auth extends ShieldAuth
      */
     public array $authenticators = [
         'tokens'  => AccessTokens::class,
-        'session' => Session::class,
+        'session' => SessionAuthenticator::class, // Shield's, plus the session's start time on a remember-me sign-in
         'hmac'    => HmacSha256::class,
         // 'jwt'     => JWT::class,
     ];

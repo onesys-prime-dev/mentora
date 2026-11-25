@@ -121,8 +121,11 @@ final class SettingsPasswordTest extends RouteTestCase
     {
         // Browser A changes the password.
         $this->browserSignedInSince($this->ivo, time() - 3600);
+        session()->didRegenerate = false;
         $response = $this->change();
 
+        $this->assertTrue(session()->didRegenerate, 'a new session id after the change');
+        $this->assertGreaterThan(time() - 5, session(App\Filters\AccountStateFilter::SIGNED_IN_AT), 'the new session keeps its start time');
         $this->assertStringEndsWith('settings', $response->response()->getHeaderLine('Location'));
         $this->assertSame('Password changed', session('message'));
         $this->assertTrue(password_verify(self::NEW, $this->hash()));

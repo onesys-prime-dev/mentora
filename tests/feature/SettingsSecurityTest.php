@@ -154,8 +154,11 @@ final class SettingsSecurityTest extends RouteTestCase
     {
         // Browser A asks for it.
         $this->browserSignedInSince($this->ivo, time() - 3600);
+        session()->didRegenerate = false;
         $this->step('POST', 'settings/sign-out-others');
 
+        $this->assertTrue(session()->didRegenerate, 'a new session id after the sign-out');
+        $this->assertGreaterThan(time() - 5, session(AccountStateFilter::SIGNED_IN_AT), 'the new session keeps its start time');
         $this->assertSame('Signed out of all other devices', session('message'));
         $this->assertSame(200, $this->step('GET', 'settings')->response()->getStatusCode(), 'browser A stays signed in');
         $this->assertTrue(auth()->loggedIn());
@@ -171,6 +174,22 @@ final class SettingsSecurityTest extends RouteTestCase
         $this->assertStringEndsWith('login', $other->response()->getHeaderLine('Location'));
         $this->assertSame('You were signed out. Please sign in again.', session('error'));
         $this->assertFalse(auth()->loggedIn());
+    }
+
+    public function testTheSixthSignOutInFifteenMinutesIsRefusedSoAStolenSessionCannotFloodTheInbox(): void
+    {
+        $this->browserSignedInSince($this->ivo, time() - 3600);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->step('POST', 'settings/sign-out-others');
+            $this->assertSame('Signed out of all other devices', session('message'));
+        }
+
+        $this->step('POST', 'settings/sign-out-others');
+
+        $this->assertSame(App\Services\Profiles\PasswordChangeService::TOO_MANY, session('error'));
+        $this->assertSame(5, $this->audits('profile.signed_out_others'));
+        $this->assertCount(5, $this->mailer->sent);
     }
 
     public function testAReadOnlyInstitutionStillAllowsBoth(): void
