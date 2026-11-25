@@ -77,3 +77,10 @@ phpunit 10152 tests OK (scratch DB :3307); vitest 121 files / 1243 tests OK. The
 - New: PasswordChangeServiceTest, SettingsPasswordTest (all 7 roles, Review Focus 5 two-session test, throttles, read-only, CSRF), TwoFactorPreferenceTest, SettingsSecurityTest, SettingsNotificationsTest (AC8 byte-identical preferences, forged child id ignored, redirects), SecurityActivityTest, SecurityNoticeTest.
 - Retired: ParentProfileController + view, Messaging PreferenceController (GETs 301, old POSTs 303 without acting).
 - Known limits: remember-me stops working after any sign-out-everywhere (secure; Phase 8); no email notice for a reset done through a link; jump list has no current-section highlight.
+
+### Phase 6 (2026-11-25) — feat/user-profile-p6-corrections
+- phpunit (unit + 8 parts): 10524 OK. vitest 126 files / 1285 OK.
+- New: CorrectionRequestServiceTest, EmailChangeServiceTest (Review Focus 6: expired, reused, other signed-in user, newer link, taken address), ProfileCorrectionFlowTest (W4 end to end, Requests tab badge, escalations, system admin direct edit, read-only, CSRF, public email-change GET side-effect free), ProfileModerationTest, ProfileClearFieldRoutesTest; extended PeopleServiceTest, UserAdminServiceTest, SisImporterTest, CsvUploadServiceTest, SecurityActivityTest, MailOutboxTest.
+- Migration 2026-12-02-000005 widens mail_outbox.kind with email_changed and field_cleared (additive, reversible).
+- Reviews closed: approval with no profile row, system admin profile stayed minimal (C5), home department select staff-only, import notices queued, D26 notice not muted, own official details editable only via the correction flow, pending email links cancelled by direct sets.
+- NOT RUN: Playwright journey for corrections (Phase 8). Known limits: one-open-request rule enforced in code only; a request stays routed to an institution even if its other admins later leave.

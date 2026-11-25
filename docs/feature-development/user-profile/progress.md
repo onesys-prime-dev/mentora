@@ -40,8 +40,10 @@ User: merge main into `feat/user-profile` (done, 64e7f0bb), leave `feat/messages
 
 - **Phase 5 complete** 2026-11-25 on `feat/user-profile-p5-settings` (3504fdd9..8f9f4676).
 
+- **Phase 6 complete** 2026-11-25 on `feat/user-profile-p6-corrections` (ca1e2aea..2530d65d).
+
 ## Next action
-Phase 6 on `feat/user-profile-p6-corrections` (from p5).
+Phase 7 on `feat/user-profile-p7-avatars` (from p6). Carries: batch visibility once per page (C2), admin-layout avatars via forViewer (C3), popover name via data attribute, preferred name in social places (7.4).
 
 ## 2026-11-23: docs committed (a27243ac), user said "done committing" but **paused implementation**
 Session prompts written for the two follow-up tracks: `../messages-institution-wide/SESSION-PROMPT.md`, `../single-identity/SESSION-PROMPT.md`.
