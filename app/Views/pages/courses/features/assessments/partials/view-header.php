@@ -3,11 +3,6 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 ?>
 
 <!-- header -->
-    <?php
-    // The author's avatar, built for this viewer: plain when they may not see the author (FR3.4).
-    $authorId = (int) ($currentAssessment['created_by'] ?? 0);
-    $authorAvatar = $authorId > 0 ? (new \App\Services\Profiles\AvatarData())->forViewer($user, [$authorId])[$authorId] ?? null : null;
-    ?>
 <header class="flex flex-col gap-2 py-2">
     
     <span class="wrap-break-word text-2xl font-bold text-brand sm:text-3xl">
@@ -63,13 +58,14 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
     </div>
 
     <div class="flex items-center gap-2">
-        <?php if ($authorAvatar !== null): ?>
+        <?php // Built for this viewer by AssessmentService; no author, no byline. ?>
+        <?php if (! empty($authorAvatar)): ?>
             <?= view('components/avatar', $authorAvatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
-        <?php endif; ?>
 
-        <span class="capitalize text-sm text-[#646464]">
-            <?= $authorAvatar !== null ? esc($authorAvatar['person']['name']) : 'Jalen Brunson' ?>  •  June 22, 2026  •  7:30AM 
-        </span>
+            <span class="text-sm text-[#646464]" data-byline>
+                <?= esc($authorAvatar['person']['name']) ?><?= ! empty($currentAssessment['created_at']) ? ' • ' . esc(date('F j, Y • g:i A', strtotime($currentAssessment['created_at']))) : '' ?>
+            </span>
+        <?php endif; ?>
     </div>
 
 </header>

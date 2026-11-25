@@ -234,10 +234,10 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                                     <?= view('components/avatar', $avatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
                                 <?php endif; ?>
                                 <div>
-                                <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url('dean/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? 'course'))) ?>">
-                                    <?= esc($student['name']) ?>
-                                </a>
-                                <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
+                                    <a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="<?= esc(site_url('dean/courses/' . $student['offering_id'] . '/' . ($student['slug'] ?? 'course'))) ?>">
+                                        <?= esc($student['name']) ?>
+                                    </a>
+                                    <span class="text-[#646464]"> · <?= esc((string) $student['course_code']) ?> <?= esc((string) $student['section_code']) ?></span>
                                 </div>
                             </div>
                             <div class="flex items-center gap-3">
@@ -279,7 +279,9 @@ $exportLinks = '<div class="flex flex-wrap items-center gap-2">'
                         'id'    => $entry['id'] ?? null,
                         'label' => $entry['description'] . ', ' . ($entry['actor'] ?? '—') . ', ' . $entry['created_at'],
                         'cells' => [
-                            'who'    => $entry['actor'] ?? '—',
+                            'who'    => ['html' => (isset($auditAvatars[(int) ($entry['actor_id'] ?? 0)])
+                                ? '<span class="mr-2 inline-flex align-middle">' . view('components/avatar', $auditAvatars[(int) $entry['actor_id']] + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) . '</span>'
+                                : '') . esc((string) ($entry['actor'] ?? '—'))],
                             // The hook sits in a cell the row sheet never copies, so each entry is counted once. The hidden
                             // words name the ⋯ button "Details for <what>, <who>, <when>" (data-table names it after this cell).
                             'what'   => ['html' => '<span data-audit-entry title="' . esc((string) $entry['description'], 'attr') . '">' . esc((string) $entry['description']) . '</span>'

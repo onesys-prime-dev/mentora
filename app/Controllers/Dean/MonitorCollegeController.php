@@ -83,6 +83,7 @@ class MonitorCollegeController extends BaseController
             'atRiskAvatars'  => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($overview['atRisk'], 'student_id'))),
             'instructorActivity' => $instructors,
             'audit'          => $audit,
+            'auditAvatars'   => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_filter(array_map('intval', array_column($audit['rows'] ?? [], 'actor_id'))))),
             'auditPage'      => $auditPage,
             'auditPages'     => max(1, (int) ceil($audit['total'] / self::AUDIT_PER_PAGE)),
             'previousPage'   => 'dashboard',

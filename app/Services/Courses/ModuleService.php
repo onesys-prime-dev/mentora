@@ -636,6 +636,9 @@ class ModuleService
 
             'currentItem' => $currentItem,
 
+            // The course's first-assigned instructor, for the item header's byline (null without one).
+            'instructorAvatar' => $this->instructorAvatar($user, (int) ($module['offering_id'] ?? 0)),
+
             'previousItem' => $navigation['previous'],
 
             'nextItem' => $navigation['next'],
@@ -673,6 +676,13 @@ class ModuleService
                 : null,
 
         ];
+    }
+
+    private function instructorAvatar(User $user, int $offeringId): ?array
+    {
+        $id = (int) (db_connect()->table('instructor_assignments')->select('instructor_user_id')->where('offering_id', $offeringId)->orderBy('id')->get(1)->getRow('instructor_user_id') ?? 0);
+
+        return $id > 0 ? (new \App\Services\Profiles\AvatarData())->forViewer($user, [$id])[$id] ?? null : null;
     }
 
     private function hydrateLearningItem(array $item): array

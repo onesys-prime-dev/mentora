@@ -112,6 +112,14 @@ class AssessmentService
         ];
     }
 
+    /** The avatar of the assessment's author for this viewer (plain when they may not open it); null without an author. */
+    private function authorAvatar(User $user, array $assessment): ?array
+    {
+        $id = (int) ($assessment['created_by'] ?? 0);
+
+        return $id > 0 ? (new \App\Services\Profiles\AvatarData())->forViewer($user, [$id])[$id] ?? null : null;
+    }
+
     public function viewAssessment(
         User $user,
         int $assessmentId
@@ -178,6 +186,7 @@ class AssessmentService
                 [
                     'user' => $user,
                     'currentAssessment' => $data['assessment'],
+                    'authorAvatar' => $this->authorAvatar($user, $data['assessment']),
                     'currentSettings' => ($data['settings'] ?? []) + ['assignee_count' => count($this->assigneeIds($assessmentId))],
                     'currentUnit' => $data['currentUnit'],
                     'previousAssessment' => $data['previousAssessment'],
@@ -228,6 +237,7 @@ class AssessmentService
                 [
                     'user' => $user,
                     'currentAssessment' => $data['assessment'],
+                    'authorAvatar' => $this->authorAvatar($user, $data['assessment']),
                     'currentSettings' => ($data['settings'] ?? []) + ['assignee_count' => count($this->assigneeIds($assessmentId))],
                     'currentUnit' => $data['currentUnit'],
                     'previousAssessment' => $data['previousAssessment'],

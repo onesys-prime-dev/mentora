@@ -228,6 +228,23 @@ final class MonitorCollegePageTest extends RouteTestCase
         $this->assertSame(1, substr_count($body, 'data-audit-entry'));
     }
 
+    public function testTheAuditLogShowsTheActorsAvatarOpenOnlyWhereTheDeanMaySee(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->chairAction('maria@dept.example', $it, 'PATCH', '2026-09-02 09:00:00');
+        $this->chairAction('lone@dept.example', $it, 'PATCH', '2026-09-03 09:00:00');
+
+        $actors = array_map('intval', array_column(db_connect()->table('audit_logs')->select('actor_user_id')->where('action', 'course.chairperson_action')->orderBy('id')->get()->getResultArray(), 'actor_user_id'));
+        [$seen, $lone] = $actors;
+        db_connect()->table('institution_users')->where('user_id', $lone)->delete();
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $seen . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $lone . '"', $body);
+        $this->assertStringContainsString('lone@dept.example', html_entity_decode($body), 'the name stays');
+    }
+
     public function testTheAuditLogPagesAndKeepsTheFilters(): void
     {
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101');
