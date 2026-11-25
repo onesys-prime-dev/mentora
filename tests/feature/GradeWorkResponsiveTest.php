@@ -178,6 +178,51 @@ final class GradeWorkResponsiveTest extends RouteTestCase
         $this->assertContains('sm:text-sm', $this->classes($feedback));
     }
 
+    public function testStudentsGetAvatarsAndOnlyThoseTheInstructorMaySeeOpenACard(): void
+    {
+        // Enrolled but in no institution: the instructor may not open this student's card.
+        $outsider = CourseFactory::user('student');
+        db_connect()->table('user_profiles')->insert(['user_id' => $outsider->id, 'first_name' => 'Out', 'last_name' => 'Sider']);
+        CourseFactory::enroll($this->offering, $outsider);
+
+        $xpath = $this->page($this->assignment());
+
+        $this->assertGreaterThan(0, $xpath->query('//button[@data-person-avatar="' . $this->student->id . '"]')->length);
+        $this->assertSame(0, $xpath->query('//*[@data-person-avatar="' . $outsider->id . '"]')->length);
+        $this->assertStringContainsString('Out Sider', $xpath->document->textContent);
+        $this->assertSame(0, $xpath->query('//img[contains(@src, "placeholder/profile.png")]')->length);
+    }
+
+    public function testTheAssessmentAndItemHeadersShowTheAuthorAndInstructorAsAvatars(): void
+    {
+        $outsider = CourseFactory::user('instructor');
+        db_connect()->table('user_profiles')->insert(['user_id' => $outsider->id, 'first_name' => 'Out', 'last_name' => 'Sider']);
+        $this->loggedInAs($this->student);
+
+        $assessment = static fn (int $author): string => view('pages/courses/features/assessments/partials/view-header', [
+            'user'              => auth()->user(),
+            'currentAssessment' => ['title' => 'T', 'assessment_type' => 'assignment', 'status' => 'published', 'learning_completion' => null, 'created_by' => $author],
+            'currentUnit'       => ['title' => 'U'],
+        ], ['saveData' => false]);
+
+        $seen = $assessment((int) $this->teacher->id);
+        $this->assertStringContainsString('data-person-avatar="' . $this->teacher->id . '"', $seen);
+        $this->assertStringNotContainsString('placeholder/profile.png', $seen);
+
+        $hidden = $assessment((int) $outsider->id);
+        $this->assertStringNotContainsString('data-person-avatar', $hidden);
+        $this->assertStringContainsString('data-avatar', $hidden);
+
+        $item = view('pages/courses/features/modules/partials/learning-item-header', [
+            'user'        => auth()->user(),
+            'module'      => ['offering_id' => $this->offering, 'status' => 'published'],
+            'currentUnit' => ['title' => 'U', 'status' => 'published'],
+            'currentItem' => ['title' => 'I', 'item_type' => 'lesson', 'status' => 'published'],
+        ], ['saveData' => false]);
+        $this->assertStringContainsString('data-person-avatar="' . $this->teacher->id . '"', $item);
+        $this->assertStringNotContainsString('placeholder/profile.png', $item);
+    }
+
     public function testAStudentWithoutASubmissionGetsTheEmptyStateAndADisabledSave(): void
     {
         $xpath = $this->page($this->assignment());

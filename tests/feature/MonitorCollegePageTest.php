@@ -65,6 +65,43 @@ final class MonitorCollegePageTest extends RouteTestCase
         }
     }
 
+    public function testAtRiskStudentsGetAvatarsFromOneLookupAndNoPlaceholder(): void
+    {
+        $it    = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $count = function (): int {
+            $queries = 0;
+            $l       = static function () use (&$queries): void {
+                $queries++;
+            };
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $this->page();
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return $queries;
+        };
+
+        // The first student belongs to no institution: the dean may not open their card.
+        $this->enrolled($it, 1);
+        $few = $count();
+        $this->enrolled($it, 6);
+        $ids = array_map('intval', array_column(db_connect()->table('enrollments')->select('student_user_id')->where('offering_id', $it)->orderBy('id')->get()->getResultArray(), 'student_user_id'));
+        $hidden = array_shift($ids);
+        foreach ($ids as $id) {
+            db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $id]);
+        }
+        $many = $count();
+        $body = $this->page();
+
+        $this->assertSame(7, substr_count($body, 'data-follow-up-link'));
+        foreach ($ids as $id) {
+            $this->assertStringContainsString('data-person-avatar="' . $id . '"', $body);
+        }
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden . '"', $body);
+        $this->assertStringContainsString('Dent' . $hidden, $body, 'the hidden student keeps the name the page prints');
+        $this->assertStringNotContainsString('placeholder/profile.png', $body);
+        $this->assertLessThanOrEqual($few + 2, $many, 'avatars are fetched once for the page, not per row');
+    }
+
     public function testTheDeanSeesTheCollegesTotalsComparisonAndAtRiskStudents(): void
     {
         $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');

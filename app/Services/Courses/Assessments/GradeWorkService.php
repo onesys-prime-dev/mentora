@@ -224,6 +224,7 @@ class GradeWorkService
                     'currentAssessment' => $assessment,
                     'currentRubric' => $currentRubric,
                     'students' => $students,
+                    'studentAvatars' => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($students, 'student_id'))),
                     'selectedStudentId' => $selectedStudentId,
                     'selectedStudent' => $selectedStudent,
                     'submission' => $submission,

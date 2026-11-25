@@ -266,13 +266,23 @@ final class AnnouncementRoutesTest extends RouteTestCase
             $this->assertTrue($interactive($html, $this->instructor), 'the author');
             $this->assertTrue($interactive($html, $this->student), 'their own reply');
             $this->assertFalse($interactive($html, $leaver));
-            $this->assertSame(3, substr_count($html, 'data-avatar'));
+            // Author, the leaver's reply, the viewer's reply and the viewer's two reply-row avatars.
+            $this->assertSame(5, substr_count($html, 'data-avatar'));
             $this->assertStringNotContainsString('Hiddenname', $html, 'a preferred name the viewer may not see');
             $this->assertStringContainsString('Shownname', $html, 'a visible author keeps their preferred name');
-            // Only the viewer's own reply composer keeps the placeholder (Phase 7).
-            $this->assertSame(2, substr_count($html, 'placeholder/profile.png'));
+            $this->assertSame(0, substr_count($html, 'placeholder/profile.png'));
         }
 
         $this->assertTrue($interactive($own, $this->student), 'the reply just posted');
+    }
+
+    public function testTheComposerShowsTheInstructorsOwnInteractiveAvatar(): void
+    {
+        $this->announce('Composer');
+        $html = $this->api($this->instructor, 'get')['html'];
+
+        $this->assertStringContainsString('data-announcement-composer', $html);
+        $this->assertStringContainsString('data-person-avatar="' . $this->instructor->id . '"', $html);
+        $this->assertStringNotContainsString('placeholder/profile.png', $html);
     }
 }

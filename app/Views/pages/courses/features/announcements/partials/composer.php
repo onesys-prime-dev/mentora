@@ -1,13 +1,16 @@
 <?php
 $profile = current_user_profile($user);
 $fullName = trim(($profile['first_name'] ?? '') . ' ' . ($profile['last_name'] ?? ''));
+// Their own avatar: opens their own card.
+$me = (int) $user->id;
+$meAvatar = (new \App\Services\Profiles\AvatarData())->forMany([$me])[$me] ?? ['id' => $me, 'name' => $fullName];
 ?>
 
 <div class="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm" data-announcement-composer data-mode="create" data-announcement-id="">
 
     <div class="flex items-center justify-between px-5 py-4">
         <div class="flex items-center gap-3">
-            <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-9 w-9 rounded-full" alt="">
+            <?= view('components/avatar', ['person' => $meAvatar, 'size' => 'sm', 'interactive' => true], ['saveData' => false]) ?>
             <span class="font-semibold text-[#1A1C1E]"><?= esc($fullName) ?></span>
         </div>
 

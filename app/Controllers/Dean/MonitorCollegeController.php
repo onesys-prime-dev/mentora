@@ -80,6 +80,7 @@ class MonitorCollegeController extends BaseController
             'groups'         => $overview['groups'],
             'gradeDistribution' => $overview['gradeDistribution'],
             'atRisk'         => $overview['atRisk'],
+            'atRiskAvatars'  => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($overview['atRisk'], 'student_id'))),
             'instructorActivity' => $instructors,
             'audit'          => $audit,
             'auditPage'      => $auditPage,

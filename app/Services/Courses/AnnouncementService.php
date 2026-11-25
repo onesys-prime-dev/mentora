@@ -224,6 +224,7 @@ class AnnouncementService
         foreach ($repliesByAnnouncement as $replies) {
             array_push($authorIds, ...array_column($replies, 'author_id'));
         }
+        $authorIds[] = (int) $user->id; // the reply row's own avatar
         $avatars = (new AvatarData())->forViewer($user, array_map('intval', $authorIds));
 
         foreach ($announcements as &$announcement) {
@@ -232,6 +233,7 @@ class AnnouncementService
             $isOwner = (int) $announcement['author_id'] === (int) $user->id;
 
             $announcement['author_avatar'] = $avatars[(int) $announcement['author_id']] ?? null;
+            $announcement['viewer_avatar'] = $avatars[(int) $user->id] ?? null;
             $announcement['replies'] = array_map(
                 fn (array $reply) => $reply + ['author_avatar' => $avatars[(int) $reply['author_id']] ?? null],
                 $repliesByAnnouncement[$id] ?? []

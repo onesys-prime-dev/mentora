@@ -226,9 +226,7 @@ $attemptTabs ??= [];
                         data-student-name="<?= esc($student['student_name']) ?>"
                         class="flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors <?= $isActive ? 'border-brand bg-brand/5' : 'border-gray-200 bg-white hover:border-brand/40' ?>">
 
-                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-xs font-bold text-brand">
-                            <?= esc(mb_substr($initials, 0, 2)) ?>
-                        </div>
+                        <?= view('components/avatar', ($studentAvatars[(int) $student['student_id']] ?? ['person' => ['id' => (int) $student['student_id'], 'name' => (string) $student['student_name']], 'interactive' => false]) + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
 
                         <div class="flex min-w-0 flex-1 flex-col">
 
@@ -306,6 +304,8 @@ $attemptTabs ??= [];
                         <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-gray-100 pb-3">
 
                             <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+
+                                <?= view('components/avatar', ($studentAvatars[(int) $selectedStudent['student_id']] ?? ['person' => ['id' => (int) $selectedStudent['student_id'], 'name' => (string) $selectedStudent['student_name']], 'interactive' => false]) + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
 
                                 <span class="min-w-0 wrap-anywhere font-bold text-[#1A1C1E]">
                                     <?= esc($selectedStudent['student_name']) ?>'s Work

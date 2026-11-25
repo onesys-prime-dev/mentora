@@ -741,9 +741,12 @@ class DashboardService
         // Who counts as at risk is decided by RosterRiskService, shared with
         // the course Overview; this only shapes it for the widget.
         $students = $this->rosterRiskService->atRisk(array_keys($labels));
+        // One lookup for the whole list; the rows are links, so the avatar is a plain, gated picture.
+        $avatars = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($students, 'student_id')));
 
         return [
             'students' => array_map(fn (array $student) => [
+                'avatar'      => $avatars[(int) $student['student_id']] ?? null,
                 'name'        => $student['name'],
                 'student_id'  => $student['student_id'],
                 'offering_id' => $student['offering_id'],

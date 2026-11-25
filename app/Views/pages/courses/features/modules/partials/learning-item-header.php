@@ -3,6 +3,11 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 ?>
 
 <!-- header -->
+    <?php
+    // The course instructor's avatar, built for this viewer: plain when they may not see them (FR3.4).
+    $authorId = (int) (db_connect()->table('instructor_assignments')->select('instructor_user_id')->where('offering_id', (int) ($module['offering_id'] ?? 0))->orderBy('id')->get(1)->getRow('instructor_user_id') ?? 0);
+    $authorAvatar = $authorId > 0 ? (new \App\Services\Profiles\AvatarData())->forViewer($user, [$authorId])[$authorId] ?? null : null;
+    ?>
 <header class="flex flex-col gap-2 py-2">
     
     <span class="break-words text-fluid-h2 lg:text-3xl font-bold text-brand" data-item-header-title>
@@ -67,14 +72,12 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
-        <div class="h-8 w-8 flex justify-center items-center rounded-4xl">
-            <img
-                class="h-full w-auto" 
-                src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
-        </div>
+        <?php if ($authorAvatar !== null): ?>
+            <?= view('components/avatar', $authorAvatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
+        <?php endif; ?>
 
         <span class="capitalize text-sm text-[#646464]">
-            Jalen Brunson  •  June 22, 2026  •  7:30AM 
+            <?= $authorAvatar !== null ? esc($authorAvatar['person']['name']) : 'Jalen Brunson' ?>  •  June 22, 2026  •  7:30AM 
         </span>
     </div>
 

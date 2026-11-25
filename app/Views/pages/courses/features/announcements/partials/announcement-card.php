@@ -203,15 +203,16 @@ $reactionTotal = array_sum($announcement['reaction_counts']);
     <?php endif; ?>
 
     <!-- reply in thread -->
+    <?php $viewerAvatar = $announcement['viewer_avatar'] ?? ['person' => ['id' => (int) ($userId ?? 0), 'name' => ''], 'interactive' => false, 'decorative' => true]; ?>
     <div class="border-t border-gray-100 px-4 py-4 sm:px-6" data-reply-row>
 
         <button type="button" data-reply-trigger class="flex w-full items-center gap-3 text-left pointer-coarse:min-h-11">
-            <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
+            <?= view('components/avatar', $viewerAvatar + ['size' => 'sm'], ['saveData' => false]) ?>
             <span class="flex-1 rounded-2xl border border-gray-200 px-4 py-2 text-sm text-[#767676] transition hover:border-brand/40">Reply in thread</span>
         </button>
 
         <div class="hidden items-center gap-3" data-reply-form>
-            <img src="<?= base_url('assets/images/placeholder/profile.png') ?>" class="h-8 w-8 shrink-0 rounded-full" alt="">
+            <?= view('components/avatar', $viewerAvatar + ['size' => 'sm'], ['saveData' => false]) ?>
             <div class="flex flex-1 items-center gap-2 rounded-2xl border border-gray-200 px-4 py-2 focus-within:border-brand/50">
                 <textarea
                     rows="1"

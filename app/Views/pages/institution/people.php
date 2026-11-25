@@ -130,7 +130,7 @@ foreach ($peopleRows as $p) {
     $rows[] = [
         'id'      => $p['id'],
         'label'   => $p['name'],
-        'person'  => $peopleAvatars[(int) $p['id']] ?? null,
+        'person'  => ($peopleAvatars ?? [])[(int) $p['id']] ?? null,
         'cells'   => [
             'name'        => ['html' => '<span class="font-medium">' . esc($p['name']) . '</span>' . ($p['self'] ? ' <span class="text-xs text-[#646464]">(you)</span>' : '') . $badges . '<span class="block text-xs text-[#646464]">' . esc($p['email']) . '</span>'],
             'roles'       => implode(', ', $roleNames),

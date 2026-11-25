@@ -393,6 +393,7 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         $intro = html_entity_decode((string) json_decode((string) $roster->getJSON(), true)['html']);
         $this->assertStringContainsString('Read-only. Quiz and assignment scores come from Grade Work', $intro);
         $this->assertStringNotContainsString('Click a final grade', $intro);
+        $this->assertStringNotContainsString('data-person-avatar', $intro, 'gradebook rows carry no avatars');
 
         $this->assertSame('Edit as chairperson', $this->text($x->query('//button[@data-edit-as-chair]')->item(0)));
         $done = $x->query('//button[@data-edit-done]')->item(0);

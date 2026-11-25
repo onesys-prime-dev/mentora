@@ -49,7 +49,7 @@ foreach ($userRows as $row) {
     $rows[] = [
         'id'    => (string) $row['id'],
         'label' => $shown,
-        'person' => $userAvatars[(int) $row['id']] ?? null,
+        'person' => ($userAvatars ?? [])[(int) $row['id']] ?? null,
         'cells' => [
             'name'        => ['html' => $nameCell],
             'email'       => (string) ($row['email'] ?? '—'),

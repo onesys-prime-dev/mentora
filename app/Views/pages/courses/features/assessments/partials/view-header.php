@@ -3,6 +3,11 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
 ?>
 
 <!-- header -->
+    <?php
+    // The author's avatar, built for this viewer: plain when they may not see the author (FR3.4).
+    $authorId = (int) ($currentAssessment['created_by'] ?? 0);
+    $authorAvatar = $authorId > 0 ? (new \App\Services\Profiles\AvatarData())->forViewer($user, [$authorId])[$authorId] ?? null : null;
+    ?>
 <header class="flex flex-col gap-2 py-2">
     
     <span class="wrap-break-word text-2xl font-bold text-brand sm:text-3xl">
@@ -58,14 +63,12 @@ $userRole = \App\Services\Courses\CourseViewer::seesInstructorView($user) ? 'ins
     </div>
 
     <div class="flex items-center gap-2">
-        <div class="h-8 w-8 flex justify-center items-center rounded-4xl">
-            <img
-                class="h-full w-auto" 
-                src="<?= base_url('assets/images/placeholder/profile.png') ?>" alt="">
-        </div>
+        <?php if ($authorAvatar !== null): ?>
+            <?= view('components/avatar', $authorAvatar + ['size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
+        <?php endif; ?>
 
         <span class="capitalize text-sm text-[#646464]">
-            Jalen Brunson  •  June 22, 2026  •  7:30AM 
+            <?= $authorAvatar !== null ? esc($authorAvatar['person']['name']) : 'Jalen Brunson' ?>  •  June 22, 2026  •  7:30AM 
         </span>
     </div>
 
