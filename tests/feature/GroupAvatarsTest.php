@@ -134,6 +134,21 @@ final class GroupAvatarsTest extends RouteTestCase
         $this->assertAvatars($json['members'], 'student_user_id', $json);
     }
 
+    public function testGroupGradingNamesTheSubmitterAsTheViewerMaySeeThem(): void
+    {
+        $group = (int) db_connect()->table('student_groups')->where('config_id', $this->config)->get()->getRowArray()['id'];
+        $url   = "instructor/api/courses/{$this->offering}/assessments/{$this->assignment}/group-grading/{$group}";
+
+        \Tests\Support\AssessmentFactory::attempt($this->assignment, $this->mate, 'Submitted', 0.0, ['group_id' => $group, 'submitted_by_user_id' => $this->mate->id]);
+        $this->assertSame('Jun Dela Cruz', $this->getJson($this->teacher, $url)['submission']['submittedBy']['name']);
+
+        db_connect()->table('assessment_submissions')->where('assessment_id', $this->assignment)->delete();
+        \Tests\Support\AssessmentFactory::attempt($this->assignment, $this->hidden, 'Submitted', 0.0, ['group_id' => $group, 'submitted_by_user_id' => $this->hidden->id]);
+        $json = $this->getJson($this->teacher, $url);
+        $this->assertSame('Hal Hidden', $json['submission']['submittedBy']['name']);
+        $this->assertStringNotContainsString('Zedekiah', (string) json_encode($json));
+    }
+
     public function testGroupGradingGivesUngroupedStudentsTheirAvatarAndName(): void
     {
         db_connect()->table('student_group_members')->where('config_id', $this->config)->whereIn('student_user_id', [$this->mate->id, $this->hidden->id])->delete();

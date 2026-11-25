@@ -128,6 +128,42 @@ final class MessagesAvatarsTest extends RouteTestCase
         $this->assertSame('Jun Dela Cruz', $this->getJson($this->student, "conversations/{$this->conversation}/messages")['messages'][0]['sender_name']);
     }
 
+    /** The instructor's pinned message and the student's reply quoting it. */
+    private function pinAndQuote(): void
+    {
+        $this->say($this->conversation, (int) $this->instructor->id);
+        $original = (int) db_connect()->insertID();
+        db_connect()->table('messages')->where('id', $original)->update(['pinned_at' => date('Y-m-d H:i:s')]);
+        db_connect()->table('messages')->insert([
+            'conversation_id' => $this->conversation, 'sender_id' => $this->student->id, 'body_enc' => 'x', 'reply_to_message_id' => $original,
+            'client_uuid' => $this->uuid(), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function testQuoteAndPinNamesMatchTheSenderName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->pinAndQuote();
+
+        $page = $this->getJson($this->student, "conversations/{$this->conversation}/messages");
+
+        $this->assertSame('Jun Dela Cruz', $page['pinned'][0]['sender_name']);
+        $this->assertSame('Jun Dela Cruz', $page['messages'][1]['reply']['sender_name']);
+    }
+
+    public function testQuoteAndPinKeepTheLegalNameOfAHiddenPerson(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->pinAndQuote();
+        $this->hideInstructor();
+
+        $page = $this->getJson($this->student, "conversations/{$this->conversation}/messages");
+
+        $this->assertSame('Juan Dela Cruz', $page['pinned'][0]['sender_name']);
+        $this->assertSame('Juan Dela Cruz', $page['messages'][1]['reply']['sender_name']);
+        $this->assertStringNotContainsString('Jun Dela Cruz', (string) json_encode($page));
+    }
+
     public function testEachSendersAvatarIsOnTheirMessagesAndMineHaveNone(): void
     {
         $this->say($this->conversation, (int) $this->instructor->id);
