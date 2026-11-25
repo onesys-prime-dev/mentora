@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Services\Messaging\RecipientSearch;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
@@ -142,5 +144,53 @@ final class RecipientSearchTest extends DatabaseTestCase
         $this->assertCount(2, $found);
         $this->assertSame(['Ann Kid', 'Ben Kid'], array_column($found, 'subject_name'));
         $this->assertNotNull($found[0]['subject_student_id']);
+    }
+
+    public function testAVisiblePersonShowsTheirPreferredNameAndAnInteractiveAvatar(): void
+    {
+        [$student, $instructor] = $this->pair();
+        db_connect()->table('user_profiles')->where('user_id', $instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+
+        $found = $this->search->search($student, 'Dela');
+
+        $this->assertSame('Jun Dela Cruz', $found[0]['name']);
+        $this->assertSame((int) $instructor->id, $found[0]['avatar']['id']);
+        $this->assertSame('Jun Dela Cruz', $found[0]['avatar']['name']);
+        $this->assertTrue($found[0]['avatar']['interactive']);
+        $this->assertSame(['id', 'name', 'role', 'subject_student_id', 'subject_name', 'avatar'], array_keys($found[0]));
+    }
+
+    public function testAPreferredNameIsNeverSearchable(): void
+    {
+        [$student, $instructor] = $this->pair();
+        db_connect()->table('user_profiles')->where('user_id', $instructor->id)->update(['preferred_first_name' => 'Zedekiah']);
+
+        $this->assertSame([], $this->search->search($student, 'Zedekiah'), 'only the legal name is matched, so a hidden preferred name cannot be found');
+    }
+
+    public function testNamesAreLookedUpOnceWhateverTheNumberFound(): void
+    {
+        [$student, , $offering] = $this->pair();
+        $lookups = static function (callable $call): int {
+            $n = 0;
+            $l = static function (Query $q) use (&$n): void {
+                $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+            };
+            Events::on('DBQuery', $l);
+            $call();
+            Events::removeListener('DBQuery', $l);
+
+            return $n;
+        };
+
+        $one = $lookups(fn () => $this->search->search($student, 'Ignat'));
+
+        for ($i = 1; $i <= 3; $i++) {
+            CourseFactory::assignInstructor($offering, $this->person('instructor', 'Iggy' . $i, 'Ignatius'));
+        }
+
+        $this->assertCount(4, $this->search->search($student, 'Ignat'));
+        $this->assertSame(1, $one);
+        $this->assertSame(1, $lookups(fn () => $this->search->search($student, 'Ignat')));
     }
 }

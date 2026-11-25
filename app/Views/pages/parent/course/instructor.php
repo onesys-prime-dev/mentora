@@ -42,9 +42,12 @@
         <div class="flex flex-col gap-4">
             <?php foreach ($feed['posts'] as $post): ?>
                 <article class="rounded-2xl border border-gray-200 bg-white px-4 py-4 sm:px-5 shadow-sm" data-instructor-post="<?= (int) $post['id'] ?>">
-                    <p class="text-xs text-[#767676]">
-                        <span class="font-semibold text-[#3D3D3D]"><?= esc($post['sender_name']) ?></span>
-                        · <?= esc(date('M j, Y g:i A', strtotime((string) $post['created_at']))) ?>
+                    <p class="flex items-center gap-2 text-xs text-[#767676]">
+                        <?php if (($post['avatar'] ?? null) !== null): ?>
+                            <?= view('components/avatar', ['person' => $post['avatar']['person'], 'size' => 'xs', 'interactive' => $post['avatar']['interactive'], 'decorative' => true], ['saveData' => false]) ?>
+                        <?php endif; ?>
+                        <span><span class="font-semibold text-[#3D3D3D]"><?= esc($post['sender_name']) ?></span>
+                        · <?= esc(date('M j, Y g:i A', strtotime((string) $post['created_at']))) ?></span>
                     </p>
                     <p class="mt-2 break-words text-sm leading-relaxed text-[#3D3D3D]"><?= nl2br(esc($post['body']), false) ?></p>
                 </article>

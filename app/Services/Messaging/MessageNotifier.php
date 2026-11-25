@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Notifications\NotificationService;
+use App\Services\Profiles\AvatarData;
+use CodeIgniter\Shield\Models\UserModel;
 use DateInterval;
 use DateTimeImmutable;
 
@@ -120,7 +122,7 @@ class MessageNotifier
     private function tell(int $userId, array $chat, int $senderId, ?string $chatName, int $maxId, DateTimeImmutable $now): void
     {
         $conversationId = (int) $chat['id'];
-        $sender         = ConversationPresenter::names([$senderId])[$senderId] ?? 'Someone';
+        $sender         = $this->nameFor($userId, $senderId);
         $body           = $chat['type'] === 'direct' || $chatName === null ? "{$sender} sent you a message." : "{$sender} sent you a message in {$chatName}.";
         $emails         = $this->prefs->get($userId)['email_alerts'] && ! $this->emailedRecently($userId, $conversationId, $now);
 
@@ -151,9 +153,20 @@ class MessageNotifier
 
         $key = "react:{$messageId}";
 
-        $name = ConversationPresenter::names([$reactorId])[$reactorId] ?? 'Someone';
+        $name = $this->nameFor($authorId, $reactorId);
 
         $this->notes->send($authorId, 'message', 'New reaction', "{$name} reacted to your message.", false, $key, (int) $row['institution_id'], 'messages/' . $row['conversation_id']);
+    }
+
+    /**
+     * The words are baked in when sent, so the name is the one this recipient may see (FR2): the preferred first
+     * name only when they may see the person, otherwise the legal name. One AvatarData::forViewer lookup.
+     */
+    private function nameFor(int $recipientId, int $personId): string
+    {
+        $recipient = model(UserModel::class)->findById($recipientId);
+
+        return $recipient === null ? 'Someone' : ((new AvatarData())->forViewer($recipient, [$personId])[$personId]['person']['name'] ?? 'Someone');
     }
 
     private function hasUnreadNoticeForThread(int $userId, int $conversationId): bool

@@ -811,4 +811,53 @@ describe("starting a conversation", () => {
 
     });
 
+    it("draws each person's avatar inside the choice as decoration, never a button in the button", async () => {
+
+        const avatar = { id: 4, name: "Jun Dela Cruz", initials: "JD", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
+        const api = makeApi({ recipients: vi.fn().mockResolvedValue(ok({ recipients: [{ id: 4, name: "Jun Dela Cruz", role: "instructor", subject_student_id: null, subject_name: null, avatar }] })) });
+
+        await mount(api);
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "dela";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+
+        const choice = q("[data-role=picker-results] button");
+
+        expect(choice.textContent).toContain("Jun Dela Cruz");
+        expect(choice.querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+        expect(choice.querySelector("button, [data-person-avatar]")).toBeNull();
+
+    });
+
+});
+
+describe("who reacted", () => {
+
+    it("lists each name with its avatar from the server", async () => {
+
+        const shown = { id: 5, name: "Jun Dela Cruz", initials: "JD", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
+        const hidden = { id: 6, name: "Juan Santos", initials: "JS", colour: "#B91C1C", photoUrl: null, photoUrlLg: null, interactive: false };
+        const api = makeApi({
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { reactions: [{ emoji: "👍", count: 2, mine: false }] })], has_more: false })),
+            reactors: vi.fn().mockResolvedValue(ok({ reactors: { "👍": ["Jun Dela Cruz", "Juan Santos"] }, avatars: { "👍": [shown, hidden] } })),
+        });
+
+        await mount(api);
+        q("#messages-app").insertAdjacentHTML("beforeend", "<ul data-role=\"who-list\"></ul>");
+        await openFirst();
+        q("[data-reactions] button").dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+        await flush();
+
+        const items = all("[data-role=who-list] li");
+
+        expect(items.map((li) => li.textContent)).toEqual(["👍 JDJun Dela Cruz", "👍 JSJuan Santos"]);
+        expect(items[0].querySelector("button[data-person-avatar='5']")).not.toBeNull();
+        expect(items[1].querySelector("[data-person-avatar]")).toBeNull();
+        expect(items[1].querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+
+    });
+
 });

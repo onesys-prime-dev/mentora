@@ -8,6 +8,8 @@ use App\Services\Messaging\GroupService;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
 use CodeIgniter\Config\Services;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Config\Messages;
 use Tests\Support\CourseFactory;
@@ -191,7 +193,7 @@ final class GroupServiceTest extends DatabaseTestCase
         $dean = $this->groupService()->candidates($this->dean, 'Bravo');
         $this->assertSame([(int) $this->teacherB->id], array_column($dean, 'id'));
         $this->assertSame([(int) $this->chairB->id], array_column($this->groupService()->candidates($this->dean, 'Bram'), 'id'));
-        $this->assertSame(['id', 'name', 'role'], array_keys($chair[0]));
+        $this->assertSame(['id', 'name', 'role', 'avatar'], array_keys($chair[0]));
     }
 
     public function testMembersPostAndOnlyTheCreatorModerates(): void
@@ -219,5 +221,31 @@ final class GroupServiceTest extends DatabaseTestCase
         $config->previousKeys  = '';
 
         return new MessageCipher($config);
+    }
+
+    public function testACandidateShowsTheirPreferredNameAndAvatarButIsFoundOnlyByTheLegalName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->teacherA1->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+
+        $found = $this->groupService()->candidates($this->chairA, 'Dela');
+
+        $this->assertSame('Jun Dela Cruz', $found[0]['name']);
+        $this->assertSame((int) $this->teacherA1->id, $found[0]['avatar']['id']);
+        $this->assertTrue($found[0]['avatar']['interactive']);
+        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Jun'), 'the preferred name is not searchable');
+    }
+
+    public function testCandidatesAreLookedUpOnce(): void
+    {
+        $n = 0;
+        $l = static function (Query $q) use (&$n): void {
+            $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        Events::on('DBQuery', $l);
+        $found = $this->groupService()->candidates($this->chairA, 'Alpha');
+        Events::removeListener('DBQuery', $l);
+
+        $this->assertCount(2, $found);
+        $this->assertSame(1, $n);
     }
 }

@@ -87,7 +87,9 @@ final class MessagesActionRoutesTest extends RouteTestCase
         $this->assertSame(['reactions' => [['emoji' => '👍', 'count' => 1, 'mine' => true]]], json_decode($response->getBody(), true));
 
         $list = $this->api('GET', "conversations/{$this->conversation}/messages/{$this->message}/reactors")->response();
-        $this->assertSame(['reactors' => ['👍' => ['Stu Dent']]], json_decode($list->getBody(), true));
+        $json = json_decode($list->getBody(), true);
+        $this->assertSame(['👍' => ['Stu Dent']], $json['reactors']);
+        $this->assertSame((int) $this->student->id, $json['avatars']['👍'][0]['id'], 'each name has its avatar, in the same order');
     }
 
     public function testAnEmojiOutsideThePaletteIsRefused(): void

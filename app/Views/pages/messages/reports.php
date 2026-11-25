@@ -44,9 +44,15 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
             <ul class="flex flex-col divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white shadow-sm">
                 <?php foreach ($reports as $row): ?>
                     <li>
-                        <a href="<?= esc(site_url('messages/reports/' . (int) $row['id'])) ?>" class="flex flex-col gap-0.5 px-5 py-3 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50">
-                            <span class="text-sm font-semibold text-gray-900"><?= esc($reasons[$row['reason']] ?? $row['reason']) ?> · <?= esc($row['conversation_name']) ?></span>
-                            <span class="text-xs text-[#646464]">Reported by <?= esc($row['reporter_name']) ?> · <?= esc(date('M j, Y g:i A', strtotime((string) $row['created_at']))) ?></span>
+                        <a href="<?= esc(site_url('messages/reports/' . (int) $row['id'])) ?>" class="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/50">
+                            <?php if (($row['reporter_avatar'] ?? null) !== null): ?>
+                                <?php // Inside the row link, so never a button; the legal name beside it is the text. ?>
+                                <?= view('components/avatar', ['person' => $row['reporter_avatar']['person'], 'size' => 'sm', 'decorative' => true], ['saveData' => false]) ?>
+                            <?php endif; ?>
+                            <span class="flex min-w-0 flex-col gap-0.5">
+                                <span class="text-sm font-semibold text-gray-900"><?= esc($reasons[$row['reason']] ?? $row['reason']) ?> · <?= esc($row['conversation_name']) ?></span>
+                                <span class="text-xs text-[#646464]">Reported by <?= esc($row['reporter_name']) ?> · <?= esc(date('M j, Y g:i A', strtotime((string) $row['created_at']))) ?></span>
+                            </span>
                         </a>
                     </li>
                 <?php endforeach; ?>
@@ -72,9 +78,12 @@ $tabs    = ['open' => 'Open', 'dismissed' => 'Dismissed', 'actioned' => 'Actione
                 <?php foreach ($report['snapshot'] as $line): ?>
                     <?php $reported = (int) $line['id'] === (int) $report['reported_id']; ?>
                     <article class="rounded-xl border px-4 py-2 <?= $reported ? 'border-brand bg-brand-tint' : 'border-gray-200 bg-white' ?>" <?= $reported ? 'aria-label="The reported message"' : '' ?>>
-                        <p class="text-xs text-[#767676]">
-                            <span class="font-semibold text-[#3D3D3D]"><?= esc($line['sender_name']) ?></span>
-                            · <?= esc(date('M j, Y g:i A', strtotime((string) $line['created_at']))) ?><?= $reported ? ' · reported' : '' ?>
+                        <p class="flex items-center gap-2 text-xs text-[#767676]">
+                            <?php if (($line['avatar'] ?? null) !== null): ?>
+                                <?= view('components/avatar', ['person' => $line['avatar']['person'], 'size' => 'xs', 'interactive' => $line['avatar']['interactive'], 'decorative' => true], ['saveData' => false]) ?>
+                            <?php endif; ?>
+                            <span><span class="font-semibold text-[#3D3D3D]"><?= esc($line['sender_name']) ?></span>
+                            · <?= esc(date('M j, Y g:i A', strtotime((string) $line['created_at']))) ?><?= $reported ? ' · reported' : '' ?></span>
                         </p>
                         <p class="mt-1 break-words text-sm text-[#1A1C1E]"><?= nl2br(esc($line['body']), false) ?></p>
                     </article>

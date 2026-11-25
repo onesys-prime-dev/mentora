@@ -8,6 +8,8 @@ use App\Services\Messaging\MessageActions;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
 use App\Services\Messaging\RateLimitedException;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Config\Messages;
 use Tests\Support\CourseFactory;
@@ -153,7 +155,55 @@ final class MessageActionsReactionsTest extends DatabaseTestCase
     {
         $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
 
-        $this->assertSame(['👍' => ['Stu Dent']], $this->actions()->reactors($this->instructor, $this->conversation, $this->message));
+        $this->assertSame(['👍' => ['Stu Dent']], $this->actions()->reactors($this->instructor, $this->conversation, $this->message)['reactors']);
+    }
+
+    public function testAVisibleReactorShowsTheirPreferredNameAndAvatar(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
+
+        $who = $this->actions()->reactors($this->instructor, $this->conversation, $this->message);
+
+        $this->assertSame(['👍' => ['Jun Dela Cruz']], $who['reactors']);
+        $this->assertSame((int) $this->student->id, $who['avatars']['👍'][0]['id']);
+        $this->assertTrue($who['avatars']['👍'][0]['interactive']);
+    }
+
+    public function testAHiddenReactorKeepsTheLegalNameAndAnInertAvatar(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->student->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->actions()->react($this->student, $this->conversation, $this->message, '👍');
+        // The student drops out of every institution: the instructor may no longer see their profile.
+        db_connect()->table('institution_users')->where('user_id', $this->student->id)->delete();
+
+        $who = $this->actions()->reactors($this->instructor, $this->conversation, $this->message);
+
+        $this->assertSame(['👍' => ['Juan Dela Cruz']], $who['reactors']);
+        $this->assertFalse($who['avatars']['👍'][0]['interactive']);
+        $this->assertNull($who['avatars']['👍'][0]['photoUrl']);
+        $this->assertStringNotContainsString('Jun ', (string) json_encode($who));
+    }
+
+    public function testReactorsAreLookedUpOnce(): void
+    {
+        $classmate = PeopleFactory::person('student', 'Cla', 'Ssmate', null, $this->institution);
+        CourseFactory::enroll($this->offering, $classmate);
+        $chat = (int) (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
+        $post = $this->post($chat, $this->instructor);
+        $this->actions()->react($this->student, $chat, $post, '👍');
+        $this->actions()->react($classmate, $chat, $post, '😂');
+
+        $n = 0;
+        $l = static function (Query $q) use (&$n): void {
+            $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        Events::on('DBQuery', $l);
+        $who = $this->actions()->reactors($this->instructor, $chat, $post);
+        Events::removeListener('DBQuery', $l);
+
+        $this->assertCount(2, $who['reactors']);
+        $this->assertSame(1, $n);
     }
 
     public function testRefusedWhenTheSwitchIsOff(): void

@@ -5,6 +5,9 @@ declare(strict_types=1);
 use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageService;
 use App\Services\Messaging\ParentFeedService;
+use App\Services\Parents\ParentCourseTabs;
+use CodeIgniter\Database\Query;
+use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
@@ -141,5 +144,57 @@ final class ParentFeedServiceTest extends DatabaseTestCase
 
         $this->assertSame(['three', 'Message unavailable', 'one'], $this->bodies($this->feed()));
         $this->assertCount(2, $this->feed(null, null, 2)['posts']);
+    }
+
+    public function testAVisibleInstructorShowsTheirPreferredNameAndAvatar(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->say($this->instructor, 'hello parents');
+
+        $feed = $this->feed();
+        $html = (new ParentCourseTabs())->instructor($feed, (int) $this->child->id)['html'];
+
+        $this->assertSame('Jun Dela Cruz', $feed['posts'][0]['sender_name']);
+        $this->assertSame('Jun Dela Cruz', $feed['instructors'][0]['name']);
+        $this->assertTrue($feed['posts'][0]['avatar']['interactive']);
+        $this->assertStringContainsString('Message Jun Dela Cruz', $html);
+        $this->assertStringContainsString('data-person-avatar="' . $this->instructor->id . '"', $html);
+    }
+
+    public function testAHiddenInstructorKeepsTheLegalNameAndAnInertAvatar(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->say($this->instructor, 'hello parents');
+        // The instructor drops out of every institution: the parent may no longer see their profile.
+        db_connect()->table('institution_users')->where('user_id', $this->instructor->id)->delete();
+
+        $feed = $this->feed();
+        $html = (new ParentCourseTabs())->instructor($feed, (int) $this->child->id)['html'];
+
+        $this->assertSame('Juan Dela Cruz', $feed['posts'][0]['sender_name']);
+        $this->assertFalse($feed['posts'][0]['avatar']['interactive']);
+        $this->assertNull($feed['posts'][0]['avatar']['person']['photo_url']);
+        $this->assertStringNotContainsString('Jun Dela', $html . json_encode($feed));
+        $this->assertStringNotContainsString('data-person-avatar', $html);
+    }
+
+    public function testNamesAreLookedUpOncePerFeed(): void
+    {
+        $second = PeopleFactory::person('instructor', 'Sec', 'Ond', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $second);
+        (new CourseChatSync())->syncOffering($this->offering);
+        $this->say($this->instructor, 'one');
+        $this->say($second, 'two');
+
+        $n = 0;
+        $l = static function (Query $q) use (&$n): void {
+            $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        Events::on('DBQuery', $l);
+        $feed = $this->feed();
+        Events::removeListener('DBQuery', $l);
+
+        $this->assertCount(2, $feed['posts']);
+        $this->assertSame(1, $n);
     }
 }

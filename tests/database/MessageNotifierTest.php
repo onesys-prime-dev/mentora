@@ -264,4 +264,38 @@ final class MessageNotifierTest extends DatabaseTestCase
         $this->assertSame([], $this->notices($this->child), 'not told inside the send');
         $this->assertContains($chat, $this->notifier()->pendingConversationIds());
     }
+
+    public function testTheBellAndTheEmailNameAVisibleSenderByTheirPreferredName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->parent->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->plant($this->thread, $this->parent, 'hello');
+
+        $this->notifier()->notifyConversation($this->thread);
+
+        $this->assertSame('Jun Dela Cruz sent you a message.', $this->notices($this->instructor)[0]['body']);
+        $this->assertStringContainsString('Jun Dela Cruz sent you a message.', $this->mail->sent[0]['message']);
+    }
+
+    public function testAHiddenSenderIsNamedByTheLegalNameOnly(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->parent->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $this->plant($this->thread, $this->parent, 'hello');
+        // The parent drops out of every institution: the instructor may no longer see their profile.
+        db_connect()->table('institution_users')->where('user_id', $this->parent->id)->delete();
+
+        $this->notifier()->notifyConversation($this->thread);
+
+        $this->assertSame('Juan Dela Cruz sent you a message.', $this->notices($this->instructor)[0]['body']);
+        $this->assertStringNotContainsString('Jun Dela', $this->mail->sent[0]['message']);
+    }
+
+    public function testAReactionNoticeNamesAVisibleReactorByTheirPreferredName(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->parent->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        $message = $this->plant($this->thread, $this->instructor, 'hello');
+
+        $this->notifier()->notifyReaction($message, (int) $this->parent->id);
+
+        $this->assertSame('Jun Dela Cruz reacted to your message.', $this->notices($this->instructor)[0]['body']);
+    }
 }

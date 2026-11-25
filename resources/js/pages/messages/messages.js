@@ -887,14 +887,18 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
             const name = document.createElement("span");
             const meta = document.createElement("span");
+            const words = document.createElement("span");
 
             button.type = "button";
-            button.className = "flex w-full flex-col rounded-lg px-3 py-2 text-left hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.className = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             name.className = "text-sm font-semibold text-gray-900";
             name.textContent = entry.name;
             meta.className = "text-xs text-[#646464]";
             meta.textContent = entry.subject_name ? `${ROLE_WORDS[entry.role] ?? entry.role} · about ${entry.subject_name}` : (ROLE_WORDS[entry.role] ?? entry.role);
-            button.append(name, meta);
+            words.className = "flex min-w-0 flex-col";
+            words.append(name, meta);
+            // Inside the choice button, so never a button itself: decoration beside the name.
+            button.append(...(entry.avatar ? [renderAvatar({ ...entry.avatar, interactive: false }, "sm", { decorative: true })] : []), words);
             button.addEventListener("click", () => picker.pick(entry));
             item.append(button);
 
@@ -1032,8 +1036,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const button = document.createElement("button");
 
             button.type = "button";
-            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
-            button.textContent = entry.name;
+            button.className = "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            // Inside the choice button, so never a button itself: decoration beside the name.
+            button.append(...(entry.avatar ? [renderAvatar({ ...entry.avatar, interactive: false }, "xs", { decorative: true })] : []), entry.name);
             button.title = ROLE_WORDS[entry.role] ?? entry.role;
             button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
             // The pick redraws the results and chips, so the tapped button goes: focus stays in the dialog, on the search.
@@ -1260,10 +1265,19 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         const entries = Object.entries(data.reactors ?? {}).filter(([e]) => !emoji || e === emoji);
 
-        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name) => {
+        $("[data-role=who-list]").replaceChildren(...entries.flatMap(([e, names]) => names.map((name, i) => {
             const item = document.createElement("li");
+            const avatar = data.avatars?.[e]?.[i];
 
-            item.textContent = `${e} ${name}`;
+            item.className = "flex items-center gap-2";
+            item.append(`${e} `);
+
+            // The server's avatar (AvatarData::forViewer), in the same order as the names.
+            if (avatar) {
+                item.append(renderAvatar(avatar, "xs", { decorative: true }));
+            }
+
+            item.append(name);
 
             return item;
         })));

@@ -130,7 +130,8 @@ final class MessagesGroupRoutesTest extends RouteTestCase
         $found = json_decode($this->api('GET', 'group-candidates?q=Tructor')->response()->getBody(), true)['candidates'];
 
         $this->assertSame([(int) $this->instructor->id], array_column($found, 'id'));
-        $this->assertSame(['id', 'name', 'role'], array_keys($found[0]));
+        $this->assertSame(['id', 'name', 'role', 'avatar'], array_keys($found[0]));
+        $this->assertSame(['id', 'name', 'initials', 'colour', 'photoUrl', 'photoUrlLg', 'interactive'], array_keys($found[0]['avatar']), 'the avatar carries no contact details either');
     }
 
     public function testAPostWithoutACsrfTokenIsRefused(): void

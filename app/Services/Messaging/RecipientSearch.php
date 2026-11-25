@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -12,7 +13,9 @@ use CodeIgniter\Shield\Models\UserModel;
  * sender's institution, and every candidate is put through the same policy
  * check starting a thread uses, so the list cannot offer anyone a start would
  * refuse. A parent is offered once per linked child they share with the
- * person, because each child is a separate thread.
+ * person, because each child is a separate thread. Names are shown as the
+ * sender may see each person (AvatarData::forViewer), but only the legal name
+ * is matched, so a hidden preferred name cannot be found by searching.
  */
 class RecipientSearch
 {
@@ -32,7 +35,7 @@ class RecipientSearch
     }
 
     /**
-     * @return list<array{id: int, name: string, role: string, subject_student_id: int|null, subject_name: string|null}>
+     * @return list<array{id: int, name: string, role: string, subject_student_id: int|null, subject_name: string|null, avatar: array<string, mixed>|null}>
      */
     public function search(User $sender, string $query, int $limit = 20): array
     {
@@ -87,11 +90,13 @@ class RecipientSearch
             }
         }
 
-        $found  = array_slice($found, 0, $limit);
-        $titles = ConversationPresenter::names(array_values(array_filter(array_column($found, 'subject_student_id'))));
+        $found   = array_slice($found, 0, $limit);
+        $avatars = (new AvatarData())->forViewerJson($sender, array_values(array_unique([...array_column($found, 'id'), ...array_filter(array_column($found, 'subject_student_id'))])));
 
         foreach ($found as &$entry) {
-            $entry['subject_name'] = $entry['subject_student_id'] === null ? null : ($titles[$entry['subject_student_id']] ?? null);
+            $entry['name']         = $avatars[$entry['id']]['name'] ?? $entry['name'];
+            $entry['subject_name'] = $entry['subject_student_id'] === null ? null : ($avatars[$entry['subject_student_id']]['name'] ?? null);
+            $entry['avatar']       = $avatars[$entry['id']] ?? null;
         }
 
         return $found;
