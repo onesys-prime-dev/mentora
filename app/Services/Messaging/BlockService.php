@@ -10,15 +10,13 @@ use CodeIgniter\Shield\Models\UserModel;
 /**
  * Blocking (spec 3.3 rule 6). A blocks B: B cannot start a thread with A and
  * cannot post in the direct thread with A; A can still post, and both can read.
- * It never takes anyone out of a course chat or a group. Instructors and
- * institutional administrators cannot be blocked, because a student must always
- * be able to reach their instructor. Each change is audited with ids only.
+ * It never takes anyone out of a course chat or a group. Institutional
+ * administrators cannot be blocked, and nobody can block someone they share an
+ * active course with as instructor and student (the protected link), nor, as a
+ * parent, a teacher of their child. Each change is audited with ids only.
  */
 class BlockService
 {
-    /** Roles a block cannot shut out (the same list the policy uses). */
-    public const UNBLOCKABLE = ['instructor', 'institutional_admin'];
-
     private MessagingContextResolver $resolver;
 
     public function __construct(?MessagingContextResolver $resolver = null)
@@ -27,25 +25,67 @@ class BlockService
     }
 
     /**
-     * Whether this person can be blocked at all: holds a role, is not the bare system admin, holds no unblockable role.
-     *
-     * @param list<string> $roles MessagingContextResolver::roles()
+     * Whether $user may block $targetId: not self, known, same institution, holds a role, not the bare
+     * system admin, not an institutional admin, not in a protected link with $user, and (for a parent) not
+     * a teacher of one of their linked children.
      */
-    public static function blockable(array $roles): bool
+    public function canBlock(User $user, int $targetId): bool
     {
-        return $roles !== [] && $roles !== ['admin'] && array_intersect(self::UNBLOCKABLE, $roles) === [];
+        $target = $targetId < 1 || $targetId === (int) $user->id ? null : model(UserModel::class)->findById($targetId);
+
+        return $target !== null && $this->allows(
+            $user,
+            $this->resolver->institutionOf($user),
+            $target,
+            $this->resolver->institutionOf($target),
+            $this->resolver->protectedLink((int) $user->id, $targetId),
+        );
     }
 
     /**
-     * False when the target is yourself, unknown, in another institution, or cannot be blocked. Blocking
-     * someone already blocked succeeds without a second row or audit entry.
+     * The canBlock rule on facts the caller already has (the inbox computes them once per list).
+     * $protectedLink false asks "would anything but the protected link refuse?", which is what the
+     * UI offers: the server then answers a protected-link block with its own sentence (refusal()).
+     */
+    public function allows(User $user, ?int $institution, User $target, ?int $targetInstitution, bool $protectedLink): bool
+    {
+        if ($institution === null || $targetInstitution !== $institution || (int) $target->id === (int) $user->id) {
+            return false;
+        }
+
+        $roles = $this->resolver->roles($target);
+
+        if ($roles === [] || $roles === ['admin'] || in_array('institutional_admin', $roles, true) || $protectedLink) {
+            return false;
+        }
+
+        return ! (in_array('parent', $this->resolver->roles($user), true) && in_array('instructor', $roles, true)
+            && $this->resolver->sharedLinkedChildIds($user, $target, 'instructor') !== []);
+    }
+
+    /** The sentence to show when only the protected link stops $user blocking $targetId; null for every other refusal (those stay generic). */
+    public function refusal(User $user, int $targetId): ?string
+    {
+        if ($targetId === (int) $user->id) {
+            return null;
+        }
+
+        if ($this->resolver->teaches($targetId, (int) $user->id)) {
+            return "You can't block your instructor while you share a course.";
+        }
+
+        return $this->resolver->teaches((int) $user->id, $targetId) ? "You can't block a student while you teach them." : null;
+    }
+
+    /**
+     * False when the target cannot be blocked (see canBlock). Blocking someone already blocked succeeds
+     * without a second row or audit entry.
      */
     public function block(User $user, int $blockedId): bool
     {
         $institution = $this->resolver->institutionOf($user);
-        $target      = $blockedId < 1 || $blockedId === (int) $user->id ? null : model(UserModel::class)->findById($blockedId);
 
-        if ($institution === null || $target === null || $this->resolver->institutionOf($target) !== $institution || ! self::blockable($this->resolver->roles($target))) {
+        if ($institution === null || ! $this->canBlock($user, $blockedId)) {
             return false;
         }
 
@@ -80,7 +120,7 @@ class BlockService
         return true;
     }
 
-    /** @return list<array{id: int, name: string}> */
+    /** @return list<array{id: int, name: string, paused: bool}> paused: the row exists but a protected link keeps it from binding */
     public function blockedBy(User $user): array
     {
         $ids = array_map('intval', array_column(
@@ -89,7 +129,9 @@ class BlockService
         ));
         $names = ConversationPresenter::names($ids);
 
-        return array_map(static fn (int $id): array => ['id' => $id, 'name' => $names[$id] ?? 'Former member'], $ids);
+        return array_map(fn (int $id): array => [
+            'id' => $id, 'name' => $names[$id] ?? 'Former member', 'paused' => $this->resolver->protectedLink((int) $user->id, $id),
+        ], $ids);
     }
 
     private function audit(string $action, User $user, int $institution, int $targetId): void

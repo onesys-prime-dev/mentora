@@ -284,25 +284,11 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $peer->id, 'blocked_id' => $student->id, 'created_at' => $now]);
         $ctx = $this->resolver->forPost($student, $conv);
         $this->assertTrue($ctx->blocked);
-        $this->assertFalse($ctx->blockerIsExempt);
         $this->assertFalse($this->resolver->forPost($peer, $conv)->blocked);
 
         db_connect()->table('conversation_participants')->where(['conversation_id' => $conv['id'], 'user_id' => $student->id])->update(['left_at' => $now]);
         $this->assertFalse($this->resolver->forPost($student, $conv)->activeParticipant);
         $this->assertFalse($this->resolver->isActiveParticipant((int) $student->id, (int) $conv['id']));
-    }
-
-    public function testForPostExemptsAnInstructorsBlock(): void
-    {
-        $student    = $this->person('student');
-        $instructor = $this->person('instructor');
-        $conv       = $this->direct((int) $student->id, (int) $instructor->id);
-        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $instructor->id, 'blocked_id' => $student->id, 'created_at' => date('Y-m-d H:i:s')]);
-
-        $ctx = $this->resolver->forPost($student, $conv);
-
-        $this->assertTrue($ctx->blocked);
-        $this->assertTrue($ctx->blockerIsExempt);
     }
 
     public function testForPostSeesAClosedOfferingALockAndAnInstructor(): void

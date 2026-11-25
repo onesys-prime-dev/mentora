@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Profiles\AvatarData;
+use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * Turns the rows ConversationService::listFor returns into what the Messages
@@ -46,6 +48,7 @@ class ConversationPresenter
         $viewerParty = $this->resolver->party($viewer);
         $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $blocked     = $this->blockedIds((int) $viewer->id);
+        $blockable   = $this->blockTargets($viewer, $institution, $rows, $blocked);
         // One lookup for the list: the other person of each direct chat and each subject student, as this viewer
         // may see them (FR2); their gated names replace the legal ones (FR5).
         $avatars     = (new AvatarData())->forViewerJson($viewer, array_values(array_filter(array_map('intval', [...array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
@@ -93,7 +96,7 @@ class ConversationPresenter
             $row['can_delete']    = in_array($row['type'], ['direct', 'group'], true);
 
             $row['blocked_by_me'] = $row['type'] === 'direct' && $other !== null && isset($blocked[$other]);
-            $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && $this->canBlock($other);
+            $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && isset($blockable[$other]);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($teaches ? $viewerParty->withRole('instructor') : $viewerParty, (string) $row['type'], $teaches || $created);
@@ -119,12 +122,44 @@ class ConversationPresenter
         return $out;
     }
 
-    /** Whether the other person in a direct thread is someone a block can shut out (not an instructor or administrator). */
-    private function canBlock(int $otherUserId): bool
+    /**
+     * The other people of this list's direct threads the Block control is offered for (BlockService::allows
+     * with the protected link ignored: when only that refuses, the click gets the explaining 422, FR4).
+     * One batched institution lookup and one user fetch for the whole list.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @param array<int, true>           $blocked
+     *
+     * @return array<int, true>
+     */
+    private function blockTargets(User $viewer, ?int $institution, array $rows, array $blocked): array
     {
-        $other = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($otherUserId);
+        $ids = [];
 
-        return $other !== null && BlockService::blockable($this->resolver->roles($other));
+        foreach ($rows as $row) {
+            if ($row['type'] === 'direct' && $row['other_user_id'] !== null && ! isset($blocked[(int) $row['other_user_id']])) {
+                $ids[(int) $row['other_user_id']] = (int) $row['other_user_id'];
+            }
+        }
+
+        if ($institution === null || $ids === []) {
+            return [];
+        }
+
+        $institutions = (new PlanLimits())->institutionsOf(array_values($ids));
+        $service      = new BlockService($this->resolver);
+        $out          = [];
+
+        /** @var list<User> $targets */
+        $targets = model(UserModel::class)->whereIn('id', array_values($ids))->findAll();
+
+        foreach ($targets as $target) {
+            if ($service->allows($viewer, $institution, $target, $institutions[(int) $target->id] ?? null, false)) {
+                $out[(int) $target->id] = true;
+            }
+        }
+
+        return $out;
     }
 
     /**

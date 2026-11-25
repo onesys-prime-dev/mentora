@@ -22,9 +22,19 @@ class BlockController extends MessagingController
     {
         $id = $this->input()['user_id'] ?? null;
 
-        return is_numeric($id) && (new BlockService())->block(auth()->user(), (int) $id)
-            ? $this->response->setJSON(['ok' => true])
-            : $this->notFound();
+        if (! is_numeric($id)) {
+            return $this->notFound();
+        }
+
+        $blocks = new BlockService();
+
+        if ($blocks->block(auth()->user(), (int) $id)) {
+            return $this->response->setJSON(['ok' => true]);
+        }
+
+        $message = $blocks->refusal(auth()->user(), (int) $id);
+
+        return $message === null ? $this->notFound() : $this->response->setStatusCode(422)->setJSON(['reason' => 'protected_link', 'message' => $message]);
     }
 
     public function remove(int $blockedId): ResponseInterface

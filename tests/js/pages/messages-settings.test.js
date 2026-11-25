@@ -39,6 +39,20 @@ describe("Settings", () => {
         await vi.waitFor(() => expect(some.api.unblock).toHaveBeenCalledWith(5));
     });
 
+    it("renders a Paused badge and explanation for paused blocks", async () => {
+        const b = build({ blocked: [{ id: 5, name: "Ann Lee", paused: true }, { id: 6, name: "Bo Ng", paused: false }] });
+
+        b.settings.sync();
+        await vi.waitFor(() => expect(b.q("[data-role=blocked-count]").textContent).toBe("2"));
+
+        const [paused, normal] = b.root.querySelectorAll("[data-role=blocked-list] li");
+
+        expect(paused.textContent).toContain("Paused");
+        expect(paused.textContent).toContain("Paused while you share a course.");
+        expect(paused.querySelector("[data-unblock='5']")).not.toBeNull();
+        expect(normal.textContent).not.toContain("Paused");
+    });
+
     it("has no chat controls: those are in Institution settings", () => {
         const b = build();
 

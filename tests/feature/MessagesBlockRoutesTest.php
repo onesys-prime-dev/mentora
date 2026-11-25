@@ -74,7 +74,7 @@ final class MessagesBlockRoutesTest extends RouteTestCase
 
         $unknown = $this->api('POST', 'blocks', ['user_id' => 99999999])->response();
 
-        foreach ([(int) $this->instructor->id, (int) $far->id, (int) $this->student->id] as $id) {
+        foreach ([(int) $far->id, (int) $this->student->id] as $id) {
             $response = $this->api('POST', 'blocks', ['user_id' => $id])->response();
 
             $this->assertSame(404, $response->getStatusCode());
@@ -82,5 +82,58 @@ final class MessagesBlockRoutesTest extends RouteTestCase
         }
 
         $this->assertSame(0, db_connect()->table('user_blocks')->countAllResults());
+    }
+
+    public function testBlockingOwnInstructorReturnsReason(): void
+    {
+        $this->signIn($this->student);
+
+        $response = $this->api('POST', 'blocks', ['user_id' => (int) $this->instructor->id])->response();
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertSame(
+            ['reason' => 'protected_link', 'message' => "You can't block your instructor while you share a course."],
+            json_decode($response->getBody(), true),
+        );
+    }
+
+    public function testInstructorBlockingTheirStudentReturnsReason(): void
+    {
+        $this->signIn($this->instructor);
+
+        $response = $this->api('POST', 'blocks', ['user_id' => (int) $this->student->id])->response();
+
+        $this->assertSame(422, $response->getStatusCode());
+        $this->assertSame("You can't block a student while you teach them.", json_decode($response->getBody(), true)['message']);
+    }
+
+    public function testBlockingInstitutionalAdminIsGeneric404(): void
+    {
+        $admin = PeopleFactory::person('institutional_admin', 'Ins', 'Admin', null, $this->institution);
+        $this->signIn($this->student);
+
+        $unknown  = $this->api('POST', 'blocks', ['user_id' => 99999999])->response();
+        $response = $this->api('POST', 'blocks', ['user_id' => (int) $admin->id])->response();
+
+        $this->assertSame(404, $response->getStatusCode());
+        $this->assertSame($unknown->getBody(), $response->getBody());
+    }
+
+    public function testBlocksListIncludesPausedFlag(): void
+    {
+        $classmate = PeopleFactory::person('student', 'Cla', 'Ssmate', null, $this->institution);
+        $this->signIn($this->student);
+        $this->api('POST', 'blocks', ['user_id' => (int) $classmate->id]);
+        // A pre-existing row against the instructor (made before the protected link rule) is listed as paused.
+        db_connect()->table('user_blocks')->insert([
+            'institution_id' => $this->institution, 'blocker_id' => (int) $this->student->id,
+            'blocked_id' => (int) $this->instructor->id, 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $list   = json_decode($this->api('GET', 'blocks')->response()->getBody(), true)['blocked'];
+        $paused = array_column($list, 'paused', 'id');
+
+        $this->assertFalse($paused[(int) $classmate->id]);
+        $this->assertTrue($paused[(int) $this->instructor->id]);
     }
 }

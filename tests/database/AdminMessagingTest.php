@@ -100,11 +100,10 @@ final class AdminMessagingTest extends DatabaseTestCase
         $this->assertNull($this->messages()->page($this->admin, $thread));
     }
 
-    public function testAnAdminCannotBeBlockedOutOfAReplyPath(): void
+    public function testABlockedDirectPostIsRefused(): void
     {
         $policy = new MessagingPolicy();
 
-        $this->assertTrue($policy->canPost(new PostContext('direct', true, true, blocked: true, blockerIsExempt: true)));
         $this->assertFalse($policy->canPost(new PostContext('direct', true, true, blocked: true)));
     }
 }

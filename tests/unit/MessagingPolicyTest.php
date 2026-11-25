@@ -160,7 +160,7 @@ final class MessagingPolicyTest extends CIUnitTestCase
         $this->assertTrue(self::start('student', 'instructor', $off));
     }
 
-    public function testABlockStopsEveryoneButInstructorsAndInstitutionalAdmins(): void
+    public function testABlockStopsEveryRecipientRole(): void
     {
         $policy = new MessagingPolicy();
 
@@ -172,9 +172,7 @@ final class MessagingPolicyTest extends CIUnitTestCase
                     continue; // not a permitted pair, nothing for a block to change
                 }
                 $blocked  = self::startContext(self::FACTS, true, ['blockedByRecipient' => true]);
-                $expected = in_array($recipient, ['instructor', 'institutional_admin'], true);
-
-                $this->assertSame($expected, self::start($sender, $recipient, $blocked), "{$sender} -> {$recipient}");
+                $this->assertFalse(self::start($sender, $recipient, $blocked), "{$sender} -> {$recipient}");
             }
         }
     }
@@ -292,13 +290,11 @@ final class MessagingPolicyTest extends CIUnitTestCase
         $this->assertTrue($policy->canStart(self::party(['instructor', 'admin']), self::party(['instructor'], 2), null, $all));
     }
 
-    public function testABlockedDirectPostIsRefusedUnlessTheBlockerIsExempt(): void
+    public function testABlockedDirectPostIsRefused(): void
     {
         $policy = new MessagingPolicy();
 
         $this->assertFalse($policy->canPost(new PostContext('direct', true, true, blocked: true)));
-        $this->assertTrue($policy->canPost(new PostContext('direct', true, true, blocked: true, blockerIsExempt: true)));
-        $this->assertTrue($policy->canPost(new PostContext('direct', true, true, blockerIsExempt: true)));
         $this->assertTrue($policy->canPost(new PostContext('direct', true, true)));
     }
 
@@ -450,7 +446,6 @@ final class MessagingPolicyTest extends CIUnitTestCase
             'closed offering'              => [new PostContext('course', true, true, offeringClosed: true), false],
             'lost parent link'             => [new PostContext('direct', true, true, subjectLinkLost: true), false],
             'blocked direct thread'        => [new PostContext('direct', true, true, blocked: true), false],
-            'blocked by exempt blocker'    => [new PostContext('direct', true, true, blocked: true, blockerIsExempt: true), true],
             'student dm switched off'      => [new PostContext('direct', true, true, studentDmBlocked: true), false],
         ];
     }

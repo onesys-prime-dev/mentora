@@ -56,9 +56,6 @@ final class MessagingPolicy
         ],
     ];
 
-    /** Recipients a block cannot shut out (spec 3.3 rule 6). */
-    private const UNBLOCKABLE = ['instructor', 'institutional_admin'];
-
     /**
      * Transitional: the parties pick a capacity for the thread, then any pair of held roles valid for it
      * that passes the START table with the facts allows the start. The resolver refuses the system `admin`,
@@ -121,7 +118,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->blockedByRecipient && ! in_array($recipientRole, self::UNBLOCKABLE, true)) {
+        if ($c->blockedByRecipient) {
             return false;
         }
 
@@ -154,7 +151,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->type === 'direct' && (($c->blocked && ! $c->blockerIsExempt) || $c->studentDmBlocked)) {
+        if ($c->type === 'direct' && ($c->blocked || $c->studentDmBlocked)) {
             return false;
         }
 
@@ -229,7 +226,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->type === 'direct' && (($c->blocked && ! $c->blockerIsExempt) || $c->studentDmBlocked)) {
+        if ($c->type === 'direct' && ($c->blocked || $c->studentDmBlocked)) {
             return false;
         }
 

@@ -16,6 +16,7 @@ namespace App\Services\Messaging;
  *   parent, has a linked child taught by the other side's instructor role or
  *   chaired by its chairperson role. One fact per direction, so a person never
  *   speaks as the parent of a child only the other side is linked to.
+ * blockedByRecipient: the recipient has blocked the sender and the block binds.
  * isSelf: sender and recipient are the same person; always refused.
  *
  * The resolver builds it from every role each account holds, and must never build a

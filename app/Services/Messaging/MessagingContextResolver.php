@@ -23,9 +23,6 @@ use CodeIgniter\Shield\Entities\User;
  */
 class MessagingContextResolver
 {
-    /** Roles whose block never binds the person they blocked (spec 3.3 rule 6). */
-    private const UNBLOCKABLE = ['instructor', 'institutional_admin'];
-
     /** Every role the account may use, as Messaging decides on it (no active role involved). */
     public function party(User $user): Party
     {
@@ -149,7 +146,7 @@ class MessagingContextResolver
             linkedChildAsSenderParent: $sameInstitution && $this->linkedChild($sender, $senderRoles, $recipient, $recipientRoles, $subjectStudentId),
             linkedChildAsRecipientParent: $sameInstitution && $this->linkedChild($recipient, $recipientRoles, $sender, $senderRoles, $subjectStudentId),
             studentDmEnabled: ! $sameInstitution || $this->studentSwitch()->enabled($senderInstitution),
-            blockedByRecipient: $this->blocked($recipientId, $senderId),
+            blockedByRecipient: $this->blockBinds($recipientId, $senderId),
             isSelf: $senderId === $recipientId,
         );
     }
@@ -162,17 +159,12 @@ class MessagingContextResolver
         $type           = (string) $conversation['type'];
         $sameInst       = $this->institutionOf($user) === (int) $conversation['institution_id'];
         $blocked        = false;
-        $exempt         = false;
 
         if ($type === 'direct') {
             $other = db_connect()->table('conversation_participants')->select('user_id')
                 ->where('conversation_id', $conversationId)->where('user_id !=', $userId)->get()->getRowArray();
 
-            if ($other !== null && $this->blocked((int) $other['user_id'], $userId)) {
-                $blocked   = true;
-                $blocker   = model(\CodeIgniter\Shield\Models\UserModel::class)->findById((int) $other['user_id']);
-                $exempt    = $blocker !== null && array_intersect($this->roles($blocker), self::UNBLOCKABLE) !== [];
-            }
+            $blocked = $other !== null && $this->blockBinds((int) $other['user_id'], $userId);
         }
 
         $offeringId = $conversation['offering_id'] === null ? null : (int) $conversation['offering_id'];
@@ -188,7 +180,6 @@ class MessagingContextResolver
                 ->where('offering_id', $offeringId)->where('instructor_user_id', $userId)->countAllResults() > 0,
             blocked: $blocked,
             studentDmBlocked: $type === 'direct' && $this->studentDmBlocked($conversation),
-            blockerIsExempt: $exempt,
             subjectLinkLost: $type === 'direct' && $this->linkLost($conversation),
         );
     }
@@ -303,9 +294,35 @@ class MessagingContextResolver
         return $row !== null && (int) $row['active'] === 1 && ! (new AccountControl())->isDeactivated($userId);
     }
 
-    private function blocked(int $blockerId, int $blockedId): bool
+    /**
+     * Whether a block row shuts $blockedId out of $blockerId. Never binds when the blocker holds
+     * institutional_admin, or while the pair is in a protected link (computed live; the row stays).
+     */
+    public function blockBinds(int $blockerId, int $blockedId): bool
     {
-        return db_connect()->table('user_blocks')->where('blocker_id', $blockerId)->where('blocked_id', $blockedId)->countAllResults() > 0;
+        if (db_connect()->table('user_blocks')->where('blocker_id', $blockerId)->where('blocked_id', $blockedId)->countAllResults() === 0) {
+            return false;
+        }
+
+        $blocker = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($blockerId);
+
+        return $blocker !== null && ! in_array('institutional_admin', $this->roles($blocker), true) && ! $this->protectedLink($blockerId, $blockedId);
+    }
+
+    /** One of the two is an assigned instructor of an active offering the other is enrolled in. */
+    public function protectedLink(int $a, int $b): bool
+    {
+        return $this->teaches($a, $b) || $this->teaches($b, $a);
+    }
+
+    /** $instructor is assigned to an active offering $student is enrolled in. */
+    public function teaches(int $instructor, int $student): bool
+    {
+        return db_connect()->table('instructor_assignments ia')
+            ->join('enrollments e', 'e.offering_id = ia.offering_id')->join('course_offerings co', 'co.id = ia.offering_id')
+            ->where('co.status', 'active')->where('e.status', 'enrolled')
+            ->where('ia.instructor_user_id', $instructor)->where('e.student_user_id', $student)
+            ->countAllResults() > 0;
     }
 
     private function offeringClosed(int $offeringId): bool

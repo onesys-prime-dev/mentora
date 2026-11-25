@@ -68,7 +68,22 @@ export function createSettings({ root, api }) {
                     unblock.disabled = false;
                 }
             });
-            item.append(node("span", "truncate", p.name), unblock);
+            const who = node("span", "min-w-0");
+            const name = node("span", "flex items-center gap-1.5");
+
+            name.append(node("span", "truncate", p.name));
+
+            if (p.paused) {
+                name.append(node("span", "shrink-0 rounded-full bg-gray-100 px-1.5 text-[10px] font-bold text-gray-600", "Paused"));
+            }
+
+            who.append(name);
+
+            if (p.paused) {
+                who.append(node("span", "block text-xs text-[#646464]", "Paused while you share a course."));
+            }
+
+            item.append(who, unblock);
 
             return item;
         }));

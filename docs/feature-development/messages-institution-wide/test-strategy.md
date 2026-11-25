@@ -38,8 +38,10 @@ Every phase ends with the whole PHP suite and the whole Vitest suite green, not 
 |---|---|---|---|---|---|
 | baseline (main 37a9c5f9, before Phase 1) | 10629 tests / 42895 assertions OK (MySQL :3306, 37m43s) | 127 files / 1306 tests OK | not run | not run | 2026-11-25 |
 | Phase 1 (feat/messages-open-p1-parties, uncommitted) | full suite: 10638 tests, 42909 assertions; 10626 passed, 12 failed only in `CheckDiffCoverageScriptTest` (11) and `SmokeTestScriptTest` (1) with exit code -1073741502 (Windows process start failure under low memory; the run's wrapper was killed by Claude Code for low memory at the same time). Both files rerun alone: OK (11 + 19 tests). Filtered Messages suites: 2917 OK. phpstan clean on changed files. | 127 files / 1306 tests OK | eslint clean | NOT RUN (no UI change in Phase 1) | 2026-11-26 |
+| Phase 2 (feat/messages-open-p2-blocks) | full suite: 10680 tests / 43025 assertions OK (36m08s); incl. ResetNonBindingBlocksTest (counts add up, down() restores, abort path) | 127 files / 1308 tests OK | eslint clean | NOT RUN (no local e2e server) | 2026-11-26 |
 
 ## Failure log
+- 2026-11-26 Phase 2: whole-phase review found 3 Important (reset ignored a failed transaction; protected-link sentence unreachable; inbox poll queries). Fixed before the full run; first full run stopped as stale.
 - 2026-11-26 Phase 1: the first full run was stopped on purpose after the whole-phase review (results would be stale). The second full run's wrapper was killed by Claude Code for low memory; the PHPUnit process kept running to the end. 12 script-test failures under memory pressure, confirmed environmental by rerunning both files alone (green). Review findings and fixes are in the SDD ledger (Task 1.2 fix round, Task 1.3 fix round, Phase 1 fix wave).
 
 - 2026-11-23 (Stage 2, docs): a script inserted decisions before a heading the D2 edit had removed, so D3-D24 never reached `decision-register.md`. Found by the builder check; register rewritten from the session record; no content changed. Lesson: assert the anchor exists before every scripted insert (now done).
