@@ -100,7 +100,7 @@ class OverviewService
         );
 
         $viewData += $isInstructor
-            ? $this->forInstructor($offeringId, $info, $assessments)
+            ? $this->forInstructor($offeringId, $info, $assessments, $user)
             : $this->forStudent($user, $offering, $assessments, $modulesUrl);
 
         return [
@@ -151,7 +151,7 @@ class OverviewService
             ->buildStudentGrades($user, $offering, $assessments)['summary'];
 
         return [
-            'activity'  => $this->activityFeedService->forStudent((int) $user->id, $offeringId, $assessments['assessments']),
+            'activity'  => $this->activityFeedService->forStudent((int) $user->id, $offeringId, $assessments['assessments'], $user),
             'resume'    => $this->resumePoint((int) $user->id, $offeringId, $modulesUrl),
             'metrics'   => $this->studentMetrics($assessments['metrics'], $grade),
             'deadlines' => $this->studentDeadlines($assessments['upNext']),
@@ -365,10 +365,10 @@ class OverviewService
     |--------------------------------------------------------------------------
     */
 
-    protected function forInstructor(int $offeringId, array $info, array $assessments): array
+    protected function forInstructor(int $offeringId, array $info, array $assessments, ?User $viewer = null): array
     {
         return [
-            'activity'       => $this->activityFeedService->forInstructor($offeringId),
+            'activity'       => $this->activityFeedService->forInstructor($offeringId, $viewer),
             'attention'      => $this->attention($offeringId, $assessments),
             'metrics'        => $assessments['metrics'],
             'deadlines'      => $this->instructorDeadlines($assessments['assessments']),

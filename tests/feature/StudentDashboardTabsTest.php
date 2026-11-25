@@ -168,4 +168,31 @@ final class StudentDashboardTabsTest extends RouteTestCase
         $this->assertSame(site_url('student/announcements'), $all->item(0)->getAttribute('href'));
         $this->assertStringContainsString('lg:hidden', $all->item(0)->getAttribute('class'));
     }
+
+    public function testAnAnnouncementBylineShowsTheAuthorsGatedNameAndAPlainAvatar(): void
+    {
+        $offering = CourseFactory::offering();
+        $student  = CourseFactory::user('student');
+        $seen     = CourseFactory::user('instructor');
+        $hidden   = CourseFactory::user('instructor');
+        db_connect()->table('user_profiles')->insert(['user_id' => $seen->id, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->insert(['user_id' => $hidden->id, 'first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+        CourseFactory::enroll($offering, $student);
+        CourseFactory::members($offering, [$student, $seen]);
+        // Not in the institution: the student may not see this author's profile.
+        CourseFactory::members($offering, [$hidden], false);
+        foreach ([$seen, $hidden] as $i => $author) {
+            db_connect()->table('announcements')->insert(['offering_id' => $offering, 'author_id' => $author->id, 'subject' => 'Post ' . $i, 'message' => '{}', 'created_at' => date('Y-m-d H:i:s', time() - 60 * $i)]);
+        }
+
+        $x = $this->dashboard($student, 'student/dashboard');
+
+        $rows = $x->query('//a[@data-announcement-row]');
+        $this->assertSame(2, $rows->length);
+        $this->assertStringContainsString('Jun Dela Cruz', $rows->item(0)->textContent);
+        $this->assertStringContainsString('Hal Hidden', $rows->item(1)->textContent);
+        $this->assertSame(2, $x->query('//a[@data-announcement-row]//span[@data-avatar][@aria-hidden="true"]')->length, 'a plain picture inside the link');
+        $this->assertSame(0, $x->query('//a[@data-announcement-row]//button')->length);
+        $this->assertSame(0, $x->query('//a[@data-announcement-row]//*[contains(., "Zedekiah")]')->length);
+    }
 }

@@ -307,6 +307,24 @@ final class MonitorCollegePageTest extends RouteTestCase
         $this->assertStringContainsString('id="monitor-program-charts"', $body);
     }
 
+    public function testAProgramPageGivesAtRiskStudentsAndActorsTheirGatedAvatars(): void
+    {
+        $it = DeanFactory::offering($this->programA, $this->term, 'IT101', 'A', 'active', 'Intro to Computing');
+        $this->enrolled($it, 2);
+        $this->chairAction('maria@dept.example', $it, 'POST', '2026-09-02 09:00:00');
+        [$seen, $hidden] = array_map('intval', array_column(db_connect()->table('enrollments')->select('student_user_id')->where('offering_id', $it)->orderBy('id')->get()->getResultArray(), 'student_user_id'));
+        db_connect()->table('institution_users')->insert(['institution_id' => $this->institution, 'user_id' => $seen]);
+        $actor = (int) db_connect()->table('audit_logs')->where('action', 'course.chairperson_action')->get()->getRowArray()['actor_user_id'];
+
+        $this->loggedInAs($this->dean);
+        $body = $this->call('GET', "/dean/monitor-college/programs/{$this->programA}")->response()->getBody();
+
+        $this->assertStringContainsString('data-person-avatar="' . $seen . '"', $body);
+        $this->assertStringContainsString('data-person-avatar="' . $actor . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden . '"', $body);
+        $this->assertStringContainsString('Dent' . $hidden, $body, 'the hidden student keeps the name the page prints');
+    }
+
     public function testAProgramPageKeepsItsOwnFiltersInItsLinks(): void
     {
         DeanFactory::offering($this->programA, $this->term, 'IT101');

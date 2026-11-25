@@ -125,6 +125,32 @@ final class InstitutionParentLinksTest extends RouteTestCase
         $this->assertStringNotContainsString('No student linked', $body);
     }
 
+    public function testParentsAndStudentsHaveGatedAvatarsBesideTheirLegalNames(): void
+    {
+        $ann = $this->student('Ann', '2026-001');
+        $bea = $this->student('Bea', '2026-002');
+        db_connect()->table('user_profiles')->where('user_id', $ann->id)->update(['preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->where('user_id', $this->parent->id)->update(['preferred_first_name' => 'Pammy']);
+        db_connect()->table('user_profiles')->where('user_id', $bea->id)->update(['preferred_first_name' => 'Zedekiah']);
+        foreach ([$ann, $bea] as $child) {
+            db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $this->parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+        }
+        // Bea left the institution: the administrator may no longer open her card.
+        db_connect()->table('institution_users')->where('user_id', $bea->id)->delete();
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->parent->id . '"', $body);
+        $this->assertStringContainsString('data-person-avatar="' . $ann->id . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $bea->id . '"', $body);
+        // An admin screen keeps legal names as its text; only the card a visible avatar opens is the person's own.
+        $this->assertStringContainsString('<span class="font-medium">Pam Parent</span>', $body);
+        $this->assertMatchesRegularExpression('#data-linked-student="\d+">.*?Ann Student#s', $body);
+        $this->assertStringContainsString('Bea Student', $body);
+        $this->assertStringNotContainsString('<span class="font-medium">Pammy', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body, 'nothing of a hidden person beyond the legal name');
+    }
+
     public function testNobodyLinkedAnswers422OnTheField(): void
     {
         $this->withHeaders(['Accept' => 'application/json']);

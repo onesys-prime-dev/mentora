@@ -62,7 +62,7 @@ class GroupGradeController extends BaseController
         return $this->response->setJSON([
             'success'         => true,
             'groups'          => $groups,
-            'ungrouped'       => array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null, 'hasSubmission' => in_array((int) $s['student_user_id'], $handedIn, true)], $ungrouped),
+            'ungrouped'       => AvatarData::sortByName(array_map(static fn (array $s) => ['student_user_id' => (int) $s['student_user_id'], 'name' => $avatars[(int) $s['student_user_id']]['name'] ?? (string) $s['name'], 'avatar' => $avatars[(int) $s['student_user_id']] ?? null, 'hasSubmission' => in_array((int) $s['student_user_id'], $handedIn, true)], $ungrouped)),
             'ungroupedPolicy' => (string) $config['ungrouped_policy'],
             'blockers'        => $blockers,
             'flags'      => ['canWrite' => $access['canWrite'], 'finalized' => $access['finalized']],

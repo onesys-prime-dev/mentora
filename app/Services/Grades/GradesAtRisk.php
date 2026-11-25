@@ -6,6 +6,8 @@ namespace App\Services\Grades;
 
 use App\Models\Assessments\GradebookRecordModel;
 use App\Services\Courses\RosterRiskService;
+use App\Services\Profiles\AvatarData;
+use CodeIgniter\Shield\Entities\User;
 
 /**
  * Students at risk across an instructor's sections, for either reason.
@@ -134,6 +136,25 @@ final class GradesAtRisk
 
             return [$aActivityOnly, $a['name'], $a['offering_id']] <=> [$bActivityOnly, $b['name'], $b['offering_id']];
         });
+
+        return $rows;
+    }
+
+    /**
+     * The rows as this viewer may see each student (FR2): one avatar lookup, the gated name in place of the
+     * legal one, and the same grouping again ordered by the name now shown (natural, case-insensitive).
+     *
+     * @param list<array<string, mixed>> $rows forSections() output
+     *
+     * @return list<array<string, mixed>> each row with an `avatar` (AvatarData::forViewer entry or null)
+     */
+    public function shownTo(User $viewer, array $rows): array
+    {
+        $avatars = (new AvatarData())->forViewer($viewer, array_values(array_unique(array_map(static fn (array $r): int => (int) $r['student_id'], $rows))));
+        $rows    = array_map(static fn (array $r): array => ['name' => $avatars[(int) $r['student_id']]['person']['name'] ?? $r['name'], 'avatar' => $avatars[(int) $r['student_id']] ?? null] + $r, $rows);
+
+        usort($rows, static fn (array $a, array $b): int => (($a['reasons'][0]['kind'] === 'activity') <=> ($b['reasons'][0]['kind'] === 'activity'))
+            ?: (strnatcasecmp((string) $a['name'], (string) $b['name']) ?: $a['offering_id'] <=> $b['offering_id']));
 
         return $rows;
     }

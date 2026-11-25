@@ -10,6 +10,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\ParentLinkService;
 use App\Services\Institutions\PeopleService;
+use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\CorrectionRequestService;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -46,6 +47,11 @@ class ParentLinksController extends BaseController
             'pageTitle'      => 'Parents',
             'user'           => auth()->user(),
             'parentRows'     => $result['rows'],
+            // One lookup for the page: every parent and linked student, as this administrator may see them (FR2).
+            'parentAvatars'  => (new AvatarData())->forViewer(auth()->user(), array_values(array_unique(array_map('intval', [
+                ...array_column($result['rows'], 'id'),
+                ...array_column(array_merge([], ...array_column($result['rows'], 'students')), 'student_id'),
+            ])))),
             'parentTotal'    => $result['total'],
             'parentPages'    => $result['pages'],
             'parentPage'     => $result['page'],

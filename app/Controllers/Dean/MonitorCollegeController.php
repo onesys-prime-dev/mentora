@@ -209,6 +209,11 @@ class MonitorCollegeController extends BaseController
             'monitorEmptyText'   => 'Courses in this program will appear here.',
             'monitorBackUrl'     => site_url('dean/monitor-college?compare=program'),
             'monitorBackLabel'   => 'Back to Monitor College',
+            // One lookup for the page: the at-risk students and the audit actors together, as on Monitor College.
+            'monitorAvatars'     => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_filter(array_map('intval', [
+                ...array_column($page['atRisk'], 'student_id'),
+                ...array_column($page['audit']['rows'] ?? [], 'actor_id'),
+            ]))))),
             'mainGutter'   => 'px-4 sm:px-8 xl:px-20 2xl:px-40',
         ]);
     }

@@ -183,4 +183,34 @@ final class GroupAvatarsTest extends RouteTestCase
         $this->assertSame(1, $few);
         $this->assertSame($few, $lookups());
     }
+
+    public function testTheSetDetailListsMembersByTheNameItShows(): void
+    {
+        // Legally "Juan" sorts after "Hal"; shown as "Abe" he comes first.
+        db_connect()->table('user_profiles')->where('user_id', $this->mate->id)->update(['preferred_first_name' => 'Abe']);
+
+        $json = $this->getJson($this->teacher, "instructor/api/courses/{$this->offering}/group-sets/{$this->set}");
+
+        $this->assertSame(['Abe Dela Cruz', 'Hal Hidden', 'Member No' . $this->me->id], array_column($json['groups'][0]['members'], 'name'));
+    }
+
+    public function testTheGeneratePreviewGivesEachProposedMemberTheirAvatarAndNameFromOneLookup(): void
+    {
+        $n = 0;
+        $l = static function (Query $q) use (&$n): void {
+            $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+        };
+        $this->loggedInAs($this->teacher);
+        Events::on('DBQuery', $l);
+        $res = $this->withBody(json_encode(['by' => 'count', 'n' => 1, 'seed' => 7]))
+            ->withHeaders(['Content-Type' => 'application/json', 'Accept' => 'application/json', 'X-Requested-With' => 'XMLHttpRequest'])
+            ->call('POST', "instructor/api/courses/{$this->offering}/group-sets/{$this->set}/generate/preview");
+        Events::removeListener('DBQuery', $l);
+        $this->assertSame(200, $res->response()->getStatusCode());
+        $json = json_decode((string) $res->response()->getBody(), true);
+
+        $this->assertAvatars($json['groups'][0]['members'], 'student_user_id', $json);
+        $this->assertSame(['Hal Hidden', 'Jun Dela Cruz', 'Member No' . $this->me->id], array_column($json['groups'][0]['members'], 'name'), 'by the name shown');
+        $this->assertSame(1, $n);
+    }
 }

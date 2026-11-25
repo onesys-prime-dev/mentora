@@ -82,6 +82,23 @@ final class AvatarData
     }
 
     /**
+     * A list re-sorted by the name it shows, once names are gated, so a preferred name does not sit out of order.
+     * Stable (usort keeps ties in their order), case-insensitive, natural ("No2" before "No10").
+     *
+     * @template T of array<string, mixed>
+     *
+     * @param list<T> $rows
+     *
+     * @return list<T>
+     */
+    public static function sortByName(array $rows, string $key = 'name'): array
+    {
+        usort($rows, static fn (array $a, array $b): int => strnatcasecmp((string) $a[$key], (string) $b[$key]));
+
+        return $rows;
+    }
+
+    /**
      * forViewer() in the shape resources/js/shared/avatar.js draws, for JSON lists (Messages, groups).
      *
      * @param list<int> $userIds

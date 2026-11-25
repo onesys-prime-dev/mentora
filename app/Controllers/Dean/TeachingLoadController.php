@@ -54,6 +54,8 @@ class TeachingLoadController extends BaseController
             'term'           => $result['term'],
             'highLoadUnits'  => $result['highLoadUnits'],
             'instructors'    => $result['rows'],
+            // One lookup for the page; the names stay legal (an official workload view).
+            'loadAvatars'    => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($result['rows'], 'id'))),
             'loadError'      => $loadError,
             'previousPage'   => 'dashboard',
         ]);

@@ -31,8 +31,12 @@ $announcements = $data['announcements'] ?? [];
                     class="flex flex-col gap-0.5 px-5 py-3.5 border-b border-[#F6F7FA] last:border-b-0 transition-colors hover:bg-[#F8FAFF]">
 
                     <span class="text-[13px] font-semibold text-[#1A1C1E] truncate"><?= esc($announcement['title']) ?></span>
-                    <span class="text-xs text-[#6B7488]">
-                        <?= esc($announcement['code']) ?> · <?= esc($announcement['author']) ?> · <?= esc($announcement['posted']) ?>
+                    <span class="flex items-center gap-1.5 text-xs text-[#6B7488]">
+                        <?php // The row is a link, so the author's avatar is a plain picture beside the name, never a button. ?>
+                        <?php if (($announcement['avatar'] ?? null) !== null): ?>
+                            <?= view('components/avatar', ['person' => $announcement['avatar']['person'], 'size' => 'xs', 'decorative' => true], ['saveData' => false]) ?>
+                        <?php endif; ?>
+                        <span class="min-w-0 truncate"><?= esc($announcement['code']) ?> · <?= esc($announcement['author']) ?> · <?= esc($announcement['posted']) ?></span>
                     </span>
 
                 </a>

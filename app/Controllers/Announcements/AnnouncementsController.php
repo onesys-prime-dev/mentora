@@ -12,6 +12,7 @@ use App\Services\Admin\PlatformSettings;
 use App\Services\Courses\ChairpersonAccessService;
 use App\Services\Courses\CollegeAnnouncementService;
 use App\Services\Institutions\InstitutionAnnouncement;
+use App\Services\Profiles\AvatarData;
 
 /**
  * The Announcements app: every announcement that reaches this person, at four levels and in this order:
@@ -41,6 +42,12 @@ class AnnouncementsController extends BaseController
             $institution = (new InstitutionAnnouncement())->forUser($user);
             $college  = (new CollegeAnnouncementService())->forUser($user);
             $courses     = $this->courseAnnouncements($user, $area);
+
+            // One lookup for the page: each author's name and avatar as this person may see them (a byline is
+            // social), before the search, so typing the name shown finds the post.
+            $avatars = (new AvatarData())->forViewer($user, array_values(array_unique(array_map('intval', [...array_column($college, 'created_by'), ...array_column($courses, 'author_id')]))));
+            $college = array_map(static fn (array $a): array => ['author' => $avatars[(int) $a['created_by']]['person']['name'] ?? $a['author'], 'avatar' => $avatars[(int) $a['created_by']] ?? null] + $a, $college);
+            $courses = array_map(static fn (array $c): array => ['author' => $avatars[$c['author_id']]['person']['name'] ?? $c['author'], 'avatar' => $avatars[$c['author_id']] ?? null] + $c, $courses);
         } catch (\Throwable $e) {
             log_message('error', 'Announcements failed to load: ' . $e->getMessage());
             $loadError = true;
@@ -141,6 +148,7 @@ class AnnouncementsController extends BaseController
 
             $out[] = [
                 'id'         => (int) $row['id'],
+                'author_id'  => (int) $row['author_id'],
                 'subject'    => (string) $row['subject'],
                 'author'     => trim((string) $row['author_name']) !== '' ? trim((string) $row['author_name']) : 'Instructor',
                 'created_at' => (string) $row['created_at'],

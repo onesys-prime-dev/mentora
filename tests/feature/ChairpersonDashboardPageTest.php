@@ -90,6 +90,40 @@ final class ChairpersonDashboardPageTest extends RouteTestCase
         $result->assertSee('Needs Attention');
     }
 
+    public function testWorkloadAndAnnouncementsShowGatedAvatarsWithTheRightNames(): void
+    {
+        $chair    = CourseFactory::user('chairperson');
+        $offering = CourseFactory::offering();
+        $seen     = CourseFactory::user('instructor');
+        $hidden   = CourseFactory::user('instructor');
+
+        db_connect()->table('chairperson_assignments')->insert([
+            'department_id' => $this->departmentOf($offering), 'chairperson_user_id' => $chair->id, 'status' => 'active', 'assigned_at' => date('Y-m-d H:i:s'),
+        ]);
+        db_connect()->table('user_profiles')->insert(['user_id' => $seen->id, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
+        db_connect()->table('user_profiles')->insert(['user_id' => $hidden->id, 'first_name' => 'Hal', 'last_name' => 'Hidden', 'preferred_first_name' => 'Zedekiah']);
+        CourseFactory::assignInstructor($offering, $seen);
+        CourseFactory::members($offering, [$chair, $seen]);
+        // Not in the institution: the chairperson may not open this author's card.
+        CourseFactory::members($offering, [$hidden], false);
+        foreach ([$seen, $hidden] as $i => $author) {
+            db_connect()->table('announcements')->insert(['offering_id' => $offering, 'author_id' => $author->id, 'subject' => 'Post ' . $i, 'message' => '{}', 'created_at' => date('Y-m-d H:i:s', time() - 60 * $i)]);
+        }
+
+        $this->loggedInAs($chair);
+        $body = $this->get('chairperson/dashboard')->response()->getBody();
+
+        // The workload is an official view: the legal name beside an avatar that opens the card.
+        $this->assertMatchesRegularExpression('#data-person-avatar="' . $seen->id . '".*?data-workload-name>Juan Dela Cruz<#s', $body);
+        // An announcement byline is social: the preferred name, the avatar a plain picture inside the row's link.
+        $this->assertStringContainsString('Jun Dela Cruz', $body);
+        $this->assertStringContainsString('Hal Hidden', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden->id . '"', $body);
+        $this->assertDoesNotMatchRegularExpression('#<a[^>]*/announcements"[^>]*>(?:(?!</a>).)*<button#s', $body, 'no button inside a link');
+        $this->assertSame(2, preg_match_all('#<a[^>]*/announcements"[^>]*>(?:(?!</a>).)*data-avatar#s', $body), 'each byline has its avatar');
+    }
+
     private function departmentOf(int $offeringId): int
     {
         return (int) db_connect()->table('course_offerings co')

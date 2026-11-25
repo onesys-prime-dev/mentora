@@ -353,6 +353,8 @@ class DashboardService
         }
 
         $rows = $this->announcementModel->retrieveForOfferings(array_keys($byOffering), 8);
+        // One lookup for the card: each author's name and avatar as this viewer may see them (a byline is social).
+        $avatars = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_map('intval', array_column($rows, 'author_id')));
 
         $announcements = [];
 
@@ -370,7 +372,8 @@ class DashboardService
                 'slug' => url_title($offering['course_title'], '-', true),
                 'code' => $offering['course_code'] . ' - ' . $offering['section_code'],
                 'title' => $row['subject'],
-                'author' => trim((string) $row['author_name']) !== '' ? $row['author_name'] : 'Instructor',
+                'author' => $avatars[(int) $row['author_id']]['person']['name'] ?? (trim((string) $row['author_name']) !== '' ? $row['author_name'] : 'Instructor'),
+                'avatar' => $avatars[(int) $row['author_id']] ?? null,
                 'posted' => $this->describeEditedAt($row['created_at']),
             ];
 
@@ -454,6 +457,14 @@ class DashboardService
             $counts[$id] ??= ['name' => trim((string) $section['instructor_name']), 'sections' => 0];
             $counts[$id]['sections']++;
         }
+
+        // One lookup for the card; the names stay legal (an official workload view).
+        $avatars = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_keys($counts));
+
+        foreach ($counts as $id => &$row) {
+            $row['avatar'] = $avatars[$id] ?? null;
+        }
+        unset($row);
 
         usort($counts, static fn (array $a, array $b) => $b['sections'] <=> $a['sections']);
 

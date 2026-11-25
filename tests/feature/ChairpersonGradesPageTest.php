@@ -516,15 +516,15 @@ final class ChairpersonGradesPageTest extends RouteTestCase
         $x = $this->xpath($this->open('tab=program&sub=at-risk'));
 
         $this->assertSame('at-risk', $x->query("//*[@data-grades-sub][@aria-current='page']")->item(0)->getAttribute('data-grades-sub'));
-        $names = $this->texts($x, '//*[@data-risk-row]/th');
+        $names = $this->texts($x, '//*[@data-risk-row]/th//*[@data-risk-name]');
         $this->assertContains('Faye Failing', $names);
         $this->assertNotContains('Otto Outside', $names);
-        $this->assertSame(['grade'], $this->attributes($x, "//*[@data-risk-row][th[normalize-space()='Faye Failing']]//*[@data-reason='grade']", 'data-reason'));
-        $this->assertSame(site_url("chairperson/courses/{$offering}/course-it101/grades"), $x->query("//*[@data-risk-row][th[normalize-space()='Faye Failing']]//a")->item(0)->getAttribute('href'));
+        $this->assertSame(['grade'], $this->attributes($x, "//*[@data-risk-row][th[.//*[@data-risk-name][normalize-space()='Faye Failing']]]//*[@data-reason='grade']", 'data-reason'));
+        $this->assertSame(site_url("chairperson/courses/{$offering}/course-it101/grades"), $x->query("//*[@data-risk-row][th[.//*[@data-risk-name][normalize-space()='Faye Failing']]]//a")->item(0)->getAttribute('href'));
         $this->assertSame(0, $x->query('//a[@data-program-row] | //*[@data-grades-grid]')->length, 'the list, not the table');
 
         $x = $this->xpath($this->open('tab=program&sub=at-risk&reason=grade'));
-        $this->assertSame(['Faye Failing'], $this->texts($x, '//*[@data-risk-row]/th'));
+        $this->assertSame(['Faye Failing'], $this->texts($x, '//*[@data-risk-row]/th//*[@data-risk-name]'));
     }
 
     public function testControlsHiddenWithoutTheirPermissions(): void

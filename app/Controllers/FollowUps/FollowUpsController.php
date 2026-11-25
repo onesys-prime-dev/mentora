@@ -77,6 +77,10 @@ class FollowUpsController extends BaseController
             $loadError = true;
         }
 
+        // One lookup for the page: the student each request is about, as this person may see them (FR2).
+        $students = (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_unique(array_filter(array_map('intval', array_column($list['rows'], 'student_id'))))));
+        $list['rows'] = array_map(static fn (array $r): array => ['student_name' => $students[(int) $r['student_id']]['person']['name'] ?? $r['student_name'], 'student_avatar' => $students[(int) $r['student_id']] ?? null] + $r, $list['rows']);
+
         return view('pages/follow-ups/index', [
             'title'        => $area === 'instructor' ? 'Requests' : 'Follow-ups',
             'page'         => 'follow-ups',

@@ -72,6 +72,39 @@ final class TeachingLoadPageTest extends RouteTestCase
         $this->assertStringContainsString('dean/teaching-load/' . $this->leo->id, $body);
     }
 
+    public function testEachInstructorHasAGatedAvatarBesideTheLegalNameFromOneLookup(): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $this->tess->id)->update(['preferred_first_name' => 'Tee']);
+        db_connect()->table('user_profiles')->where('user_id', $this->leo->id)->update(['preferred_first_name' => 'Zedekiah']);
+        // Leo left the institution: the dean may no longer open his card.
+        db_connect()->table('institution_users')->where('user_id', $this->leo->id)->delete();
+
+        $lookups = function (): array {
+            $n = 0;
+            $l = static function (\CodeIgniter\Database\Query $q) use (&$n): void {
+                $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+            };
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $body = $this->page('dean/teaching-load');
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return [$n, $body];
+        };
+        [$few, $body] = $lookups();
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->tess->id . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $this->leo->id . '"', $body);
+        $this->assertStringContainsString('>Tess Tan</a>', $body, 'an official workload view keeps the legal name');
+        $this->assertStringContainsString('>Leo Law</a>', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body);
+
+        $it = (int) db_connect()->table('course_offerings')->select('course_offerings.id')->join('courses', 'courses.id = course_offerings.course_id')->where('course_code', 'IT101')->get()->getRow()->id;
+        for ($i = 0; $i < 3; $i++) {
+            CourseFactory::assignInstructor($it, PeopleFactory::person('instructor', 'More', 'No' . $i, null, $this->institution));
+        }
+        $this->assertLessThanOrEqual($few, $lookups()[0], 'one avatar lookup for the page, not one per instructor');
+    }
+
     public function testTheHighLoadLineFollowsTheInstitutionsSetting(): void
     {
         db_connect()->table('institution_academic_defaults')->insert(['institution_id' => $this->institution, 'high_load_units' => 2]);

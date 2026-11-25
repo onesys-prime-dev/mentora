@@ -9,6 +9,7 @@
  * @var list<array<string, mixed>> $terms
  * @var list<array<string, mixed>> $departments
  * @var int $highLoadUnits
+ * @var array<int, array> $loadAvatars AvatarData::forViewer() entries by instructor id
  */
 $base = site_url('dean/teaching-load');
 
@@ -40,8 +41,9 @@ $rows = [];
 
 foreach ($instructors as $i) {
     $rows[] = [
-        'id'    => (int) $i['id'],
-        'cells' => [
+        'id'     => (int) $i['id'],
+        'person' => ($loadAvatars ?? [])[(int) $i['id']] ?? null,
+        'cells'  => [
             'name'       => ['html' => '<a class="font-semibold text-brand hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center" href="' . esc($base . '/' . (int) $i['id'] . (($q = http_build_query(array_filter(['term' => $term, 'department' => null]))) === '' ? '' : '?' . $q)) . '">' . esc($i['name']) . '</a>'
                 . ($i['high_load'] ? '<span class="mt-1 block">' . view('components/status-badge', ['label' => 'High load', 'tone' => 'warning', 'icon' => 'attention'], ['saveData' => false]) . '</span>' : '')],
             'sections'   => (string) $i['sections'],

@@ -62,7 +62,7 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
                 <?= icon('search', 'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400') ?>
             <input id="announcement-q" type="search" name="q" data-auto-search value="<?= esc($query) ?>" maxlength="100" placeholder="Search announcements"
                    class="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-base sm:text-sm pointer-coarse:min-h-11 focus:outline-none focus:ring-2 focus:ring-brand/55 sm:w-64">
-            </span>
+            </span>
         </form>
         </div>
     <?php endif; ?>
@@ -106,7 +106,10 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
                         <li class="flex flex-col gap-1 rounded-2xl border border-[#E3E6EE] bg-[#F6F7FA] px-5 py-4 shadow-md" data-college-announcement>
                             <span class="text-sm font-bold text-[#1A1C1E]"><?= esc($a['title']) ?></span>
                             <p class="whitespace-pre-line text-sm text-[#3D3D3D]"><?= esc($a['message']) ?></p>
-                            <span class="text-xs text-[#646464]">
+                            <span class="flex flex-wrap items-center gap-x-1.5 text-xs text-[#646464]">
+                                <?php if (($a['avatar'] ?? null) !== null): ?>
+                                    <?= view('components/avatar', $a['avatar'] + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) ?>
+                                <?php endif; ?>
                                 <?= esc($a['author'] !== '' ? $a['author'] . ' · ' : '') ?><?= esc($a['scope_label']) ?> · <?= esc($when($a['created_at'])) ?><?= $a['ends_on'] ? ' · until ' . esc($when($a['ends_on'])) : '' ?>
                             </span>
                         </li>
@@ -129,7 +132,8 @@ $link = static fn (string $key): string => site_url($area . '/announcements') . 
                         <li>
                             <a href="<?= esc($c['url']) ?>" class="flex flex-col gap-0.5 px-5 py-3 transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" data-course-announcement>
                                 <span class="text-sm font-semibold text-[#1A1C1E]"><?= esc($c['subject']) ?></span>
-                                <span class="text-xs text-[#646464]"><?= esc($c['code']) ?> · <?= esc($c['author']) ?> · <?= esc($when($c['created_at'])) ?></span>
+                                <?php // The row is a link, so the author's avatar is a plain picture beside the name, never a button. ?>
+                                <span class="flex items-center gap-1.5 text-xs text-[#646464]"><?php if (($c['avatar'] ?? null) !== null): ?><?= view('components/avatar', ['person' => $c['avatar']['person'], 'size' => 'xs', 'decorative' => true], ['saveData' => false]) ?><?php endif; ?><span><?= esc($c['code']) ?> · <?= esc($c['author']) ?> · <?= esc($when($c['created_at'])) ?></span></span>
                             </a>
                         </li>
                     <?php endforeach; ?>

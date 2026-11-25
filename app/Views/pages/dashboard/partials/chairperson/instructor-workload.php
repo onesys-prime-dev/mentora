@@ -16,14 +16,19 @@ $max = max(1, ...array_column($instructors, 'sections') ?: [1]);
 
     <?php else: ?>
 
-        <?php // From lg up the list scrolls inside the card and holds no links, so the region itself takes the focus (keyboard scrolling). ?>
+        <?php // From lg up the list scrolls inside the card, so the region itself takes the focus (keyboard scrolling); only the avatars of people the viewer may see are buttons. ?>
         <div class="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto scroll-area focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50" tabindex="0" role="region" aria-labelledby="instructor-workload-heading">
 
             <?php foreach ($instructors as $instructor): ?>
 
                 <div class="flex flex-col gap-1.5">
                     <div class="flex items-center justify-between gap-3">
-                        <span class="text-sm text-[#2A3142] truncate"><?= esc($instructor['name']) ?></span>
+                        <span class="flex min-w-0 items-center gap-2">
+                            <?php if (($instructor['avatar'] ?? null) !== null): ?>
+                                <?= view('components/avatar', $instructor['avatar'] + ['size' => 'xs', 'decorative' => true], ['saveData' => false]) ?>
+                            <?php endif; ?>
+                            <span class="text-sm text-[#2A3142] truncate" data-workload-name><?= esc($instructor['name']) ?></span>
+                        </span>
                         <span class="text-xs font-bold text-[#0A0F1E] shrink-0">
                             <?= (int) $instructor['sections'] ?> <?= $instructor['sections'] === 1 ? 'section' : 'sections' ?>
                         </span>

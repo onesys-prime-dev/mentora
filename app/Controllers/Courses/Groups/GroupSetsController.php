@@ -73,8 +73,8 @@ class GroupSetsController extends BaseController
         return $this->response->setJSON([
             'success'   => true,
             'set'       => $set,
-            'groups'    => array_map(static fn (array $g) => ['id' => (int) $g['id'], 'name' => $g['name'], 'members' => $byGroup[(int) $g['id']] ?? []], $groups),
-            'ungrouped' => array_map($person, $ungrouped),
+            'groups'    => array_map(static fn (array $g) => ['id' => (int) $g['id'], 'name' => $g['name'], 'members' => AvatarData::sortByName($byGroup[(int) $g['id']] ?? [])], $groups),
+            'ungrouped' => AvatarData::sortByName(array_map($person, $ungrouped)),
             'limits'    => ['max_members' => GroupLimits::MAX_MEMBERS, 'max_groups' => GroupLimits::MAX_GROUPS_PER_ACTIVITY, 'max_sets' => GroupLimits::MAX_SETS_PER_OFFERING],
         ]);
     }
@@ -169,11 +169,13 @@ class GroupSetsController extends BaseController
                 ->select("u.id, COALESCE(NULLIF(TRIM(CONCAT(p.first_name, ' ', p.last_name)), ''), u.username) AS name", false)
                 ->join('user_profiles p', 'p.user_id = u.id', 'left')
                 ->whereIn('u.id', $ids)->get()->getResultArray(), 'name', 'id');
-            $person = static fn (int $id): array => ['student_user_id' => $id, 'name' => (string) ($names[$id] ?? '')];
+            // One lookup for the preview: each proposed member's avatar and name as this viewer may see them (FR2).
+            $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', $ids));
+            $person  = static fn (int $id): array => ['student_user_id' => $id, 'name' => $avatars[$id]['name'] ?? (string) ($names[$id] ?? ''), 'avatar' => $avatars[$id] ?? null];
 
             return [
-                'groups'    => array_map(static fn (array $g) => ['members' => array_map($person, $g)], $result['groups']),
-                'ungrouped' => array_map($person, $result['ungrouped']),
+                'groups'    => array_map(static fn (array $g) => ['members' => AvatarData::sortByName(array_map($person, $g))], $result['groups']),
+                'ungrouped' => AvatarData::sortByName(array_map($person, $result['ungrouped'])),
                 'conflicts' => $result['conflicts'],
                 'replaces'  => (new StudentGroupModel())->where('set_id', $setId)->countAllResults(),
             ];

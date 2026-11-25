@@ -357,6 +357,29 @@ final class InstructorGradesPageTest extends RouteTestCase
         $this->open('tab=to-grade&qsection=' . $a . '&late=1')->assertSee('Nothing waiting to grade');
     }
 
+    public function testAtRiskShowsGatedNamesAndAvatarsSortedByTheNameShown(): void
+    {
+        $offering = $this->section('A');
+        CourseFactory::items(CourseFactory::unit(CourseFactory::module($offering)), array_fill(0, 2, []));
+
+        $this->student($offering, 'Adams');
+        $hidden = $this->student($offering, 'Brown');
+        $cole   = $this->student($offering, 'Cole');
+        db_connect()->table('user_profiles')->where('user_id', $cole->id)->update(['preferred_first_name' => 'Abe']);
+        db_connect()->table('user_profiles')->where('user_id', $hidden->id)->update(['preferred_first_name' => 'Zedekiah']);
+        // Ada Brown left the institution: the instructor may no longer see her profile.
+        db_connect()->table('institution_users')->where('user_id', $hidden->id)->delete();
+
+        $body = (string) $this->open('tab=at-risk')->response()->getBody();
+        $x    = $this->xpath($this->open('tab=at-risk'));
+        $names = array_map(fn (DOMNode $row): string => $this->text((new DOMXPath($row->ownerDocument))->query('.//*[@data-risk-name]', $row)->item(0)), iterator_to_array($x->query('//*[@data-risk-row]')));
+
+        $this->assertSame(['Abe Cole', 'Ada Adams', 'Ada Brown'], $names, 'sorted by the name shown, not the legal one');
+        $this->assertStringContainsString('data-person-avatar="' . $cole->id . '"', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $hidden->id . '"', $body);
+        $this->assertStringNotContainsString('Zedekiah', $body);
+    }
+
     public function testAtRiskShowsReasonsAndFilters(): void
     {
         $offering = $this->section('A');
@@ -390,7 +413,7 @@ final class InstructorGradesPageTest extends RouteTestCase
         $this->assertSame('3', $this->text($x->query("//*[@data-tab-count='at-risk']")->item(0)));
 
         $names = fn (string $query): array => array_map(
-            fn (DOMNode $row): string => $this->text($row->getElementsByTagName('th')->item(0)),
+            fn (DOMNode $row): string => $this->text((new DOMXPath($row->ownerDocument))->query('.//*[@data-risk-name]', $row)->item(0)),
             iterator_to_array($this->xpath($this->open($query))->query('//*[@data-risk-row]')),
         );
 
