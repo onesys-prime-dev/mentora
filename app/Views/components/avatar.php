@@ -41,7 +41,7 @@ $classes = $sizeClasses . ' shrink-0 inline-flex items-center justify-center ove
 $tag     = $interactive ? 'button' : 'span';
 ?>
 <<?= $tag ?>
-    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : ($decorative ? 'aria-hidden="true"' : '') ?>
+    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" data-person-name="' . esc($name, 'attr') . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : ($decorative ? 'aria-hidden="true"' : '') ?>
     class="<?= $classes ?>"
     style="background-color: <?= $colour ?>"
     data-avatar>

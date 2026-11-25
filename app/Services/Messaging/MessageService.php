@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Shield\Entities\User;
 
 /**
@@ -372,6 +373,8 @@ class MessageService
             'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
             'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
             'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
+            // One lookup for the page: everyone else who wrote here, as this viewer may see them (FR2).
+            'avatars'   => (new AvatarData())->forViewerJson($user, array_values(array_diff(array_map('intval', array_column($rows, 'sender_id')), [$userId]))),
         ];
 
         return array_map(fn (array $row): array => $this->present($row, $userId, $view), $rows);
@@ -379,7 +382,7 @@ class MessageService
 
     /**
      * @param array<string, mixed>                                                                                                  $row  a `messages` row
-     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>} $view what the viewer may do and the reactions of the page
+     * @param array{canPin?: bool, canReact?: bool, canReply?: bool, reactions?: array<int, list<array<string, mixed>>>, avatars?: array<int, array<string, mixed>>} $view what the viewer may do, the reactions and the senders' avatars of the page
      *
      * @return array<string, mixed>
      */
@@ -405,6 +408,7 @@ class MessageService
         return [
             'id' => (int) $row['id'], 'sender_id' => (int) $row['sender_id'], 'mine' => (int) $row['sender_id'] === $userId,
             'sender_name' => $sender['name'], 'sender_role' => $sender['role'],
+            'avatar' => $view['avatars'][(int) $row['sender_id']] ?? null,
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,

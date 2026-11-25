@@ -83,6 +83,34 @@ final class ChairpersonReviewPageTest extends RouteTestCase
         $this->assertStringContainsString('To review', $body);
     }
 
+    public function testTheChairpersonColumnShowsTheActorsAvatarFromOneLookup(): void
+    {
+        $lookups = function (): int {
+            $n = 0;
+            $l = static function (\CodeIgniter\Database\Query $q) use (&$n): void {
+                $n += str_contains($q->getQuery(), 'preferred_first_name') ? 1 : 0;
+            };
+            \CodeIgniter\Events\Events::on('DBQuery', $l);
+            $this->page();
+            \CodeIgniter\Events\Events::removeListener('DBQuery', $l);
+
+            return $n;
+        };
+
+        $this->action($this->offering);
+        $this->page(); // the header's own profile is cached after the first request
+        $few = $lookups();
+        foreach (range(1, 4) as $day) {
+            $this->action($this->offering, "2026-10-1{$day} 09:00:00");
+        }
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->chair->id . '"', $body);
+        $this->assertStringContainsString("Open Ana Chair's profile", $body);
+        $this->assertSame($few, $lookups(), 'avatars are looked up once for the page, not per row');
+    }
+
     public function testItSaysSoWhenNothingNeedsReviewAndWhenFiltersFindNothing(): void
     {
         $this->assertStringContainsString('Nothing to review', $this->page());

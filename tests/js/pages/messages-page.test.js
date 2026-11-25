@@ -278,6 +278,33 @@ describe("the conversation list", () => {
 
 describe("opening a conversation", () => {
 
+    it("puts the other person's interactive avatar in the thread head", async () => {
+
+        const avatar = { id: 7, name: "Prof. Reyes", initials: "PR", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
+
+        await mount(makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ avatar })], unread: 0 })) }));
+        await openFirst();
+
+        const head = q("[data-role=head-avatar]");
+
+        expect(head.hasAttribute("aria-hidden")).toBe(false);
+        expect(head.querySelector("button[data-person-avatar='7']")).not.toBeNull();
+
+    });
+
+    it("draws a hidden person's avatar in the thread head as decoration only", async () => {
+
+        const avatar = { id: 7, name: "Prof. Reyes", initials: "PR", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
+
+        await mount(makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ avatar: { ...avatar, interactive: false } })], unread: 0 })) }));
+        await openFirst();
+
+        expect(q("[data-role=head-avatar]").getAttribute("aria-hidden")).toBe("true");
+        expect(q("[data-role=head-avatar] [data-person-avatar]")).toBeNull();
+        expect(q("[data-role=head-avatar] [data-avatar]")).not.toBeNull();
+
+    });
+
     it("shows the messages oldest first, marks the newest read and starts polling after it", async () => {
 
         const api = makeApi();

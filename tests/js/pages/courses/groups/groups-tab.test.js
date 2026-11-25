@@ -235,6 +235,25 @@ describe("the tab's states", () => {
         expect(document.querySelector("[data-detail-skeleton]")).not.toBeNull();
     });
 
+    it("puts each member's avatar from the JSON on their chip: a button when interactive, decoration when not", () => {
+        const avatar = (id, name, interactive) => ({ id, name, initials: name.slice(0, 2).toUpperCase(), colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive });
+        const withAvatars = {
+            ...detail(),
+            groups: [{ id: 1, name: "Team 1", members: [{ student_user_id: 41, name: "Ana Cruz", avatar: avatar(41, "Ana Cruz", true) }] }],
+            ungrouped: [{ student_user_id: 42, name: "Ben Dela", avatar: avatar(42, "Ben Dela", false) }],
+        };
+
+        document.body.innerHTML = renderSetDetail(withAvatars, true);
+
+        const ana = document.querySelector("[data-member=\"41\"]");
+        const ben = document.querySelector("[data-member=\"42\"]");
+
+        expect(ana.querySelector("button[data-person-avatar=\"41\"]").getAttribute("aria-label")).toBe("Open Ana Cruz's profile");
+        expect(ana.querySelector("[data-member-name]").textContent).toBe("Ana Cruz");
+        expect(ben.querySelector("[data-person-avatar]")).toBeNull();
+        expect(ben.querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
+    });
+
     it("says a set without groups has none yet, with Add group", () => {
         const empty = { ...detail(), groups: [] };
         document.body.innerHTML = renderSetDetail(empty, true);

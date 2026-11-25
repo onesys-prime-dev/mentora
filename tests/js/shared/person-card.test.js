@@ -111,6 +111,19 @@ describe("the popover", () => {
 
     });
 
+    it("takes the popover's name from data-person-name when the avatar has it", async () => {
+
+        avatar.setAttribute("data-person-name", "Maria Santos");
+        avatar.setAttribute("aria-label", "View this person");
+        start({ "/people/7/card": reply(200, CARD) });
+
+        mouseOver(avatar);
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(document.querySelector("[data-person-popover]").getAttribute("aria-label")).toBe("Maria Santos, profile summary");
+
+    });
+
     it("sends the whole page to the login when the session expired, caching and showing nothing", async () => {
 
         const assign = vi.fn();

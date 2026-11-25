@@ -149,7 +149,7 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertCount(2, $json['myGroup']['members']);
 
         foreach ($json['myGroup']['members'] as $member) {
-            $this->assertSame(['id', 'name'], array_keys($member));
+            $this->assertSame(['id', 'name', 'avatar'], array_keys($member));
         }
 
         $this->assertArrayNotHasKey('otherGroups', $json);
@@ -369,7 +369,7 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertSame([], $this->api($this->loner, 'GET')[1]['pendingInvitations']);
 
         foreach ($mine['myGroup']['members'] as $member) {
-            $this->assertSame(['id', 'name'], array_keys($member));
+            $this->assertSame(['id', 'name', 'avatar'], array_keys($member));
         }
     }
 
@@ -429,7 +429,7 @@ final class StudentGroupRoutesTest extends RouteTestCase
         $this->assertSame(date('Y-m-d H:i', strtotime('+30 days')), substr($group['extension']['until'], 0, 16));
 
         foreach ($group['members'] as $member) {
-            $this->assertSame(['id', 'name'], array_keys($member));
+            $this->assertSame(['id', 'name', 'avatar'], array_keys($member));
         }
     }
 

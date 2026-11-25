@@ -54,6 +54,7 @@ class ChairpersonReviewController extends BaseController
             'user'           => $user,
             'filters'        => $filters,
             'entries'        => $result['rows'],
+            'actorAvatars'   => (new \App\Services\Profiles\AvatarData())->forViewer($user, array_values(array_filter(array_map('intval', array_column($result['rows'], 'actor_id'))))),
             'total'          => $result['total'],
             'counts'         => $result['counts'],
             'pageNumber'     => $page,

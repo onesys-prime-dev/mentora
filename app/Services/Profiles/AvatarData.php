@@ -80,4 +80,19 @@ final class AvatarData
 
         return array_map(static fn (array $person): array => ['person' => $person, 'interactive' => isset($visible[$person['id']])], $this->rows($userIds, $visible));
     }
+
+    /**
+     * forViewer() in the shape resources/js/shared/avatar.js draws, for JSON lists (Messages, groups).
+     *
+     * @param list<int> $userIds
+     *
+     * @return array<int, array{id:int, name:string, initials:string, colour:string, photoUrl:?string, photoUrlLg:?string, interactive:bool}>
+     */
+    public function forViewerJson(User $viewer, array $userIds): array
+    {
+        return array_map(static fn (array $a): array => [
+            'id' => $a['person']['id'], 'name' => $a['person']['name'], 'initials' => $a['person']['initials'], 'colour' => $a['person']['colour'],
+            'photoUrl' => $a['person']['photo_url'], 'photoUrlLg' => $a['person']['photo_url_lg'], 'interactive' => $a['interactive'],
+        ], $this->forViewer($viewer, $userIds));
+    }
 }

@@ -38,4 +38,39 @@ describe("renderAvatar", () => {
         expect(renderAvatar(person, "xl").className).toContain("h-18 w-18");
         expect(renderAvatar(person, "nope").className).toContain("h-12 w-12");
     });
+
+    it("is a button that opens the person's card when the avatar data says interactive", () => {
+        const el = renderAvatar({ ...person, interactive: true }, "sm");
+        expect(el.tagName).toBe("BUTTON");
+        expect(el.type).toBe("button");
+        expect(el.dataset.personAvatar).toBe("10");
+        expect(el.dataset.personName).toBe("Ana Reyes");
+        expect(el.getAttribute("aria-haspopup")).toBe("dialog");
+        expect(el.getAttribute("aria-label")).toBe("Open Ana Reyes's profile");
+        expect(el.querySelector("[role=img]")).toBeNull();
+        expect(el.querySelector("span").getAttribute("aria-hidden")).toBe("true");
+        expect(el.hasAttribute("data-avatar")).toBe(true);
+    });
+
+    it("is hidden from screen readers when decorative, with an empty photo alt", () => {
+        const el = renderAvatar({ ...person, photoUrl: "/p.jpg" }, "xs", { decorative: true });
+        expect(el.tagName).toBe("SPAN");
+        expect(el.getAttribute("aria-hidden")).toBe("true");
+        expect(el.hasAttribute("data-person-avatar")).toBe(false);
+        expect(el.querySelector("img").alt).toBe("");
+    });
+
+    it("ignores decorative for an interactive avatar and keeps the photo alt", () => {
+        const el = renderAvatar({ ...person, interactive: true, photoUrl: "/p.jpg" }, "sm", { decorative: true });
+        expect(el.tagName).toBe("BUTTON");
+        expect(el.hasAttribute("aria-hidden")).toBe(false);
+        expect(el.querySelector("img").alt).toBe("Photo of Ana Reyes");
+    });
+
+    it("never writes a colour outside the set into the style", () => {
+        const el = renderAvatar({ ...person, id: 11, colour: "red;background:url(x)" });
+        const probe = document.createElement("span");
+        probe.style.backgroundColor = COLOURS[3];
+        expect(el.style.backgroundColor).toBe(probe.style.backgroundColor);
+    });
 });

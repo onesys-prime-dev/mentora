@@ -13,6 +13,7 @@ use App\Services\Groups\GroupLeaderService;
 use App\Services\Groups\GroupProposalService;
 use App\Services\Groups\GroupSignupService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -76,7 +77,8 @@ class StudentGroupController extends BaseController
 
         if ((int) $config['groups_visible'] === 1) {
             $out['otherGroups'] = array_values(array_map(
-                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => $g['members']],
+                // Other groups stay names only: no avatar is drawn for them.
+                static fn (array $g) => ['id' => $g['id'], 'name' => $g['name'], 'members' => array_map(static fn (array $m): array => ['id' => $m['id'], 'name' => $m['name']], $g['members'])],
                 array_filter($groups, static fn (array $g) => $g['status'] === 'active' && ($mine === null || $g['id'] !== $mine['id'])),
             ));
         }
@@ -193,7 +195,7 @@ class StudentGroupController extends BaseController
         return array_map(static fn (array $r) => ['id' => (int) $r['id'], 'name' => (string) $r['name']], $rows);
     }
 
-    /** @return list<array{id:int,name:string,status:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string}>}> */
+    /** @return list<array{id:int,name:string,status:string,frozen:bool,leader_user_id:?int,leader_finalized_at:?string,members:list<array{id:int,name:string,avatar:?array<string, mixed>}>}> */
     protected function groups(int $configId): array
     {
         $members = db_connect()->table('student_group_members m')
@@ -202,9 +204,11 @@ class StudentGroupController extends BaseController
             ->where('m.config_id', $configId)->orderBy('m.joined_at')->orderBy('m.id')->get()->getResultArray();
 
         $byGroup = [];
+        // One lookup for the activity: every member's avatar as this student may see them (FR2).
+        $avatars = (new AvatarData())->forViewerJson(auth()->user(), array_map('intval', array_column($members, 'student_user_id')));
 
         foreach ($members as $m) {
-            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => (string) $m['name']];
+            $byGroup[(int) $m['group_id']][] = ['id' => (int) $m['student_user_id'], 'name' => (string) $m['name'], 'avatar' => $avatars[(int) $m['student_user_id']] ?? null];
         }
 
         $rows = db_connect()->table('student_groups')->where('config_id', $configId)->whereIn('status', ['active', 'proposed'])->orderBy('name')->orderBy('id')->get()->getResultArray();
@@ -224,7 +228,7 @@ class StudentGroupController extends BaseController
      * @param array<string, mixed> $g
      * @param array<string, mixed> $config
      *
-     * @return array<string, mixed> id, name, status, members ({id, name} only), frozen, leave/rename/vote rights, leader and, while proposed, the proposal
+     * @return array<string, mixed> id, name, status, members ({id, name, avatar} only), frozen, leave/rename/vote rights, leader and, while proposed, the proposal
      */
     private function mine(array $g, array $config, bool $finalized): array
     {

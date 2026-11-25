@@ -1,7 +1,7 @@
 /**
  * A person's avatar as a way into their profile.
  *
- *   <button data-person-avatar="7" aria-haspopup="dialog" aria-label="Open Maria's profile">
+ *   <button data-person-avatar="7" data-person-name="Maria" aria-haspopup="dialog" aria-label="Open Maria's profile">
  *     hover or keyboard focus (after 300 ms)  → a small card (GET /people/7/card)
  *     click, Enter, Space, "See more", a tap  → the profile in #person-dialog (GET /people/7/panel)
  *
@@ -154,7 +154,7 @@ export function initPersonCard() {
         const run = ++popRun;
 
         popAvatar = avatar;
-        pop = make("div", { "data-person-popover": id, role: "dialog", "aria-label": `${(avatar.getAttribute("aria-label") ?? "").replace(/^Open (.*)'s profile$/, "$1") || "Profile"}, profile summary`, "aria-busy": "true", class: "fixed z-40 rounded-2xl bg-white shadow-lg ring-1 ring-black/5" });
+        pop = make("div", { "data-person-popover": id, role: "dialog", "aria-label": `${avatar.dataset.personName || (avatar.getAttribute("aria-label") ?? "").replace(/^Open (.*)'s profile$/, "$1") || "Profile"}, profile summary`, "aria-busy": "true", class: "fixed z-40 rounded-2xl bg-white shadow-lg ring-1 ring-black/5" });
         pop.append(make("span", { "aria-hidden": "true", class: "absolute h-3 w-3 rotate-45 bg-white ring-1 ring-black/5" }));
 
         const content = make("div", { class: "relative rounded-2xl bg-white" });

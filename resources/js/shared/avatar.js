@@ -9,12 +9,30 @@ const SIZES = {
     xl: "h-18 w-18 text-2xl",
 };
 
-/** @param {{id:number, name:string, initials:string, colour?:string, photoUrl?:?string, photoUrlLg?:?string}} person */
-export function renderAvatar(person, size = "md") {
-    const el = document.createElement("span");
+/**
+ * person is AvatarData's JSON: interactive true draws the button shared/person-card.js opens; decorative (ignored
+ * when interactive) hides an avatar that sits beside the person's visible name from screen readers.
+ *
+ * @param {{id:number, name:string, initials:string, colour?:string, photoUrl?:?string, photoUrlLg?:?string, interactive?:boolean}} person
+ */
+export function renderAvatar(person, size = "md", { decorative = false } = {}) {
+    const interactive = person.interactive === true;
+    const hidden = decorative && !interactive;
+    const el = document.createElement(interactive ? "button" : "span");
     el.className = `${SIZES[size] ?? SIZES.md} shrink-0 inline-flex items-center justify-center overflow-hidden rounded-full font-bold text-white select-none`;
-    el.style.backgroundColor = person.colour ?? COLOURS[person.id % 8];
+    // Only the fixed set is ever written into the style, as components/avatar does.
+    el.style.backgroundColor = COLOURS.includes(person.colour) ? person.colour : COLOURS[person.id % 8];
     el.dataset.avatar = "";
+
+    if (interactive) {
+        el.type = "button";
+        el.dataset.personAvatar = String(person.id);
+        el.dataset.personName = person.name;
+        el.setAttribute("aria-haspopup", "dialog");
+        el.setAttribute("aria-label", `Open ${person.name}'s profile`);
+    } else if (hidden) {
+        el.setAttribute("aria-hidden", "true");
+    }
 
     // The 256 px photo for the larger sizes, as components/avatar does.
     const photo = (size === "lg" || size === "xl") && person.photoUrlLg ? person.photoUrlLg : person.photoUrl;
@@ -23,12 +41,16 @@ export function renderAvatar(person, size = "md") {
         const img = document.createElement("img");
         img.className = "h-full w-full object-cover";
         img.src = photo;
-        img.alt = `Photo of ${person.name}`;
+        img.alt = hidden ? "" : `Photo of ${person.name}`;
         el.append(img);
     } else {
         const text = document.createElement("span");
-        text.setAttribute("role", "img");
-        text.setAttribute("aria-label", person.name);
+        if (interactive || hidden) {
+            text.setAttribute("aria-hidden", "true");
+        } else {
+            text.setAttribute("role", "img");
+            text.setAttribute("aria-label", person.name);
+        }
         text.textContent = person.initials;
         el.append(text);
     }

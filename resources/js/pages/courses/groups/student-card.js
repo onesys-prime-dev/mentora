@@ -1,4 +1,5 @@
 import { applyFieldErrors, createDialog } from "../../../shared/dialog.js";
+import { renderAvatar } from "../../../shared/avatar.js";
 import { showToast } from "../../../shared/toast.js";
 import { beginLoad } from "../../../shared/spa/load-guard.js";
 import { showLoadError } from "../../../shared/spa/error-state.js";
@@ -256,7 +257,7 @@ function leaderRow(group) {
 function renderMine(card, state) {
 
     const group = state.myGroup;
-    const chips = group.members.map((m) => `<span class="rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${memberChip(m)}</span>`).join("");
+    const chips = group.members.map((m) => `<span class="inline-flex items-center gap-1.5 rounded-lg bg-brand-tint px-2.5 py-1 text-sm text-[#3D3D3D]" role="listitem" data-sg-member>${m.avatar ? renderAvatar(m.avatar, "xs", { decorative: true }).outerHTML : ""}<span>${memberChip(m)}</span></span>`).join("");
     let notice = "";
     let actions = "";
 

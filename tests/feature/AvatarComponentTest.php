@@ -87,6 +87,14 @@ final class AvatarComponentTest extends RouteTestCase
         $this->assertStringNotContainsString('data-person-avatar', $this->avatar($person));
     }
 
+    public function testAnInteractiveAvatarCarriesThePersonsNameForThePopover(): void
+    {
+        $html = $this->avatar(['id' => 4, 'name' => 'Ana "Q" Reyes'], 'sm', true);
+
+        $this->assertSame('Ana "Q" Reyes', $this->dom($html)->query('//button[@data-person-avatar="4"]')->item(0)?->getAttribute('data-person-name'));
+        $this->assertStringNotContainsString('data-person-name', $this->avatar(['id' => 4, 'name' => 'Ana Reyes']));
+    }
+
     public function testNamesAreEscaped(): void
     {
         $html = $this->avatar(['id' => 1, 'name' => '"><script>x</script>', 'initials' => 'X']);

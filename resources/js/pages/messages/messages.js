@@ -19,6 +19,7 @@
 |--------------------------------------------------------------------------
 */
 
+import { renderAvatar } from "../../shared/avatar.js";
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
 import { createGroupPicker, MAX_MEMBERS } from "./group.js";
@@ -251,8 +252,20 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         $("[data-role=head-name]").textContent = c?.name ?? "Conversation";
         $("[data-role=head-sub]").textContent = !c ? "" : c.subtitle ? `About ${c.subtitle}` : c.type === "course" ? "Course chat" : c.type === "group" ? "Group" : "Direct message";
-        avatar.textContent = c?.initials ?? "";
-        avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+        // A direct chat's head is the other person's avatar from the server: a way into their profile when they may be seen.
+        if (c?.avatar) {
+            avatar.replaceChildren(renderAvatar(c.avatar, "sm", { decorative: true }));
+            avatar.className = "flex flex-none";
+            if (c.avatar.interactive === true) {
+                avatar.removeAttribute("aria-hidden");
+            } else {
+                avatar.setAttribute("aria-hidden", "true");
+            }
+        } else {
+            avatar.textContent = c?.initials ?? "";
+            avatar.className = `grid h-[34px] w-[34px] flex-none place-items-center text-[13px] font-semibold ${c?.type === "course" ? "rounded-lg bg-brand text-white" : c?.type === "group" ? "rounded-lg bg-accent text-white" : "rounded-full bg-[#E0E5F2] text-brand-dark"}`;
+            avatar.setAttribute("aria-hidden", "true");
+        }
 
         const canPost = c === null || c.can_post !== false;
         const locked = Number(c?.is_locked) === 1;
