@@ -265,4 +265,13 @@ final class InstitutionAuditLogPageTest extends RouteTestCase
         $this->assertSame('Signed in', InstitutionAuditLog::label('auth.login'));
         $this->assertSame('Offering status changed', InstitutionAuditLog::label('offering.status_changed'));
     }
+
+    public function testTheActorHasAnInteractiveAvatarBesideTheName(): void
+    {
+        $this->entry();
+
+        $body = $this->page();
+
+        $this->assertStringContainsString('data-person-avatar="' . $this->admin->id . '"', $body);
+    }
 }

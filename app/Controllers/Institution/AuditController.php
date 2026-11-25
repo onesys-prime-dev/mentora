@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Services\Audit\AuditLogFilters;
 use App\Services\Institutions\InstitutionAuditLog;
 use App\Services\Institutions\InstitutionScope;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -31,6 +32,7 @@ class AuditController extends BaseController
             'user'         => auth()->user(),
             'auditFilters' => $filters,
             'auditRows'    => $result['rows'],
+            'auditAvatars' => (new AvatarData())->forViewer(auth()->user(), array_values(array_filter(array_map('intval', array_column($result['rows'], 'actor_id'))))),
             'auditTotal'   => $result['total'],
             'auditPages'   => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'auditActions' => $log->actionOptions(),

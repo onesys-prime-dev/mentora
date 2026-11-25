@@ -5,6 +5,7 @@
  *
  * @var App\Services\Audit\AuditLogFilters $auditFilters
  * @var list<array<string, mixed>>         $auditRows
+ * @var array<int, array>                 $auditAvatars AvatarData::forViewer() entries by actor id
  * @var int                                $auditTotal
  * @var int                                $auditPages
  * @var array<string, string>              $auditActions
@@ -42,6 +43,7 @@ foreach ($auditRows as $row) {
     $rows[] = [
         'id'    => $row['id'],
         'label' => $row['action_label'],
+        'person' => $auditAvatars[(int) ($row['actor_id'] ?? 0)] ?? null,
         'cells' => [
             'created_at'  => date('j M Y H:i', strtotime((string) $row['created_at'])),
             'actor_label' => ['html' => $who],

@@ -10,6 +10,7 @@ use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
 use App\Services\Institutions\PeopleService;
 use App\Services\Institutions\StructureException;
+use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\CorrectionRequestService;
 use App\Services\Profiles\ProfileModeration;
 use App\Services\Subscriptions\PlanLimits;
@@ -55,6 +56,7 @@ class PeopleController extends BaseController
             'reauthDialog'       => true,
             'peopleView'         => $view,
             'peopleRows'         => $result['rows'],
+            'peopleAvatars'      => (new AvatarData())->forViewer(auth()->user(), array_map('intval', array_column($result['rows'], 'id'))),
             'peopleTotal'        => $result['total'],
             'peoplePages'        => $result['pages'],
             'peopleFilters'      => $result['filters'],

@@ -43,7 +43,7 @@ $th = 'px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[#
             <?php foreach ($auditRows as $row): ?>
                 <tr>
                     <td class="sticky left-0 z-[1] whitespace-nowrap bg-white px-3 py-2 text-gray-700"><?= esc($row['created_at']) ?></td>
-                    <td class="px-3 py-2"><?= esc($row['actor_label'] ?? 'system') ?></td>
+                    <td class="px-3 py-2"><?php if (isset(($auditAvatars ?? [])[(int) ($row['actor_user_id'] ?? 0)])): ?><span class="flex items-center gap-2"><?= view('components/avatar', ['person' => $auditAvatars[(int) ($row['actor_user_id'] ?? 0)]['person'], 'size' => 'xs', 'decorative' => true], ['saveData' => false]) ?><span><?= esc($row['actor_label'] ?? 'system') ?></span></span><?php else: ?><?= esc($row['actor_label'] ?? 'system') ?><?php endif; ?></td>
                     <td class="px-3 py-2"><?= esc($row['acting_role'] ?? '—') ?></td>
                     <td class="px-3 py-2 font-mono text-xs"><?= esc($row['action']) ?></td>
                     <td class="px-3 py-2"><?= esc(trim(($row['target_type'] ?? '') . ' ' . ($row['target_id'] ?? '')) ?: '—') ?></td>

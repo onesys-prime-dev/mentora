@@ -85,7 +85,7 @@ foreach ($auditRows as $row) {
 
     $cells['changes'] = ['html' => $changes];
 
-    $rows[] = ['id' => (string) $row['id'], 'label' => (string) $row['action'], 'cells' => $cells];
+    $rows[] = ['id' => (string) $row['id'], 'label' => (string) $row['action'], 'cells' => $cells, 'person' => $avatars[(int) ($row['actor_user_id'] ?? 0)] ?? null];
 }
 
 $columns = [

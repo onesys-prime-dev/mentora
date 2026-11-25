@@ -120,4 +120,22 @@ final class AvatarComponentTest extends RouteTestCase
             $this->assertGreaterThan(0, $x->query('//main//*[@data-avatar]//*[@role="img"][.="AR"]')->length, $role);
         }
     }
+
+    public function testADecorativeNonInteractiveAvatarIsHiddenFromScreenReaders(): void
+    {
+        $person = ['id' => 4, 'name' => 'Ana Reyes', 'initials' => 'AR', 'colour' => AvatarData::COLOURS[4], 'photo_url' => '/media/a.jpg'];
+        $plain  = view('components/avatar', ['person' => $person, 'decorative' => true], ['saveData' => false]);
+
+        $this->assertStringContainsString('aria-hidden="true"', $plain);
+        $this->assertStringContainsString('alt=""', $plain);
+        $this->assertStringNotContainsString('role="img"', $plain);
+        $this->assertStringNotContainsString('Photo of', $plain);
+
+        $initials = view('components/avatar', ['person' => [...$person, 'photo_url' => null], 'decorative' => true], ['saveData' => false]);
+        $this->assertStringNotContainsString('aria-label', $initials);
+
+        $button = view('components/avatar', ['person' => $person, 'decorative' => true, 'interactive' => true], ['saveData' => false]);
+        $this->assertStringContainsString('aria-label="Open', $button, 'an interactive avatar is never hidden');
+        $this->assertStringNotContainsString('aria-hidden="true" class', $button);
+    }
 }

@@ -6,6 +6,7 @@
 |--------------------------------------------------------------------------
 | Params: person (a row of AvatarData::forMany; only id and name are needed,
 | initials and colour are worked out when missing), size (xs|sm|md|lg|xl),
+| decorative (bool, default false: for a non-interactive avatar beside the person's visible name; hidden from screen readers),
 | interactive (bool, default false: a button that opens the person's card on
 | hover and their profile on click (shared/person-card.js), instead of a plain element).
 | Colours mirror AvatarData::COLOURS and resources/js/shared/avatar.js.
@@ -16,6 +17,7 @@ use App\Services\Profiles\AvatarData;
 
 $size        = $size ?? 'md';
 $interactive = $interactive ?? false;
+$decorative  = ($decorative ?? false) && ! $interactive;
 
 $id    = (int) ($person['id'] ?? 0);
 $name  = (string) ($person['name'] ?? '');
@@ -39,13 +41,13 @@ $classes = $sizeClasses . ' shrink-0 inline-flex items-center justify-center ove
 $tag     = $interactive ? 'button' : 'span';
 ?>
 <<?= $tag ?>
-    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : '' ?>
+    <?= $interactive ? 'type="button" data-person-avatar="' . $id . '" aria-haspopup="dialog" aria-label="' . esc('Open ' . $name . "'s profile", 'attr') . '"' : ($decorative ? 'aria-hidden="true"' : '') ?>
     class="<?= $classes ?>"
     style="background-color: <?= $colour ?>"
     data-avatar>
     <?php if ($photoUrl !== null && $photoUrl !== ''): ?>
-        <img class="h-full w-full object-cover" src="<?= esc($photoUrl, 'attr') ?>" alt="Photo of <?= esc($name) ?>">
-    <?php elseif ($interactive): ?>
+        <img class="h-full w-full object-cover" src="<?= esc($photoUrl, 'attr') ?>" alt="<?= $decorative ? '' : 'Photo of ' . esc($name) ?>">
+    <?php elseif ($interactive || $decorative): ?>
         <span aria-hidden="true"><?= esc($initials) ?></span>
     <?php else: ?>
         <span role="img" aria-label="<?= esc($name) ?>"><?= esc($initials) ?></span>

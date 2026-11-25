@@ -338,4 +338,21 @@ final class DataTableComponentTest extends CIUnitTestCase
         // No plain-label stand-in next to the link.
         $this->assertSame(0, $x->query('.//span[contains(concat(" ", @class, " "), " md:hidden ")]', $th)->length);
     }
+
+    public function testARowWithAPersonStartsItsPrimaryCellWithAnAvatarAndTheRowsWithoutOneAreUnchanged(): void
+    {
+        $person = ['person' => ['id' => 5, 'name' => 'Ann Reyes', 'initials' => 'AR', 'colour' => '#0F766E', 'photo_url' => null, 'photo_url_lg' => null], 'interactive' => true];
+        $plain  = $this->render([]);
+        $html   = $this->render(['rows' => [
+            ['id' => 1, 'person' => $person, 'cells' => ['name' => 'Ann Reyes', 'email' => 'ann@example.test', 'status' => 'Active']],
+            ['id' => 2, 'cells' => ['name' => 'Ben Cruz', 'email' => 'ben@example.test', 'status' => 'Away']],
+        ]]);
+        $x = $this->xpath($html);
+
+        $this->assertSame(2, $x->query('//tr[1]//*[@data-avatar]')->length, 'desktop cell and phone row each have one');
+        $this->assertSame(1, $x->query('//tr[1]//td[@data-role="avatar"]//*[@data-person-avatar="5"]')->length, 'phone row');
+        $this->assertSame(1, $x->query('//tr[1]//td[not(@data-role="avatar")]//*[@data-person-avatar="5"]')->length, 'primary cell');
+        $this->assertSame(0, $x->query('//tr[2]//*[@data-avatar]')->length);
+        $this->assertStringNotContainsString('data-avatar', $plain);
+    }
 }

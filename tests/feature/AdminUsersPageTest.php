@@ -647,4 +647,15 @@ final class AdminUsersPageTest extends RouteTestCase
         $this->assertSame(['student'], $this->directoryRow($a)['roles'], 'there is no bulk role change');
         $this->assertSame(1, $this->active($a));
     }
+
+    public function testEachUserRowHasANonInteractiveAvatar(): void
+    {
+        $maria = PeopleFactory::person('student', 'Maria', 'Santos', 'maria@example.com', $this->acme);
+
+        $body = $this->body('admin/users');
+
+        $this->assertStringContainsString('data-avatar', $body);
+        $this->assertStringContainsString('>MS<', $body);
+        $this->assertStringNotContainsString('data-person-avatar="' . $maria->id . '"', $body);
+    }
 }

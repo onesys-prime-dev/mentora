@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Services\Admin\PlatformSettings;
 use App\Services\Audit\AuditLogFilters;
 use App\Services\Audit\AuditLogSearch;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use InvalidArgumentException;
@@ -34,6 +35,7 @@ class AuditLogController extends BaseController
             'user'    => auth()->user(),
             'filters' => $filters,
             'rows'    => $result['rows'],
+            'avatars' => (new AvatarData())->forViewer(auth()->user(), array_values(array_filter(array_map('intval', array_column($result['rows'], 'actor_user_id'))))),
             'total'   => $result['total'],
             'pages'   => max(1, (int) ceil($result['total'] / $filters->perPage)),
             // Not called $actions: view data persists between renders and the shared

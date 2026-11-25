@@ -35,6 +35,9 @@
 |                text, the actions) in a white panel per group. false keeps the older
 |                stacked label/value card per row. Phone rows also give the table
 |                explicit ARIA table roles, since changing display drops them in WebKit.
+|   rows[].person the AvatarData::forViewer() entry ['person' => ..., 'interactive' => bool] for the row's
+|                person: an avatar (components/avatar, sm) starts the primary cell from md and the phone row.
+|                Rows without it render as before. Decorative (aria-hidden) unless interactive.
 |   avatar       bool (default true): false leaves the avatar out of the phone row.
 |                Initials (first letters of the first and last words) are shown only
 |                when the primary text starts with a letter.
@@ -260,7 +263,12 @@ $wrap = $fill
                             $initials = count($words) > 1 ? mb_substr($words[0], 0, 1) . mb_substr($words[count($words) - 1], 0, 1) : mb_substr($title, 0, 2);
                             $initials = preg_match('/^\p{L}/u', $title) === 1 ? mb_strtoupper($initials) : '';
                             ?>
-                            <?php if ($phoneRows && $avatar && $roles['avatar'] === null && $initials !== ''): ?>
+                            <?php $person = $row['person'] ?? null; ?>
+                            <?php if ($person !== null && $phoneRows): ?>
+                                <td class="md:hidden" role="cell" data-role="avatar">
+                                    <?= view('components/avatar', ['person' => $person['person'], 'size' => 'sm', 'interactive' => $person['interactive'], 'decorative' => true], ['saveData' => false]) ?>
+                                </td>
+                            <?php elseif ($phoneRows && $avatar && $roles['avatar'] === null && $initials !== ''): ?>
                                 <td class="md:hidden" role="cell" data-role="avatar" aria-hidden="true">
                                     <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark"><?= esc($initials) ?></span>
                                 </td>
@@ -279,7 +287,11 @@ $wrap = $fill
                                 };
                                 ?>
                                 <td class="px-4 py-3 align-middle text-[#1A1C1E]<?= $phone ?><?= $hide($i, $column) ?> <?= esc($column['class'] ?? '') ?>" data-label="<?= esc($column['label']) ?>"<?= $aria('cell') ?><?= $role !== null ? ' data-role="' . $role . '"' : '' ?>>
-                                    <?= $cellHtml($cell) ?>
+                                    <?php if ($person !== null && $column['key'] === $roles['primary']): ?>
+                                        <span class="md:flex md:items-center md:gap-3"><span class="max-md:hidden"><?= view('components/avatar', ['person' => $person['person'], 'size' => 'sm', 'interactive' => $person['interactive'], 'decorative' => true], ['saveData' => false]) ?></span><span class="min-w-0"><?= $cellHtml($cell) ?></span></span>
+                                    <?php else: ?>
+                                        <?= $cellHtml($cell) ?>
+                                    <?php endif; ?>
                                 </td>
                             <?php endforeach; ?>
 

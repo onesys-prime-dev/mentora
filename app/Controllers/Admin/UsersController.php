@@ -54,6 +54,7 @@ class UsersController extends BaseController
             'user'             => auth()->user(),
             'userFilters'      => $filters,
             'userRows'         => $result['rows'],
+            'userAvatars'      => (new AvatarData())->forViewer(auth()->user(), array_map('intval', array_column($result['rows'], 'id'))),
             'userTotal'        => $result['total'],
             'userPages'        => max(1, (int) ceil($result['total'] / $filters->perPage)),
             'userInstitutions' => $this->institutions(),

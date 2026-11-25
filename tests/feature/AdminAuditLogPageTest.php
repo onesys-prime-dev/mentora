@@ -8,6 +8,7 @@ use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CourseFactory;
+use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
 
 /**
@@ -408,5 +409,16 @@ final class AdminAuditLogPageTest extends RouteTestCase
         $new = json_decode($this->entries('audit.exported')[0]['new_values'], true);
 
         $this->assertSame(0, $new['rows'], 'an empty export is still an export');
+    }
+
+    public function testTheActorHasANonInteractiveAvatarBecauseASystemAdminSeesNoProfiles(): void
+    {
+        $actor = PeopleFactory::person('student', 'Sam', 'Actor', 'sam@mentora.test');
+        $this->entry(['actor_user_id' => (int) $actor->id]);
+
+        $body = $this->step('GET', 'admin/audit-log')->response()->getBody();
+
+        $this->assertStringContainsString('data-avatar', $body);
+        $this->assertStringNotContainsString('data-person-avatar', $body);
     }
 }
