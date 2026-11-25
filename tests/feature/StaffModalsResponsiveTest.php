@@ -277,7 +277,8 @@ final class StaffModalsResponsiveTest extends CIUnitTestCase
 
         // Messages' script-drawn rows in its dialogs: group results and chips, forward choices, Unblock.
         $messages = (string) file_get_contents(ROOTPATH . 'resources/js/pages/messages/messages.js');
-        $this->assertMatchesRegularExpression('/button\.className = "w-full rounded-lg px-3 py-2 [^"]*pointer-coarse:min-h-11/', $messages);
+        // The group result row is a flex row since its avatar was added (F1); what is pinned is its touch height.
+        $this->assertMatchesRegularExpression('/button\.className = "[^"]*w-full items-center gap-2 rounded-lg px-3 py-2 [^"]*pointer-coarse:min-h-11/', $messages);
         $this->assertMatchesRegularExpression('/remove\.className = "[^"]*pointer-coarse:min-h-11 pointer-coarse:min-w-11/', $messages);
         $this->assertMatchesRegularExpression('/label\.className = "[^"]*pointer-coarse:min-h-11/', $messages);
         $this->assertMatchesRegularExpression('/"rounded-full [^"]*pointer-coarse:min-h-11[^"]*", "Unblock"/', (string) file_get_contents(ROOTPATH . 'resources/js/pages/messages/settings.js'));
