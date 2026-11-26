@@ -265,21 +265,45 @@ final class PersonProfileRoutesTest extends RouteTestCase
         }
     }
 
+    /** Sabrina has blocked the student and does not teach them, so the block binds and Messages refuses the pair. */
+    private function staffBlocksStudent(): void
+    {
+        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $this->staff->id, 'blocked_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+    }
+
     public function testMessageIsAbsentWhenMessagesRefusesThePair(): void
     {
-        // No shared course between this student and Sabrina.
+        $this->staffBlocksStudent();
+
         foreach ($this->bodies($this->student, $this->staff) as $uri => $body) {
             $this->assertStringNotContainsString('data-person-message', $body, $uri);
         }
     }
 
-    public function testMessageIsAbsentInAReadOnlyInstitution(): void
+    public function testMessageIsAbsentInAReadOnlyInstitutionWithoutAThread(): void
+    {
+        foreach ($this->bodies($this->student, $this->staff) as $uri => $body) {
+            $this->assertStringContainsString('data-person-message', $body, "{$uri}: reachable while writable");
+        }
+
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+
+        foreach ($this->bodies($this->student, $this->staff) as $uri => $body) {
+            $this->assertStringNotContainsString('data-person-message', $body, $uri);
+        }
+    }
+
+    /** FR11: reading stays open, so an existing thread is still reachable from the profile in a read-only institution. */
+    public function testMessageReopensAnExistingThreadInAReadOnlyInstitution(): void
     {
         db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
 
         foreach ($this->bodies($this->student, $this->instructor) as $uri => $body) {
-            $this->assertStringNotContainsString('data-person-message', $body, $uri);
+            $this->assertStringContainsString('data-person-message', $body, $uri);
         }
+
+        $this->signIn($this->student);
+        $this->step('POST', "people/{$this->instructor->id}/message")->assertRedirectTo(site_url('messages/' . $this->conversation));
     }
 
     public function testCopyEmailSitsBesideMessageNotInTheContactCard(): void
@@ -330,6 +354,7 @@ final class PersonProfileRoutesTest extends RouteTestCase
 
     public function testPostingMessageToARefusedPairIsRefused(): void
     {
+        $this->staffBlocksStudent();
         $this->signIn($this->student);
         $this->withSession();
 

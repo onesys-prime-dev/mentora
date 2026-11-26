@@ -261,7 +261,8 @@ final class ProfileRouteSecurityTest extends RouteTestCase
      * 302 to /login for anonymous; 302 to their own area for a role a route group does not admit; 404 where the
      * subject or request is out of the caller's reach (another institution, an unlinked parent, a system
      * administrator, who has no profile); 403 for every write while viewing as someone, without a CSRF token, and
-     * for profile and moderation writes in a read-only institution, where /settings stays open (D29-C3).
+     * for profile and moderation writes in a read-only institution, where /settings stays open (D29-C3). Message is
+     * not a write there (FR11: it only reopens an existing thread), so a read-only caller with no thread gets 404.
      */
     private const MATRIX = <<<'TXT'
         GET profile                                  302 200 200 200 200 200 200 200 200 200 200 200 200   -   -   -
@@ -278,7 +279,7 @@ final class ProfileRouteSecurityTest extends RouteTestCase
         POST profile/identity-official               302 422 404 404 404 404 404 404 404 404 403 403 403 403 403 403
         POST profile/photo                           302 404 422 422 422 422 422 422 422 422 403 403 403 403 403 403
         POST profile/photo/remove                    302 404 200 200 200 200 200 200 200 200 403 403 403 403 403 403
-        POST people/{s}/message                      302 404 302 404 404 302 404 404 404 404 403 403 403 403 403 403
+        POST people/{s}/message                      302 404 302 302 302 302 404 404 404 404 403 404 404 403 403 403
         GET settings                                 302 200 200 200 200 200 200 200 200 200 200 200 200   -   -   -
         POST settings/password                       302 302 302 302 302 302 302 302 302 302 403 302 302 403 403 403
         POST settings/password-link                  302 302 302 302 302 302 302 302 302 302 403 302 302 403 403 403

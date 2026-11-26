@@ -6,6 +6,7 @@ namespace App\Controllers\Messaging;
 
 use App\Controllers\BaseController;
 use App\Services\Messaging\MessagingContextResolver;
+use App\Services\Messaging\RecipientSearch;
 
 /**
  * The Messages page: an empty shell that resources/js/pages/messages fills from
@@ -30,6 +31,8 @@ class MessagesPageController extends BaseController
             'canReview' => in_array('institutional_admin', $roles, true),
             // Staff and students (FR7); a parent-only person gets no button.
             'canStartGroups' => $resolver->party(auth()->user())->capacity(false) !== null,
+            // S2-i: the picker explains, as soon as it opens, why a parent with no linked child finds nobody (about them only).
+            'noLinkedChild' => (new RecipientSearch($resolver))->noLinkedChild(auth()->user()),
         ]);
     }
 }

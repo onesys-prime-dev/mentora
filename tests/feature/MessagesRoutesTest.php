@@ -7,7 +7,6 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\TestResponse;
 use Tests\Support\CourseFactory;
-use Tests\Support\DeanFactory;
 use Tests\Support\MessagingScenario;
 use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
@@ -148,6 +147,22 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->assertSame(200, $this->api('GET', "conversations/{$this->conversation}/messages")->response()->getStatusCode());
     }
 
+    /** FR11: reading stays open, so ?to= still opens a thread that exists; the draft for a new one is refused like any refusal. */
+    public function testAReadOnlyInstitutionReopensAnExistingThreadByPerson(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Oth', 'Er', null, $this->institution);
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+        $this->signIn($this->student);
+
+        $open = $this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id]);
+        $open->assertStatus(200);
+        $this->assertSame($this->conversation, json_decode($open->getJSON(), true)['draft']['conversation_id']);
+
+        $this->assertSame(404, $this->api('POST', 'conversations', ['recipient_id' => (int) $other->id])->response()->getStatusCode());
+        $this->assertSame(403, $this->api('POST', 'conversations/first', ['recipient_id' => (int) $other->id, 'body' => 'hi', 'client_uuid' => $this->uuid()])->response()->getStatusCode());
+        $this->assertSame(1, db_connect()->table('conversations')->countAllResults());
+    }
+
     public function testAPostWithoutACsrfTokenIsRefused(): void
     {
         $this->signIn($this->student);
@@ -252,7 +267,7 @@ final class MessagesRoutesTest extends RouteTestCase
 
     public function testRecipientsThePickerWouldNeverListAnswerLikeAnUnknownId(): void
     {
-        $chair   = DeanFactory::chair((int) db_connect()->table('departments')->get()->getRow('id'));
+        $parent  = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
         $admin   = CourseFactory::user('admin');
         $far     = PeopleFactory::person('instructor', 'Far', 'Away', null, PeopleFactory::institution('FAR3'));
         $this->signIn($this->student);
@@ -262,7 +277,7 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->assertSame(['error' => 'not_found'], json_decode($unknown, true));
 
-        foreach ([(int) $this->student->id, (int) $chair->id, (int) $admin->id, (int) $far->id, 0, -5] as $recipient) {
+        foreach ([(int) $this->student->id, (int) $parent->id, (int) $admin->id, (int) $far->id, 0, -5] as $recipient) {
             $response = $this->api('POST', 'conversations', ['recipient_id' => $recipient])->response();
 
             $this->assertSame(404, $response->getStatusCode(), "recipient {$recipient}");
@@ -306,5 +321,40 @@ final class MessagesRoutesTest extends RouteTestCase
         $theirs = json_decode($this->api('GET', 'conversations')->response()->getBody(), true);
         $this->assertArrayHasKey('restriction', $theirs);
         $this->assertNull($theirs['restriction']);
+    }
+
+    /** S2-i: the explanation is on the page before anything is typed, for that parent only. */
+    public function testTheMessagesPageTellsAParentWithNoChildUpFront(): void
+    {
+        $lonely = PeopleFactory::person('parent', 'Lone', 'Parent', null, $this->institution);
+        $note   = 'Your account is not linked to a child yet';
+
+        $this->signIn($lonely);
+        $body = (string) $this->step('GET', 'messages')->response()->getBody();
+        $this->assertStringContainsString('data-no-child="1"', $body);
+        $this->assertStringContainsString($note, $body);
+
+        $this->signIn($this->student);
+        $body = (string) $this->step('GET', 'messages')->response()->getBody();
+        $this->assertStringContainsString('data-no-child="0"', $body);
+        $this->assertStringNotContainsString($note, $body);
+    }
+
+    public function testParentWithNoChildGetsExplanation(): void
+    {
+        $lonely = PeopleFactory::person('parent', 'Lone', 'Parent', null, $this->institution);
+        $linked = PeopleFactory::person('parent', 'Link', 'Parent', null, $this->institution);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $linked->id, 'student_user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->signIn($lonely);
+        $this->assertSame(['recipients' => [], 'next' => null, 'reason' => 'no_linked_child'], json_decode($this->api('GET', 'recipients?q=Ins')->response()->getBody(), true));
+
+        $this->signIn($linked);
+        $answer = json_decode($this->api('GET', 'recipients?q=Ins')->response()->getBody(), true);
+        $this->assertArrayNotHasKey('reason', $answer);
+        $this->assertNotSame([], $answer['recipients']);
+
+        $this->signIn($this->student);
+        $this->assertArrayNotHasKey('reason', json_decode($this->api('GET', 'recipients?q=zzzz')->response()->getBody(), true), 'only that parent is told');
     }
 }

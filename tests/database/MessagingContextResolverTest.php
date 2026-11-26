@@ -9,8 +9,8 @@ use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
 
 /**
- * The database facts behind MessagingPolicy: who shares a course, a college, a
- * scope or a linked child, and the state of a conversation for one person.
+ * The database facts behind MessagingPolicy: classmates, who teaches or leads a
+ * minor, a linked child, and the state of a conversation for one person.
  *
  * @internal
  */
@@ -60,108 +60,105 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         return DeanFactory::offering($program, $this->term, $code, 'A', $status);
     }
 
-    public function testASharedCourseNeedsBothActiveInOneActiveOffering(): void
+    public function testASharedCourseMeansClassmatesInOneActiveOffering(): void
     {
-        $student    = $this->person('student');
+        $a          = $this->person('student');
+        $b          = $this->person('student');
+        $elsewhere  = $this->person('student');
         $instructor = $this->person('instructor');
-        $other      = $this->person('instructor');
         $offering   = $this->offering($this->programA, 'C1');
-        $otherOff   = $this->offering($this->programA, 'C2');
-        CourseFactory::enroll($offering, $student);
+        CourseFactory::enroll($offering, $a);
+        CourseFactory::enroll($offering, $b);
+        CourseFactory::enroll($this->offering($this->programA, 'C2'), $elsewhere);
         CourseFactory::assignInstructor($offering, $instructor);
-        CourseFactory::assignInstructor($otherOff, $other);
 
-        $this->assertTrue($this->resolver->forStart($student, $instructor, null)->sharedCourse);
-        $this->assertTrue($this->resolver->forStart($instructor, $student, null)->sharedCourse);
-        $this->assertFalse($this->resolver->forStart($student, $other, null)->sharedCourse);
+        $this->assertTrue($this->resolver->forStart($a, $b, null)->sharedCourse);
+        $this->assertTrue($this->resolver->forStart($b, $a, null)->sharedCourse);
+        $this->assertFalse($this->resolver->forStart($a, $elsewhere, null)->sharedCourse);
+        // Teaching the course is not sharing it as a classmate.
+        $this->assertFalse($this->resolver->forStart($instructor, $a, null)->sharedCourse);
     }
 
     public function testASharedCourseIsFalseWhenTheOfferingIsClosedOrTheEnrolmentDropped(): void
     {
-        $student    = $this->person('student');
-        $instructor = $this->person('instructor');
-        $closed     = $this->offering($this->programA, 'C3', 'completed');
-        CourseFactory::enroll($closed, $student);
-        CourseFactory::assignInstructor($closed, $instructor);
+        $a      = $this->person('student');
+        $b      = $this->person('student');
+        $closed = $this->offering($this->programA, 'C3', 'completed');
+        CourseFactory::enroll($closed, $a);
+        CourseFactory::enroll($closed, $b);
 
-        $this->assertFalse($this->resolver->forStart($student, $instructor, null)->sharedCourse);
+        $this->assertFalse($this->resolver->forStart($a, $b, null)->sharedCourse);
 
         $open = $this->offering($this->programA, 'C4');
-        CourseFactory::enroll($open, $student, 'dropped');
-        CourseFactory::assignInstructor($open, $instructor);
+        CourseFactory::enroll($open, $a, 'dropped');
+        CourseFactory::enroll($open, $b);
 
-        $this->assertFalse($this->resolver->forStart($student, $instructor, null)->sharedCourse);
+        $this->assertFalse($this->resolver->forStart($a, $b, null)->sharedCourse);
     }
 
-    public function testSameCollegeCoversInstructorsChairpersonsAndDeans(): void
+    public function testTeachesAndLeadsAreReadForAMinorRecipientOnly(): void
     {
-        $i1    = $this->person('instructor');
-        $i2    = $this->person('instructor');
-        $far   = $this->person('instructor');
-        $chair = DeanFactory::chair($this->departmentA);
-        $dean  = DeanFactory::dean($this->institution, $this->college);
+        $minor      = $this->person('student');
+        $adult      = $this->person('student');
+        $instructor = $this->person('instructor');
+        $stranger   = $this->person('instructor');
+        $chairA     = DeanFactory::chair($this->departmentA);
+        $chairB     = DeanFactory::chair($this->departmentB);
+        $dean       = DeanFactory::dean($this->institution, $this->college);
+        $offering   = $this->offering($this->programA, 'C5');
+        CourseFactory::enroll($offering, $minor);
+        CourseFactory::enroll($offering, $adult);
+        CourseFactory::assignInstructor($offering, $instructor);
+        db_connect()->table('institution_users')->where('institution_id', $this->institution)->where('user_id', $minor->id)->update(['is_minor' => 1]);
 
-        CourseFactory::assignInstructor($this->offering($this->programA, 'C5'), $i1);
-        CourseFactory::assignInstructor($this->offering($this->programB, 'C6'), $i2);
+        $this->assertTrue($this->resolver->forStart($instructor, $minor, null)->recipientMinor);
+        $this->assertTrue($this->resolver->forStart($instructor, $minor, null)->senderTeachesRecipient);
+        $this->assertFalse($this->resolver->forStart($stranger, $minor, null)->senderTeachesRecipient);
+        $this->assertTrue($this->resolver->forStart($chairA, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($chairB, $minor, null)->senderLeadsRecipient);
+        $this->assertTrue($this->resolver->forStart($dean, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($instructor, $minor, null)->senderLeadsRecipient);
 
-        $other      = DeanFactory::college('M2');
-        $otherDepartment   = DeanFactory::department($other['college'], 'MX');
-        $otherProg  = DeanFactory::program($otherDepartment, 'MX');
-        $otherTerm  = DeanFactory::term($other['institution']);
-        $farOffer   = DeanFactory::offering($otherProg, $otherTerm, 'CX');
-        CourseFactory::assignInstructor($farOffer, $far);
+        // An adult recipient: the minor rule does not apply, so the facts are not looked up.
+        $this->assertFalse($this->resolver->forStart($instructor, $adult, null)->recipientMinor);
+        $this->assertFalse($this->resolver->forStart($instructor, $adult, null)->senderTeachesRecipient);
+        $this->assertFalse($this->resolver->forStart($chairA, $adult, null)->senderLeadsRecipient);
 
-        $this->assertTrue($this->resolver->forStart($i1, $i2, null)->sameCollege);
-        $this->assertFalse($this->resolver->forStart($i1, $far, null)->sameCollege);
-        $this->assertTrue($this->resolver->forStart($i1, $chair, null)->sameCollege);
-        $this->assertTrue($this->resolver->forStart($i1, $dean, null)->sameCollege);
-        $this->assertTrue($this->resolver->forStart($chair, $dean, null)->sameCollege);
-    }
-
-    public function testInScopeForAChairpersonIsTheirDepartmentAndForADeanTheirCollege(): void
-    {
-        $chairA  = DeanFactory::chair($this->departmentA);
-        $dean    = DeanFactory::dean($this->institution, $this->college);
-        $studentA = $this->person('student');
-        $studentB = $this->person('student');
-        CourseFactory::enroll($this->offering($this->programA, 'C7'), $studentA);
-        CourseFactory::enroll($this->offering($this->programB, 'C8'), $studentB);
-
-        $this->assertTrue($this->resolver->forStart($chairA, $studentA, null)->inScope);
-        $this->assertFalse($this->resolver->forStart($chairA, $studentB, null)->inScope);
-        $this->assertTrue($this->resolver->forStart($dean, $studentA, null)->inScope);
-        $this->assertTrue($this->resolver->forStart($dean, $studentB, null)->inScope);
-        $this->assertTrue($this->resolver->forStart($dean, $chairA, null)->inScope);
-
-        $other     = DeanFactory::college('M3');
-        $otherDepartment  = DeanFactory::department($other['college'], 'MY');
-        $outsider  = $this->person('student', $other['institution']);
-        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program($otherDepartment, 'MY'), DeanFactory::term($other['institution']), 'CY'), $outsider);
-
-        $this->assertFalse($this->resolver->forStart($dean, $outsider, null)->inScope);
+        $other    = DeanFactory::college('M3');
+        $outsider = $this->person('student', $other['institution']);
         $this->assertFalse($this->resolver->forStart($dean, $outsider, null)->sameInstitution);
     }
 
-    public function testLinkedChildForAParentAndTheChildsInstructorAndChairperson(): void
+    public function testLinkedChildIsTheParentSideLinkedToTheNamedChild(): void
     {
-        $parent     = $this->person('parent');
-        $stranger   = $this->person('parent');
-        $child      = $this->person('student');
-        $instructor = $this->person('instructor');
-        $chair      = DeanFactory::chair($this->departmentA);
-        $offering   = $this->offering($this->programA, 'C9');
-        CourseFactory::enroll($offering, $child);
-        CourseFactory::assignInstructor($offering, $instructor);
+        $parent   = $this->person('parent');
+        $stranger = $this->person('parent');
+        $child    = $this->person('student');
+        $dean     = DeanFactory::dean($this->institution, $this->college);
         db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
 
-        $this->assertTrue($this->resolver->forStart($parent, $instructor, null)->linkedChildAsSenderParent);
-        $this->assertFalse($this->resolver->forStart($parent, $instructor, null)->linkedChildAsRecipientParent);
-        $this->assertTrue($this->resolver->forStart($parent, $instructor, (int) $child->id)->linkedChildAsSenderParent);
-        $this->assertTrue($this->resolver->forStart($instructor, $parent, null)->linkedChildAsRecipientParent);
-        $this->assertFalse($this->resolver->forStart($instructor, $parent, null)->linkedChildAsSenderParent);
-        $this->assertTrue($this->resolver->forStart($parent, $chair, null)->linkedChildAsSenderParent);
-        $this->assertFalse($this->resolver->forStart($stranger, $instructor, null)->linkedChildAsSenderParent);
-        $this->assertFalse($this->resolver->forStart($parent, $instructor, (int) $stranger->id)->linkedChildAsSenderParent);
+        // D2: any staff member; the child need not be theirs to teach.
+        $this->assertTrue($this->resolver->forStart($parent, $dean, (int) $child->id)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($parent, $dean, (int) $child->id)->linkedChildAsRecipientParent);
+        $this->assertTrue($this->resolver->forStart($dean, $parent, (int) $child->id)->linkedChildAsRecipientParent);
+        $this->assertFalse($this->resolver->forStart($dean, $parent, (int) $child->id)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($parent, $dean, null)->linkedChildAsSenderParent, 'no child named');
+        $this->assertFalse($this->resolver->forStart($stranger, $dean, (int) $child->id)->linkedChildAsSenderParent);
+        $this->assertFalse($this->resolver->forStart($parent, $dean, (int) $stranger->id)->linkedChildAsSenderParent);
+    }
+
+    public function testChildSubjectsAreTheParentsChildrenWithAnyStaff(): void
+    {
+        $parent  = $this->person('parent');
+        $child   = $this->person('student');
+        $dean    = DeanFactory::dean($this->institution, $this->college);
+        $student = $this->person('student');
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $child->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $p = fn ($u) => $this->resolver->party($u);
+
+        $this->assertSame([(int) $child->id], $this->resolver->childSubjects($parent, $p($parent), $dean, $p($dean)));
+        $this->assertSame([(int) $child->id], $this->resolver->childSubjects($dean, $p($dean), $parent, $p($parent)));
+        $this->assertNull($this->resolver->childSubjects($parent, $p($parent), $student, $p($student)));
     }
 
     public function testBlockedSelfAndActiveFacts(): void
@@ -173,7 +170,12 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $this->assertTrue($this->resolver->forStart($a, $b, null)->blockedByRecipient);
         $this->assertFalse($this->resolver->forStart($b, $a, null)->blockedByRecipient);
         $this->assertTrue($this->resolver->forStart($a, $a, null)->isSelf);
-        $this->assertTrue($this->resolver->forStart($a, $b, null)->studentDmEnabled);
+        $this->assertSame('institution', $this->resolver->forStart($a, $b, null)->studentScope);
+        $this->assertTrue($this->resolver->forStart($a, $b, null)->senderInstitutionWritable);
+        $this->assertFalse($this->resolver->forStart($a, $b, null)->impersonating);
+
+        (new \App\Services\Messaging\StudentMessaging())->setScope($this->institution, 'course');
+        $this->assertSame('course', $this->resolver->forStart($a, $b, null)->studentScope);
 
         $off = $this->person('student', null, false);
         $this->assertFalse($this->resolver->forStart($a, $off, null)->recipientActive);
@@ -240,7 +242,6 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $this->assertEqualsCanonicalizing(['instructor', 'parent'], $this->resolver->party($user)->roles);
 
         $context = $this->resolver->forStart($user, $student, null);
-        $this->assertTrue($context->sharedCourse);
         $this->assertTrue((new \App\Services\Messaging\MessagingPolicy())->canStart($this->resolver->party($user), $this->resolver->party($student), null, $context));
     }
 
@@ -312,6 +313,44 @@ final class MessagingContextResolverTest extends DatabaseTestCase
 
         $db->table('course_offerings')->where('id', $offering)->update(['status' => 'completed']);
         $this->assertTrue($this->resolver->forPost($student, $conv)->offeringClosed);
+    }
+
+    /** D9 in an existing thread: with no known starter both directions are checked; a thread the minor started is theirs. */
+    public function testMinorLostChecksBothDirectionsWhenTheStarterIsUnknown(): void
+    {
+        $minor    = $this->person('student');
+        $stranger = $this->person('instructor');
+        db_connect()->table('institution_users')->where('user_id', $minor->id)->update(['is_minor' => 1]);
+        $conv = $this->direct((int) $minor->id, (int) $stranger->id);
+        $this->assertNull($conv['created_by']);
+
+        $this->assertTrue($this->resolver->forPost($stranger, $conv)->minorLost);
+        $this->assertTrue((new MessagingContextResolver())->forPost($minor, $conv)->minorLost, 'the minor side too');
+
+        $conv['created_by'] = $minor->id;
+        $this->assertFalse((new MessagingContextResolver())->forPost($stranger, $conv)->minorLost);
+        $this->assertFalse((new MessagingContextResolver())->forPost($minor, $conv)->minorLost);
+
+        $conv['created_by'] = $stranger->id;
+        $this->assertTrue((new MessagingContextResolver())->forPost($minor, $conv)->minorLost);
+    }
+
+    /** S2-f: a minor who also holds a staff role is still protected when the other side started the thread. */
+    public function testAMinorWhoAlsoTeachesIsStillProtectedInForPost(): void
+    {
+        $minor = $this->person('student');
+        $minor->addGroup('instructor');
+        $other = $this->person('instructor');
+        db_connect()->table('institution_users')->where('user_id', $minor->id)->update(['is_minor' => 1]);
+        $conv               = $this->direct((int) $minor->id, (int) $other->id);
+        $conv['created_by'] = $other->id;
+
+        $this->assertTrue((new MessagingContextResolver())->forPost($other, $conv)->minorLost);
+
+        $offering = $this->offering($this->programA, 'C77');
+        CourseFactory::enroll($offering, $minor);
+        CourseFactory::assignInstructor($offering, $other);
+        $this->assertFalse((new MessagingContextResolver())->forPost($other, $conv)->minorLost, 'their own instructor reaches them');
     }
 
     public function testForPostSeesAReadOnlyInstitutionAndAWrongInstitution(): void

@@ -10,9 +10,9 @@ use CodeIgniter\Test\CIUnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * The Messages permission rules, compared cell by cell with the spec table
- * (docs/superpowers/specs/2026-11-02-messages-design.md, section 3.1). Pure
- * logic: every fact the policy needs is passed in.
+ * The Messages permission rules. Starting a thread follows requirements FR1
+ * (docs/feature-development/messages-institution-wide/requirements.md) as the
+ * AC1 matrix. Pure logic: every fact the policy needs is passed in.
  *
  * @internal
  */
@@ -20,238 +20,257 @@ final class MessagingPolicyTest extends CIUnitTestCase
 {
     private const ROLES = ['student', 'instructor', 'chairperson', 'dean', 'parent', 'institutional_admin', 'admin'];
 
-    private const FACTS = ['sharedCourse', 'sameCollege', 'inScope', 'linkedChild'];
-
-    /**
-     * Spec 3.1 written out as data: sender => recipient => the facts that
-     * unlock the cell. [] means "nothing more", null means "never".
-     * 'studentDmEnabled' is the institution switch (on by default).
-     *
-     * @var array<string, array<string, list<string>|null>>
-     */
-    private const TABLE = [
-        'student' => [
-            'student' => ['sharedCourse', 'studentDmEnabled'], 'instructor' => ['sharedCourse'], 'chairperson' => null,
-            'dean' => null, 'parent' => null, 'institutional_admin' => null, 'admin' => null,
-        ],
-        'instructor' => [
-            'student' => ['sharedCourse'], 'instructor' => ['sameCollege'], 'chairperson' => ['sameCollege'],
-            'dean' => ['sameCollege'], 'parent' => ['linkedChild'], 'institutional_admin' => null, 'admin' => null,
-        ],
-        'chairperson' => [
-            'student' => ['inScope'], 'instructor' => ['inScope'], 'chairperson' => ['sameCollege'],
-            'dean' => ['sameCollege'], 'parent' => null, 'institutional_admin' => null, 'admin' => null,
-        ],
-        'dean' => [
-            'student' => ['inScope'], 'instructor' => ['inScope'], 'chairperson' => ['inScope'],
-            'dean' => [], 'parent' => null, 'institutional_admin' => null, 'admin' => null,
-        ],
-        'parent' => [
-            'student' => null, 'instructor' => ['linkedChild'], 'chairperson' => ['linkedChild'],
-            'dean' => null, 'parent' => null, 'institutional_admin' => null, 'admin' => null,
-        ],
-        'institutional_admin' => [
-            'student' => [], 'instructor' => [], 'chairperson' => [],
-            'dean' => [], 'parent' => [], 'institutional_admin' => [], 'admin' => null,
-        ],
-        'admin' => [
-            'student' => null, 'instructor' => null, 'chairperson' => null,
-            'dean' => null, 'parent' => null, 'institutional_admin' => null, 'admin' => null,
-        ],
-    ];
+    private const STAFF = ['instructor', 'chairperson', 'dean', 'institutional_admin'];
 
     /** @param list<string> $roles */
-    private static function party(array $roles, int $id = 1): Party
+    private static function party(array $roles, int $id = 1, bool $minor = false): Party
     {
-        return new Party($id, $roles, true, 1);
+        return new Party($id, $roles, true, 1, $minor);
     }
 
-    /** A parent on either side makes it a child thread. */
-    private static function start(string $sender, string $recipient, StartContext $c): bool
+    private static function can(Party $sender, Party $recipient, StartContext $c = new StartContext(), ?int $subject = null): bool
+    {
+        return (new MessagingPolicy())->canStart($sender, $recipient, $subject, $c);
+    }
+
+    /**
+     * D1/D2 with the default facts: open within the institution; a parent only in a thread about their linked child,
+     * and only with staff; the system admin never.
+     *
+     * @return iterable<string, array{string, string, bool}>
+     */
+    public static function provideRolePairs(): iterable
+    {
+        foreach (self::ROLES as $sender) {
+            foreach (self::ROLES as $recipient) {
+                $expected = match (true) {
+                    $sender === 'admin' || $recipient === 'admin' => false,
+                    $sender === 'parent'                          => in_array($recipient, self::STAFF, true),
+                    $recipient === 'parent'                       => in_array($sender, self::STAFF, true),
+                    default                                       => true,
+                };
+
+                yield "{$sender} -> {$recipient}" => [$sender, $recipient, $expected];
+            }
+        }
+    }
+
+    /**
+     * A parent on either side names their linked child; anyone else starts a thread about nobody.
+     *
+     * @param array<string, mixed> $facts
+     */
+    private static function pairStart(string $sender, string $recipient, array $facts = []): bool
     {
         $subject = $sender === 'parent' || $recipient === 'parent' ? 99 : null;
+        $c       = new StartContext(...$facts + ['linkedChildAsSenderParent' => $sender === 'parent', 'linkedChildAsRecipientParent' => $recipient === 'parent']);
 
-        return (new MessagingPolicy())->canStart(self::party([$sender]), self::party([$recipient], 2), $subject, $c);
+        return self::can(self::party([$sender]), self::party([$recipient], 2), $c, $subject);
+    }
+
+    #[DataProvider('provideRolePairs')]
+    public function testRolePairWithDefaultContext(string $sender, string $recipient, bool $expected): void
+    {
+        $this->assertSame($expected, self::pairStart($sender, $recipient));
+    }
+
+    public function testMultiRoleStudentTeacherIsStaffToClassmates(): void
+    {
+        $off = new StartContext(studentScope: 'off');
+
+        // D4: a student who also teaches is staff to every classmate, so the D3 scope does not narrow them.
+        $this->assertTrue(self::can(self::party(['student', 'instructor']), self::party(['student'], 2), $off));
+        $this->assertTrue(self::can(self::party(['student']), self::party(['student', 'instructor'], 2), $off));
+        $this->assertFalse(self::can(self::party(['student']), self::party(['student'], 2), $off));
+    }
+
+    public function testMultiRoleMinorStaffProtectedWhenReceiving(): void
+    {
+        $minorStaff = self::party(['student', 'instructor'], 2, true);
+
+        // S2-f: a minor who also teaches is protected as a minor when receiving.
+        $this->assertFalse(self::can(self::party(['instructor']), $minorStaff, new StartContext(recipientMinor: true)));
+        $this->assertTrue(self::can(self::party(['instructor']), $minorStaff, new StartContext(recipientMinor: true, senderTeachesRecipient: true)));
+        // ...and sends as staff (D4): writing to an unrelated student is fine, even with the scope off.
+        $this->assertTrue(self::can(self::party(['student', 'instructor'], 1, true), self::party(['student'], 2), new StartContext(studentScope: 'off')));
+    }
+
+    public function testMinorReachableByOwnInstructorChairDeanClassmateAdminOnly(): void
+    {
+        $minor = self::party(['student'], 2, true);
+        $facts = static fn (array $args): StartContext => new StartContext(...['recipientMinor' => true] + $args);
+
+        $this->assertTrue(self::can(self::party(['instructor']), $minor, $facts(['senderTeachesRecipient' => true])), 'own instructor');
+        $this->assertTrue(self::can(self::party(['chairperson']), $minor, $facts(['senderLeadsRecipient' => true])), 'own chair');
+        $this->assertTrue(self::can(self::party(['dean']), $minor, $facts(['senderLeadsRecipient' => true])), 'own dean');
+        $this->assertTrue(self::can(self::party(['student']), $minor, $facts(['sharedCourse' => true])), 'classmate');
+        $this->assertTrue(self::can(self::party(['institutional_admin']), $minor, $facts([])), 'institutional admin');
+
+        $this->assertFalse(self::can(self::party(['instructor']), $minor, $facts([])), 'unrelated instructor');
+        $this->assertFalse(self::can(self::party(['chairperson']), $minor, $facts([])), 'other chair');
+        $this->assertFalse(self::can(self::party(['dean']), $minor, $facts([])), 'other dean');
+        $this->assertFalse(self::can(self::party(['student']), $minor, $facts([])), 'student outside their courses');
+        // Sharing a course counts only for a classmate: staff who do not teach them gain nothing from it.
+        $this->assertFalse(self::can(self::party(['instructor']), $minor, $facts(['sharedCourse' => true])), 'staff sharing a course');
+        // The classmate rule still sits under the D3 scope.
+        $this->assertFalse(self::can(self::party(['student']), $minor, $facts(['sharedCourse' => true, 'studentScope' => 'off'])), 'scope off');
     }
 
     /**
-     * @param list<string>        $facts    context facts that are true
-     * @param array<string, bool> $override constructor arguments set explicitly
+     * Every role against a minor recipient, with no link and with that role's own D9 link (teaches for an
+     * instructor, leads for a chair or dean, a shared course for a student; a parent and the admins have none).
+     *
+     * @return iterable<string, array{string, bool, bool}>
      */
-    private static function startContext(array $facts, bool $switchOn = true, array $override = []): StartContext
+    public static function provideMinorMatrix(): iterable
     {
-        return new StartContext(...array_merge([
-            'sharedCourse'     => in_array('sharedCourse', $facts, true),
-            'sameCollege'   => in_array('sameCollege', $facts, true),
-            'inScope'          => in_array('inScope', $facts, true),
-            // The matrix's linkedChild holds in whichever direction the parent sits.
-            'linkedChildAsSenderParent'    => in_array('linkedChild', $facts, true),
-            'linkedChildAsRecipientParent' => in_array('linkedChild', $facts, true),
-            'studentDmEnabled' => $switchOn,
-        ], $override));
+        foreach (self::ROLES as $role) {
+            yield "{$role} -> minor, no link" => [$role, false, $role === 'institutional_admin'];
+            yield "{$role} -> minor, own link" => [$role, true, ! in_array($role, ['parent', 'admin'], true)];
+        }
     }
 
-    /** @return iterable<string, array{string, string, list<string>, bool, bool}> */
-    public static function provideStartMatrix(): iterable
+    #[DataProvider('provideMinorMatrix')]
+    public function testEveryRoleAgainstAMinor(string $role, bool $linked, bool $expected): void
     {
-        foreach (self::ROLES as $sender) {
-            foreach (self::ROLES as $recipient) {
-                $needs = self::TABLE[$sender][$recipient];
-                $name  = "{$sender} -> {$recipient}";
+        $link = ! $linked ? [] : match ($role) {
+            'instructor'           => ['senderTeachesRecipient' => true],
+            'chairperson', 'dean'  => ['senderLeadsRecipient' => true],
+            'student'              => ['sharedCourse' => true],
+            default                => [],
+        };
 
-                if ($needs === null) {
-                    // Refused even with every fact present.
-                    yield "{$name}: never" => [$sender, $recipient, self::FACTS, true, false];
+        foreach ([['student'], ['student', 'instructor']] as $minorRoles) {
+            $this->assertSame($expected, self::can(self::party([$role]), self::party($minorRoles, 2, true), new StartContext(...['recipientMinor' => true] + $link)), implode('+', $minorRoles));
+        }
+    }
 
-                    continue;
-                }
+    public function testAParentNeverReachesAMinorStaffMemberThroughAChildThreadWithoutTheirOwnLink(): void
+    {
+        $minorStaff = self::party(['student', 'instructor'], 2, true);
+        $child      = static fn (array $f = []): StartContext => new StartContext(...['recipientMinor' => true, 'linkedChildAsSenderParent' => true] + $f);
 
-                $facts = array_values(array_diff($needs, ['studentDmEnabled']));
+        $this->assertTrue(self::can(self::party(['parent']), self::party(['instructor'], 2), new StartContext(linkedChildAsSenderParent: true), 99), 'an adult teacher: allowed');
+        $this->assertFalse(self::can(self::party(['parent']), $minorStaff, $child(), 99));
+        $this->assertTrue(self::can(self::party(['parent', 'instructor']), $minorStaff, $child(['senderTeachesRecipient' => true]), 99), 'a parent who teaches them');
+    }
 
-                yield "{$name}: unlocked" => [$sender, $recipient, $facts, true, true];
+    public function testParentNeedsLinkedChildAndStaffRecipient(): void
+    {
+        $parent = self::party(['parent']);
+        $linked = new StartContext(linkedChildAsSenderParent: true);
 
-                foreach ($needs as $missing) {
-                    if ($missing === 'studentDmEnabled') {
-                        yield "{$name}: switch off" => [$sender, $recipient, $facts, false, false];
+        $this->assertTrue(self::can($parent, self::party(['dean'], 2), $linked, 99));
+        $this->assertFalse(self::can($parent, self::party(['dean'], 2), new StartContext(), 99), 'child not linked to this parent');
+        $this->assertFalse(self::can($parent, self::party(['dean'], 2), $linked), 'no child named');
+        $this->assertFalse(self::can($parent, self::party(['student'], 2), $linked, 99), 'student recipient');
+        $this->assertFalse(self::can($parent, self::party(['parent'], 2), $linked, 99), 'parent recipient');
+        // Staff to a parent: the parent side must be linked and a child must be named (ruling R7 ends).
+        $this->assertTrue(self::can(self::party(['institutional_admin']), self::party(['parent'], 2), new StartContext(linkedChildAsRecipientParent: true), 99));
+        $this->assertFalse(self::can(self::party(['institutional_admin']), self::party(['parent'], 2), new StartContext(linkedChildAsRecipientParent: true)));
+        $this->assertFalse(self::can(self::party(['instructor']), self::party(['parent'], 2), new StartContext(linkedChildAsSenderParent: true), 99), 'wrong side linked');
+    }
 
-                        continue;
-                    }
-                    yield "{$name}: without {$missing}" => [$sender, $recipient, array_values(array_diff($facts, [$missing])), true, false];
-                }
+    public function testEachOrientationReadsItsOwnLinkedChildFact(): void
+    {
+        $sender = self::party(['chairperson', 'parent']);
+        $recip  = self::party(['instructor', 'parent'], 2);
+        $plain  = self::party(['parent'], 2);
+
+        // Either side may be the parent, as long as the side speaking as the parent is the one linked.
+        $this->assertTrue(self::can($sender, $recip, new StartContext(linkedChildAsRecipientParent: true), 99));
+        $this->assertTrue(self::can($sender, $recip, new StartContext(linkedChildAsSenderParent: true), 99));
+        // A staff+parent writing to a parent-only person about the sender's own child: the recipient is no staff.
+        $this->assertFalse(self::can($sender, $plain, new StartContext(linkedChildAsSenderParent: true), 99));
+        $this->assertTrue(self::can($sender, $plain, new StartContext(linkedChildAsRecipientParent: true), 99));
+    }
+
+    public function testStaffParentOutsideAChildThreadActsAsStaff(): void
+    {
+        $both = self::party(['chairperson', 'parent']);
+
+        $this->assertTrue(self::can($both, self::party(['instructor'], 2)));
+        $this->assertTrue(self::can(self::party(['student'], 2), $both));
+        $this->assertFalse(self::can(self::party(['parent']), self::party(['instructor'], 2)), 'a parent-only person starts only parent threads');
+    }
+
+    public function testAnyoneCanReachInstitutionalAdmin(): void
+    {
+        foreach (['student', 'instructor', 'chairperson', 'dean', 'institutional_admin'] as $role) {
+            $this->assertTrue(self::can(self::party([$role]), self::party(['institutional_admin'], 2), new StartContext(studentScope: 'off')), $role);
+        }
+        $this->assertTrue(self::can(self::party(['parent']), self::party(['institutional_admin'], 2), new StartContext(linkedChildAsSenderParent: true), 99));
+    }
+
+    public function testScopeOffCourseInstitution(): void
+    {
+        $a = self::party(['student']);
+        $b = self::party(['student'], 2);
+
+        $this->assertFalse(self::can($a, $b, new StartContext(studentScope: 'off', sharedCourse: true)));
+        $this->assertFalse(self::can($a, $b, new StartContext(studentScope: 'course')));
+        $this->assertTrue(self::can($a, $b, new StartContext(studentScope: 'course', sharedCourse: true)));
+        $this->assertTrue(self::can($a, $b, new StartContext(studentScope: 'institution')));
+        // Only student <-> student: the scope never touches a pair with staff.
+        $this->assertTrue(self::can($a, self::party(['dean'], 2), new StartContext(studentScope: 'off')));
+        $this->assertTrue(self::can(self::party(['dean']), $b, new StartContext(studentScope: 'off')));
+    }
+
+    public function testRestrictedAndPausedRefused(): void
+    {
+        // A restriction and the automatic pause both arrive as the sender's restriction kind.
+        foreach (['none' => true, 'no_new' => false, 'no_send' => false] as $restriction => $expected) {
+            $this->assertSame($expected, self::can(self::party(['instructor']), self::party(['student'], 2), new StartContext(senderRestriction: $restriction)), $restriction);
+        }
+        // Opening a thread that exists ignores it.
+        $this->assertTrue(self::can(self::party(['instructor']), self::party(['student'], 2), (new StartContext(senderRestriction: 'no_new'))->forOpening()));
+    }
+
+    public function testReadOnlyInstitutionRefusesStart(): void
+    {
+        $this->assertFalse(self::can(self::party(['institutional_admin']), self::party(['student'], 2), new StartContext(senderInstitutionWritable: false)));
+        $this->assertTrue(self::can(self::party(['institutional_admin']), self::party(['student'], 2), new StartContext(senderInstitutionWritable: true)));
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function provideRefusals(): iterable
+    {
+        yield 'self'                  => [['isSelf' => true]];
+        yield 'other institution'     => [['sameInstitution' => false]];
+        yield 'sender deactivated'    => [['senderActive' => false]];
+        yield 'recipient deactivated' => [['recipientActive' => false]];
+        yield 'impersonation'         => [['impersonating' => true]];
+        yield 'read-only institution' => [['senderInstitutionWritable' => false]];
+        yield 'restricted'            => [['senderRestriction' => 'no_new']];
+        yield 'blocked by recipient'  => [['blockedByRecipient' => true]];
+    }
+
+    /** @param array<string, mixed> $facts */
+    #[DataProvider('provideRefusals')]
+    public function testHardRefusalsAndBlocksStopEveryPair(array $facts): void
+    {
+        foreach (self::provideRolePairs() as [$sender, $recipient, $allowed]) {
+            if ($allowed) {
+                $this->assertFalse(self::pairStart($sender, $recipient, $facts), "{$sender} -> {$recipient}");
             }
         }
     }
 
-    /**
-     * @param list<string> $facts
-     */
-    #[DataProvider('provideStartMatrix')]
-    public function testStartMatrix(string $sender, string $recipient, array $facts, bool $switchOn, bool $expected): void
+    public function testRelationshipOnlyKeepsOnlyThePairFacts(): void
     {
-        $this->assertSame($expected, self::start($sender, $recipient, self::startContext($facts, $switchOn)));
+        $c = (new StartContext(senderActive: false, recipientActive: false, senderInstitutionWritable: false, impersonating: true, blockedByRecipient: true, senderRestriction: 'no_send', recipientMinor: true))->relationshipOnly();
+
+        // D26: account state, restriction and block are left out; the minor fact stays.
+        $this->assertTrue(self::can(self::party(['institutional_admin']), self::party(['student'], 2, true), $c));
+        $this->assertFalse(self::can(self::party(['instructor']), self::party(['student'], 2, true), $c));
     }
 
-    public function testTheTableCoversEveryOrderedPairOfRoles(): void
+    public function testSystemAdminAlwaysRefused(): void
     {
-        $this->assertSame(self::ROLES, array_keys(self::TABLE));
-
-        foreach (self::TABLE as $row) {
-            $this->assertSame(self::ROLES, array_keys($row));
-        }
-    }
-
-    public function testNoStartAcrossInstitutionsOrFromAnInactiveAccount(): void
-    {
-        $policy = new MessagingPolicy();
-
-        $this->assertTrue(self::start('student', 'instructor', self::startContext(['sharedCourse'])));
-
-        foreach (['sameInstitution', 'senderActive', 'recipientActive'] as $flag) {
-            $this->assertFalse(self::start('student', 'instructor', self::startContext(['sharedCourse'], true, [$flag => false])), $flag);
-        }
-    }
-
-    public function testStudentDmSwitchOnlyAffectsStudentToStudent(): void
-    {
-        $policy = new MessagingPolicy();
-        $off    = self::startContext(['sharedCourse'], false);
-
-        $this->assertFalse(self::start('student', 'student', $off));
-        $this->assertTrue(self::start('student', 'instructor', $off));
-    }
-
-    public function testABlockStopsEveryRecipientRole(): void
-    {
-        $policy = new MessagingPolicy();
-
-        foreach (self::ROLES as $sender) {
-            foreach (self::ROLES as $recipient) {
-                $open = self::startContext(self::FACTS);
-
-                if (! self::start($sender, $recipient, $open)) {
-                    continue; // not a permitted pair, nothing for a block to change
-                }
-                $blocked  = self::startContext(self::FACTS, true, ['blockedByRecipient' => true]);
-                $this->assertFalse(self::start($sender, $recipient, $blocked), "{$sender} -> {$recipient}");
-            }
-        }
-    }
-
-    /**
-     * canPost is role-blind: whether a chairperson may reply to a parent who
-     * wrote first is decided by the slice-2 resolver, not by this policy.
-     */
-    public function testAChairpersonCannotStartWithAParent(): void
-    {
-        $this->assertFalse(self::start('chairperson', 'parent', self::startContext(self::FACTS)));
-    }
-
-    public function testNobodyCanStartAThreadWithThemselves(): void
-    {
-        $policy = new MessagingPolicy();
-
-        foreach (self::ROLES as $sender) {
-            foreach (self::ROLES as $recipient) {
-                $this->assertFalse(
-                    self::start($sender, $recipient, self::startContext(self::FACTS, true, ['isSelf' => true])),
-                    "{$sender} -> {$recipient}",
-                );
-            }
-        }
-    }
-
-    public function testMultiRoleStudentInstructorReachesAsStaff(): void
-    {
-        $both = self::party(['student', 'instructor']);
-        $c    = self::startContext(['sameCollege']);
-
-        $this->assertTrue((new MessagingPolicy())->canStart($both, self::party(['instructor'], 2), null, $c));
-        $this->assertFalse((new MessagingPolicy())->canStart(self::party(['student']), self::party(['instructor'], 2), null, $c));
-    }
-
-    public function testParentOnlyRefusedWithoutChild(): void
-    {
-        $this->assertFalse((new MessagingPolicy())->canStart(self::party(['parent']), self::party(['instructor'], 2), null, self::startContext(self::FACTS)));
-        $this->assertFalse((new MessagingPolicy())->canStart(self::party(['instructor'], 2), self::party(['parent']), null, self::startContext(self::FACTS)));
-    }
-
-    public function testStaffParentChildThreadUsesParentRow(): void
-    {
-        $policy = new MessagingPolicy();
-        $both   = self::party(['chairperson', 'parent']);
-        $linked = self::startContext(['linkedChild']);
-
-        // Child thread: the parent side speaks as parent (parent -> instructor needs linkedChild).
-        $this->assertTrue($policy->canStart($both, self::party(['instructor'], 2), 99, $linked));
-        $this->assertFalse($policy->canStart($both, self::party(['instructor'], 2), 99, self::startContext([])));
-        // Two parent-only people: nobody holds a staff role.
-        $this->assertFalse($policy->canStart($both, self::party(['parent'], 2), 99, $linked));
-        // Not a child thread: the held parent role is ignored and the chairperson row applies.
-        $this->assertFalse($policy->canStart($both, self::party(['instructor'], 2), null, self::startContext([])));
-        $this->assertTrue($policy->canStart($both, self::party(['instructor'], 2), null, self::startContext(['inScope'])));
-    }
-
-    public function testInstructorWhoIsAlsoAParentStartsWithAParentOfTheirStudent(): void
-    {
-        $policy = new MessagingPolicy();
-        $linked = self::startContext(['linkedChild']);
-
-        $this->assertTrue($policy->canStart(self::party(['instructor', 'parent']), self::party(['parent'], 2), 99, $linked));
-        $this->assertTrue($policy->canStart(self::party(['parent'], 2), self::party(['instructor', 'parent']), 99, $linked));
-        $this->assertFalse($policy->canStart(self::party(['instructor', 'parent']), self::party(['parent'], 2), 99, self::startContext([])));
-    }
-
-    public function testParentCannotReachAnAdminInstructorWithoutAChild(): void
-    {
-        $policy = new MessagingPolicy();
-
-        $this->assertFalse($policy->canStart(self::party(['parent']), self::party(['institutional_admin', 'instructor'], 2), null, self::startContext(self::FACTS)));
-    }
-
-    public function testInstitutionalAdminMayStillReachAParentOnlyPartyOnANonChildThread(): void
-    {
-        // Transitional exception, kept until the Messages open-up phase.
-        $this->assertTrue((new MessagingPolicy())->canStart(self::party(['institutional_admin']), self::party(['parent'], 2), null, self::startContext(self::FACTS)));
+        $this->assertFalse(self::can(self::party(['admin']), self::party(['student'], 2)));
+        $this->assertFalse(self::can(self::party(['student']), self::party(['admin'], 2)));
+        // Ruling R10: beside an institution role the admin role is ignored.
+        $this->assertTrue(self::can(self::party(['instructor', 'admin']), self::party(['instructor'], 2)));
     }
 
     public function testSystemAdminNeverModerates(): void
@@ -263,31 +282,6 @@ final class MessagingPolicyTest extends CIUnitTestCase
     {
         // Ruling R10: inside Messages the account acts under its institution roles.
         $this->assertTrue((new MessagingPolicy())->canModerate(self::party(['admin', 'institutional_admin']), 'course', true));
-    }
-
-    public function testEachOrientationReadsItsOwnLinkedChildFact(): void
-    {
-        $policy = new MessagingPolicy();
-        $sender = self::party(['chairperson', 'parent']);
-        $recip  = self::party(['instructor', 'parent'], 2);
-
-        // The child links the recipient-as-parent to the sender-as-chair: the sender may not speak as that child's parent.
-        $this->assertFalse($policy->canStart($sender, $recip, 99, new StartContext(linkedChildAsRecipientParent: true)));
-        $this->assertTrue($policy->canStart($sender, $recip, 99, new StartContext(linkedChildAsSenderParent: true)));
-        // The recipient as parent, the sender as instructor: instructor -> parent reads the recipient-side fact.
-        $this->assertTrue($policy->canStart(self::party(['instructor']), self::party(['parent'], 2), 99, new StartContext(linkedChildAsRecipientParent: true)));
-        $this->assertFalse($policy->canStart(self::party(['instructor']), self::party(['parent'], 2), 99, new StartContext(linkedChildAsSenderParent: true)));
-    }
-
-    public function testSystemAdminAlwaysRefused(): void
-    {
-        $policy = new MessagingPolicy();
-        $all    = self::startContext(self::FACTS);
-
-        $this->assertFalse($policy->canStart(self::party(['admin']), self::party(['student'], 2), null, $all));
-        $this->assertFalse($policy->canStart(self::party(['student']), self::party(['admin'], 2), null, $all));
-        // Ruling R10: beside an institution role the admin role is ignored, so the instructor row applies.
-        $this->assertTrue($policy->canStart(self::party(['instructor', 'admin']), self::party(['instructor'], 2), null, $all));
     }
 
     public function testABlockedDirectPostIsRefused(): void
@@ -310,7 +304,10 @@ final class MessagingPolicyTest extends CIUnitTestCase
         yield 'locked course chat, instructor' => [new PostContext('course', true, true, locked: true, isCourseInstructor: true), true];
         yield 'unlocked course chat, student'  => [new PostContext('course', true, true), true];
         yield 'blocked direct thread'          => [new PostContext('direct', true, true, blocked: true), false];
-        yield 'student switch off, direct'     => [new PostContext('direct', true, true, studentDmBlocked: true), false];
+        yield 'student scope lost, direct'     => [new PostContext('direct', true, true, scopeLost: true), false];
+        yield 'minor no longer reached'        => [new PostContext('direct', true, true, minorLost: true), false];
+        yield 'other side deactivated'         => [new PostContext('direct', true, true, deactivatedOther: true), false];
+        yield 'minor flag never stops a group' => [new PostContext('group', true, true, minorLost: true, scopeLost: true), true];
         yield 'group chat'                     => [new PostContext('group', true, true), true];
         yield 'parent link ended'              => [new PostContext('direct', true, true, subjectLinkLost: true), false];
         yield 'no_new restriction, direct'     => [new PostContext('direct', true, true, restriction: 'no_new'), true];
@@ -318,16 +315,6 @@ final class MessagingPolicyTest extends CIUnitTestCase
         yield 'no_send, group'                 => [new PostContext('group', true, true, restriction: 'no_send'), false];
         yield 'no_send, course chat student'   => [new PostContext('course', true, true, restriction: 'no_send'), false];
         yield 'no_send, own course chat'       => [new PostContext('course', true, true, isCourseInstructor: true, restriction: 'no_send'), true];
-    }
-
-    public function testARestrictedSenderCannotStart(): void
-    {
-        $policy = new MessagingPolicy();
-        $party  = static fn (string $role, int $id): Party => new Party($id, [$role], true, 1);
-
-        foreach (['none' => true, 'no_new' => false, 'no_send' => false] as $restriction => $expected) {
-            $this->assertSame($expected, $policy->canStart($party('instructor', 1), $party('student', 2), null, new StartContext(sharedCourse: true, senderRestriction: $restriction)), $restriction);
-        }
     }
 
     #[DataProvider('providePostRules')]
@@ -462,7 +449,9 @@ final class MessagingPolicyTest extends CIUnitTestCase
             'closed offering'              => [new PostContext('course', true, true, offeringClosed: true), false],
             'lost parent link'             => [new PostContext('direct', true, true, subjectLinkLost: true), false],
             'blocked direct thread'        => [new PostContext('direct', true, true, blocked: true), false],
-            'student dm switched off'      => [new PostContext('direct', true, true, studentDmBlocked: true), false],
+            'student scope lost'           => [new PostContext('direct', true, true, scopeLost: true), false],
+            'minor no longer reached'      => [new PostContext('direct', true, true, minorLost: true), false],
+            'other side deactivated'       => [new PostContext('direct', true, true, deactivatedOther: true), false],
             'no_send restriction'          => [new PostContext('direct', true, true, restriction: 'no_send'), false],
             'no_send, own course chat'     => [new PostContext('course', true, true, isCourseInstructor: true, restriction: 'no_send'), true],
             'no_new restriction'           => [new PostContext('direct', true, true, restriction: 'no_new'), true],

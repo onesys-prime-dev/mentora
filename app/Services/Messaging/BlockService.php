@@ -78,14 +78,14 @@ class BlockService
     }
 
     /**
-     * False when the target cannot be blocked (see canBlock). Blocking someone already blocked succeeds
-     * without a second row or audit entry.
+     * False when the target cannot be blocked (see canBlock) or the institution is past (FR11). Blocking
+     * someone already blocked succeeds without a second row or audit entry.
      */
     public function block(User $user, int $blockedId): bool
     {
         $institution = $this->resolver->institutionOf($user);
 
-        if ($institution === null || ! $this->canBlock($user, $blockedId)) {
+        if ($institution === null || ChatStateService::past($user) || ! $this->canBlock($user, $blockedId)) {
             return false;
         }
 
@@ -108,12 +108,12 @@ class BlockService
         return true;
     }
 
-    /** False for an unknown target; unblocking someone who is not blocked succeeds quietly. */
+    /** False for an unknown target or a past institution (FR11); unblocking someone who is not blocked succeeds quietly. */
     public function unblock(User $user, int $blockedId): bool
     {
         $institution = $this->resolver->institutionOf($user);
 
-        if ($institution === null || $blockedId < 1) {
+        if ($institution === null || $blockedId < 1 || ChatStateService::past($user)) {
             return false;
         }
 

@@ -78,7 +78,7 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
 
         $this->assertSame(302, $this->step('GET', 'institution/settings/messages')->response()->getStatusCode(), $role);
         $this->assertSame(302, $this->save('off')->response()->getStatusCode(), $role);
-        $this->assertTrue((new StudentMessaging())->enabled($this->institution), $role . ' changed nothing');
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->institution), $role . ' changed nothing');
     }
 
     public function testTheTabShowsOnByDefaultAndIsInTheList(): void
@@ -96,11 +96,11 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
     public function testSwitchingItOffShowsOffAndOnAgainRestoresIt(): void
     {
         $this->assertSame(200, $this->save('off')->response()->getStatusCode());
-        $this->assertFalse((new StudentMessaging())->enabled($this->institution));
+        $this->assertSame('off', (new StudentMessaging())->scope($this->institution));
         $this->assertMatchesRegularExpression('/name="scope"[^>]*value="off"[^>]*checked/s', $this->step('GET', 'institution/settings/messages')->response()->getBody());
 
         $this->assertSame(200, $this->save('institution')->response()->getStatusCode());
-        $this->assertTrue((new StudentMessaging())->enabled($this->institution));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->institution));
     }
 
     public function testABadValueIsRefusedAndChangesNothing(): void
@@ -108,14 +108,14 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
         $response = $this->save('maybe')->response();
 
         $this->assertSame(422, $response->getStatusCode());
-        $this->assertTrue((new StudentMessaging())->enabled($this->institution));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->institution));
     }
 
     public function testItDoesNotTouchAnotherInstitution(): void
     {
         $this->save('off');
 
-        $this->assertTrue((new StudentMessaging())->enabled($this->other));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->other));
     }
 
     public function testSavesScopeAndAudits(): void
@@ -123,7 +123,7 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
         $this->assertSame(200, $this->save('course')->response()->getStatusCode());
 
         $this->assertSame('course', (new StudentMessaging())->scope($this->institution));
-        $this->assertTrue((new StudentMessaging())->enabled($this->institution));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->institution));
         $this->assertSame('institution', (new StudentMessaging())->scope($this->other));
 
         $row = db_connect()->table('audit_logs')->where(['action' => 'settings.changed', 'target_id' => 'studentMessagingScope'])->get()->getRowArray();

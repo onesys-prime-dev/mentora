@@ -623,6 +623,15 @@ describe("sending", () => {
 
     });
 
+    it("shows the server's note for a deactivated account", async () => {
+
+        await mount(makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_post: false, composer_note: "This account is deactivated" })], unread: 0 })) }));
+        await openFirst();
+
+        expect(q("[data-role=cannot-post]").textContent).toBe("This account is deactivated");
+
+    });
+
 });
 
 describe("review fixes", () => {
@@ -759,6 +768,59 @@ describe("deleting for me", () => {
 });
 
 describe("starting a conversation", () => {
+
+    it("offers the next page when the server has more, and says why a parent with no child sees nobody", async () => {
+
+        const ann = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: null, subject_name: null };
+        const bo = { ...ann, id: 9, name: "Bo Lee" };
+        const api = makeApi({
+            recipients: vi.fn()
+                .mockResolvedValueOnce(ok({ recipients: [ann], next: 4 }))
+                .mockResolvedValueOnce(ok({ recipients: [bo], next: null }))
+                .mockResolvedValueOnce(ok({ recipients: [], next: null, reason: "no_linked_child" })),
+        });
+
+        await mount(api);
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "lee";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+        q("#messages-new").hidden = false; // the dialog is open while someone picks
+        q("[data-action=picker-more]").focus();
+        q("[data-action=picker-more]").click();
+        await flush();
+
+        expect(api.recipients).toHaveBeenLastCalledWith("lee", 4);
+        expect([...document.querySelectorAll("[data-role=picker-results] li")].map((li) => li.textContent)).toEqual([expect.stringContaining("Ann Lee"), expect.stringContaining("Bo Lee")]);
+        // The button the keyboard was on is gone: focus moves to the first person added, not to the page.
+        expect(document.activeElement).toBe(document.querySelectorAll("[data-role=picker-results] li button")[1]);
+
+        input.value = "lees";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(q("[data-role=picker-state]").textContent).toContain("not linked to a child");
+
+    });
+
+    it("explains to a parent with no linked child before and after typing", async () => {
+
+        const api = makeApi();
+
+        document.body.innerHTML = SHELL;
+        q("#messages-app").dataset.noChild = "1";
+        await mountMessages(q("#messages-app"), { api }).ready;
+        await flush();
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "a";
+        input.dispatchEvent(new Event("input"));
+
+        expect(q("[data-role=picker-state]").textContent).toContain("not linked to a child");
+    });
 
     it("lists what the server finds and opens the conversation that is started", async () => {
 

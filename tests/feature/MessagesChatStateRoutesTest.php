@@ -121,6 +121,26 @@ final class MessagesChatStateRoutesTest extends RouteTestCase
         $this->assertNull($this->row($this->conversation, $this->student)['pinned_at']);
     }
 
+    /** FR11: personal and safety actions pass the read-only gate; a past institution stops them too. */
+    public function testMuteArchiveReadAndBlockWorkInAReadOnlyInstitutionButNotAPastOne(): void
+    {
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+        $this->signIn($this->student);
+
+        foreach (['mute', 'archive', 'unread', 'read'] as $action) {
+            $this->assertSame(200, $this->act($action, $this->conversation)->response()->getStatusCode(), $action);
+        }
+
+        $this->assertSame(1, (int) $this->row($this->conversation, $this->student)['is_muted']);
+        $this->assertNotSame(403, $this->api('POST', 'blocks', ['user_id' => (int) $this->instructor->id])->response()->getStatusCode(), 'block passes the gate');
+
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'past']);
+        $this->signIn($this->student);
+
+        $this->assertSame(403, $this->act('unmute', $this->conversation)->response()->getStatusCode());
+        $this->assertSame(1, (int) $this->row($this->conversation, $this->student)['is_muted']);
+    }
+
     public function testAnActionWithoutACsrfTokenIsRefused(): void
     {
         $this->signIn($this->student);

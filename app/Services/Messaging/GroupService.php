@@ -498,7 +498,7 @@ class GroupService
             return false;
         }
 
-        $context = $this->resolver->forStart($actor, $member, null);
+        $context = $this->resolver->forStart($actor, $member, null, $actorParty, $party);
 
         return $context !== null && $this->policy->canStart($actorParty, $party, null, $context);
     }
@@ -530,7 +530,7 @@ class GroupService
                     continue;
                 }
 
-                $context = $this->resolver->forStart($other, $minor, null);
+                $context = $this->resolver->forStart($other, $minor, null, $parties[$otherId], $parties[$minorId]);
 
                 if ($context === null || ! $this->policy->canStart($parties[$otherId], $parties[$minorId], null, $context->relationshipOnly())) {
                     return false;

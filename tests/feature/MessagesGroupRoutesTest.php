@@ -226,10 +226,10 @@ final class MessagesGroupRoutesTest extends RouteTestCase
 
     public function testAMemberTheyMayNotAddAnswersLikeAnUnknownRecipientAndCreatesNothing(): void
     {
-        $student = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
+        $parent = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
         $this->signIn($this->chair);
 
-        $refused = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [(int) $this->instructor->id, (int) $student->id]])->response();
+        $refused = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [(int) $this->instructor->id, (int) $parent->id]])->response();
         $unknown = $this->api('POST', 'groups', ['title' => 'Group', 'member_ids' => [99999999]])->response();
 
         $this->assertSame(404, $refused->getStatusCode());

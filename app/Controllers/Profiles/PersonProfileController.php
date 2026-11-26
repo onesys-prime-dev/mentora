@@ -121,7 +121,7 @@ class PersonProfileController extends BaseController
     /** @param array<string, mixed> $p */
     private function canMessage(User $viewer, int $id, array $p): bool
     {
-        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || (new InstitutionAccess())->stateFor((int) $viewer->id) !== InstitutionAccess::WRITABLE || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
+        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || (new InstitutionAccess())->stateFor((int) $viewer->id) === InstitutionAccess::PAST || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
             return false;
         }
         $subject = model(UserModel::class)->findById($id);
@@ -129,6 +129,6 @@ class PersonProfileController extends BaseController
             return false;
         }
         // D32: the active-role exception is gone (decisions are on parties now); the same check that starting the conversation makes.
-        return (new ConversationService())->draftFor($viewer, $id, null) !== null; // opening, so a restricted person still reaches an existing thread
+        return (new ConversationService())->draftFor($viewer, $id, null) !== null; // opening, so a restricted person or a read-only institution still reaches an existing thread
     }
 }

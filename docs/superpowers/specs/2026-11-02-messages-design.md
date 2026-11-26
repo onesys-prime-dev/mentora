@@ -1,6 +1,6 @@
 # Messages — design
 
-Status: **draft for approval** · Date: 2026-11-02 · Replaces the placeholder "Inbox" tile.
+Status: **implemented; amended** (institution-wide Messages track, Phases 1-7 built on `feat/messages-open-*` branches as of 2026-11-27, not yet merged to main) · Date: 2026-11-02 · Replaces the placeholder "Inbox" tile.
 
 > **Amended 2026-11-23 by the institution-wide Messages track.** §3.1 (who may start a thread), §3.2 (groups), §3.3 rules 6-8 (blocks, deactivated/impersonation, moderation) and §6.3 (quiet hours) are superseded by `docs/feature-development/messages-institution-wide/requirements.md` (decisions in its `decision-register.md`). Where they disagree, that document wins. The rest of this spec still applies.
 

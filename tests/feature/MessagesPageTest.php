@@ -105,7 +105,7 @@ final class MessagesPageTest extends RouteTestCase
 
         $short = $this->step('GET', 'messages/api/recipients?q=a')->response();
         $this->assertSame(200, $short->getStatusCode());
-        $this->assertSame(['recipients' => []], json_decode($short->getBody(), true));
+        $this->assertSame(['recipients' => [], 'next' => null], json_decode($short->getBody(), true));
 
         $found = json_decode($this->step('GET', 'messages/api/recipients?q=Tructor')->response()->getBody(), true);
         $this->assertCount(1, $found['recipients']);

@@ -140,7 +140,7 @@ final class FirstSendRaceTest extends DatabaseTestCase
         $failing = new class extends MessagingContextResolver {
             private bool $fired = false;
 
-            public function forPost(User $user, array $conversation): \App\Services\Messaging\PostContext
+            public function forPost(User $user, array $conversation, ?\App\Services\Messaging\Party $userParty = null, ?array $other = null): \App\Services\Messaging\PostContext
             {
                 if (! $this->fired) {
                     $this->fired = true;
@@ -151,7 +151,7 @@ final class FirstSendRaceTest extends DatabaseTestCase
                     }
                 }
 
-                return parent::forPost($user, $conversation);
+                return parent::forPost($user, $conversation, $userParty, $other);
             }
         };
         $service = new MessageService($this->cipher(), new ConversationService($failing), $failing);

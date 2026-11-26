@@ -52,16 +52,18 @@ final class AdminMessagingTest extends DatabaseTestCase
             $thread = (new ConversationService())->startDirect($this->admin, (int) $recipient->id);
 
             $this->assertNotNull($thread, (string) $recipient->first_name);
-            $this->assertNull($thread['subject_student_id'], 'a thread with the administrator is about nobody in particular');
+            // D2: a thread with a parent is about their child (here the only one); every other is about nobody.
+            $this->assertSame($recipient === $this->parent ? (int) $this->child->id : null, $thread['subject_student_id'] === null ? null : (int) $thread['subject_student_id'], (string) $recipient->first_name);
             $this->assertTrue($this->messages()->send($this->admin, (int) $thread['id'], 'A notice from the office', 'uuid-' . $recipient->id . '-a')['ok']);
             $this->assertTrue($this->messages()->send($recipient, (int) $thread['id'], 'Thank you', 'uuid-' . $recipient->id . '-r')['ok'], (string) $recipient->first_name . ' replies');
         }
     }
 
-    public function testNobodyElseStartsWithTheAdminButEveryoneCanReplyToOneTheAdminStarted(): void
+    public function testEveryoneStartsWithTheAdminAndCanReplyToOneTheAdminStarted(): void
     {
+        // D21: anyone in the institution can reach the institutional admin.
         foreach ([$this->child, $this->instructor, $this->chair, $this->dean, $this->parent] as $person) {
-            $this->assertNull((new ConversationService())->startDirect($person, (int) $this->admin->id), (string) $person->first_name);
+            $this->assertNotNull((new ConversationService())->startDirect($person, (int) $this->admin->id), (string) $person->first_name);
         }
 
         $thread = (int) (new ConversationService())->startDirect($this->admin, (int) $this->parent->id)['id'];
@@ -80,7 +82,7 @@ final class AdminMessagingTest extends DatabaseTestCase
 
         $parents = (new RecipientSearch())->search($this->admin, 'Parent');
         $this->assertSame(['parent'], array_column($parents, 'role'));
-        $this->assertSame([null], array_column($parents, 'subject_student_id'));
+        $this->assertSame([(int) $this->child->id], array_column($parents, 'subject_student_id'));
     }
 
     public function testTheSystemAdministratorHasNoMessagesBothWays(): void

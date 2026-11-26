@@ -359,7 +359,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         composerEl.hidden = !canPost;
         cannotPostEl.hidden = canPost;
-        cannotPostEl.textContent = state.restriction?.kind === "no_send" && !locked && !c?.closed ? `${restrictionTitle()}${endsWords(state.restriction.ends_at)}.` : locked ? "Only the instructor can post here" : c?.closed ? "This course has ended, so this chat is read-only." : "You can't post in this conversation";
+        cannotPostEl.textContent = c?.composer_note ? c.composer_note : state.restriction?.kind === "no_send" && !locked && !c?.closed ? `${restrictionTitle()}${endsWords(state.restriction.ends_at)}.` : locked ? "Only the instructor can post here" : c?.closed ? "This course has ended, so this chat is read-only." : "You can't post in this conversation";
 
         // The lock belongs to whoever moderates a course chat; a moderator who can still post is told what students see.
         if (lockEl) {
@@ -1153,10 +1153,41 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return item;
         }));
 
-        pickerNote.textContent = { loading: "Searching…", empty: "No one found.", error: "The search failed. Try again." }[picker.state] ?? (picker.results.length > 0 ? "" : "Type at least two letters of a name.");
+        if (picker.next !== null) {
+            const item = document.createElement("li");
+            const button = document.createElement("button");
+
+            button.type = "button";
+            button.dataset.action = "picker-more";
+            button.className = "w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-brand hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.textContent = "Show more";
+            // The list is rebuilt without this button, so keyboard focus moves to the first person added
+            // (back to this button if the page failed, or the last entry if it added nobody).
+            button.addEventListener("click", async () => {
+                const before = picker.results.length;
+
+                await picker.more();
+
+                const choices = list.querySelectorAll("li > button");
+
+                (choices[before] ?? choices[choices.length - 1])?.focus();
+            });
+            item.append(button);
+            list.append(item);
+        }
+
+        const noChild = "Your account is not linked to a child yet, so you cannot start a conversation.";
+
+        // The page says up front when the person is a parent with no linked child (S2-i), so the picker explains on opening.
+        pickerNote.textContent = {
+            loading: "Searching…",
+            empty: "No one found.",
+            error: "The search failed. Try again.",
+            no_child: noChild,
+        }[picker.state] ?? (picker.results.length > 0 ? "" : root.dataset.noChild === "1" ? noChild : "Type at least two letters of a name.");
     }
 
-    const picker = createPicker({ search: (q) => api.recipients(q), onPick: startWith, onChange: renderPicker });
+    const picker = createPicker({ search: (...args) => api.recipients(...args), onPick: startWith, onChange: renderPicker });
 
     $("[data-role=picker-input]").addEventListener("input", (event) => picker.input(event.target.value));
 

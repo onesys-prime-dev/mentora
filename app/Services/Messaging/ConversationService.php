@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Institutions\InstitutionAccess;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -29,8 +30,8 @@ class ConversationService
     /**
      * Whether $sender may start (or reopen) a direct conversation with $recipient, and about which child.
      * The one check behind startDirect and the profile's Message button, so the button never promises
-     * a conversation that starting refuses. Null when refused. `$opening` ignores the sender's own restriction:
-     * it stops creating threads, not reaching one that exists (the caller checks that one does).
+     * a conversation that starting refuses. Null when refused. `$opening` ignores the sender's own restriction and a
+     * read-only institution: they stop creating threads, not reaching one that exists (the caller checks that one does).
      *
      * @return array{subject_student_id: ?int}|null
      */
@@ -53,7 +54,7 @@ class ConversationService
             $subjectStudentId = null;
         } elseif ($subjectStudentId === null) {
             // Two staff who are also parents are a staff pair first; only if that is refused is the thread about the one shared child.
-            $plain = $opening ? $this->resolver->forStart($sender, $recipient, null)?->withoutRestriction() : $this->resolver->forStart($sender, $recipient, null);
+            $plain = $opening ? $this->resolver->forStart($sender, $recipient, null, $senderParty, $recipientParty)?->forOpening() : $this->resolver->forStart($sender, $recipient, null, $senderParty, $recipientParty);
 
             if ($plain !== null && $this->policy->canStart($senderParty, $recipientParty, null, $plain)) {
                 return ['subject_student_id' => null];
@@ -66,8 +67,8 @@ class ConversationService
             $subjectStudentId = $shared[0];
         }
 
-        $context = $this->resolver->forStart($sender, $recipient, $subjectStudentId);
-        $context = $opening ? $context?->withoutRestriction() : $context;
+        $context = $this->resolver->forStart($sender, $recipient, $subjectStudentId, $senderParty, $recipientParty);
+        $context = $opening ? $context?->forOpening() : $context;
 
         if ($context === null || ! $this->policy->canStart($senderParty, $recipientParty, $subjectStudentId, $context)) {
             return null;
@@ -110,8 +111,8 @@ class ConversationService
 
         $existing = $this->byKey(DirectKey::for((int) $this->resolver->institutionOf($sender), (int) $sender->id, $recipientId, $start['subject_student_id']));
 
-        // A restriction (FR6) lets someone open a thread they already have, never begin one.
-        if ($existing === null && $this->resolver->restrictionKind((int) $sender->id) !== 'none') {
+        // A restriction (FR6) or a read-only institution (FR11) lets someone open a thread they already have, never begin one.
+        if ($existing === null && ($this->resolver->restrictionKind((int) $sender->id) !== 'none' || ! (new InstitutionAccess())->canWrite((int) $sender->id))) {
             return null;
         }
 

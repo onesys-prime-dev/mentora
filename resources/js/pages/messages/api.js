@@ -68,6 +68,6 @@ export function createApi(base, fetchImpl = (...args) => fetch(...args)) {
         lock: (id) => request("POST", `conversations/${id}/lock`, {}),
         unlock: (id) => request("POST", `conversations/${id}/unlock`, {}),
         unread: () => request("GET", "unread-count"),
-        recipients: (q) => request("GET", `recipients${query({ q })}`),
+        recipients: (q, after) => request("GET", `recipients${query({ q, after })}`),
     };
 }

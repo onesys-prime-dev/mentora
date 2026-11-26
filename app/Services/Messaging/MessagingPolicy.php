@@ -10,131 +10,60 @@ namespace App\Services\Messaging;
  */
 final class MessagingPolicy
 {
-    private const NOTHING = 'nothing';
-
     /**
-     * Spec 3.1: sender => recipient => the context fact that unlocks the
-     * cell. A pair that is absent is refused (this includes every use of the
-     * system `admin` role). Student -> student also needs the institution's
-     * studentDmEnabled switch, checked in canStart().
-     */
-    private const START = [
-        'student' => [
-            'student'    => 'sharedCourse',
-            'instructor' => 'sharedCourse',
-        ],
-        'instructor' => [
-            'student'     => 'sharedCourse',
-            'instructor'  => 'sameCollege',
-            'chairperson' => 'sameCollege',
-            'dean'        => 'sameCollege',
-            'parent'      => 'linkedChild',
-        ],
-        'chairperson' => [
-            'student'     => 'inScope',
-            'instructor'  => 'inScope',
-            'chairperson' => 'sameCollege',
-            'dean'        => 'sameCollege',
-        ],
-        'dean' => [
-            'student'     => 'inScope',
-            'instructor'  => 'inScope',
-            'chairperson' => 'inScope',
-            'dean'        => self::NOTHING,
-        ],
-        'parent' => [
-            'instructor'  => 'linkedChild',
-            'chairperson' => 'linkedChild',
-        ],
-        'institutional_admin' => [
-            'student'             => self::NOTHING,
-            'instructor'          => self::NOTHING,
-            'chairperson'         => self::NOTHING,
-            'dean'                => self::NOTHING,
-            'parent'              => self::NOTHING,
-            'institutional_admin' => self::NOTHING,
-        ],
-    ];
-
-    /**
-     * Transitional: the parties pick a capacity for the thread, then any pair of held roles valid for it
-     * that passes the START table with the facts allows the start. The resolver refuses the system `admin`,
-     * impersonation and no-institution (no context); the system admin is refused here too.
+     * Requirements FR1, in order; the first refusal wins. The resolver gives no context for a bare system `admin`
+     * or someone with no institution; the system admin is refused here too.
      */
     public function canStart(Party $sender, Party $recipient, ?int $subjectStudentId, StartContext $c): bool
     {
-        if ($sender->isSystemAdmin() || $recipient->isSystemAdmin()) {
+        // 1. Hard refusals.
+        if ($c->isSelf || ! $c->sameInstitution || ! $c->senderActive || ! $c->recipientActive
+            || $sender->isSystemAdmin() || $recipient->isSystemAdmin() || $c->impersonating
+            || ! $c->senderInstitutionWritable || $c->senderRestriction !== 'none') {
             return false;
         }
 
+        // 2. Capacity (D4). A thread naming a child is a parent thread: one side a parent linked to that child, the
+        // other staff. Otherwise both act as staff or student; a parent-only person has no such capacity.
         if ($subjectStudentId !== null) {
-            // Exactly one side speaks as the parent, the other holds a staff role; try both orientations.
-            return ($sender->isParent() && $recipient->isStaff() && $this->anyPair(['parent'], array_intersect($recipient->roles, Party::STAFF_ROLES), $c))
-                || ($recipient->isParent() && $sender->isStaff() && $this->anyPair(array_intersect($sender->roles, Party::STAFF_ROLES), ['parent'], $c));
+            $capacityOk = ($sender->isParent() && $c->linkedChildAsSenderParent && $recipient->isStaff())
+                || ($recipient->isParent() && $c->linkedChildAsRecipientParent && $sender->isStaff());
+        } else {
+            $capacityOk = $sender->capacity(false) !== null && $recipient->capacity(false) !== null;
         }
 
-        // The institution's administrator may write to a parent outside a child thread; only that one pair.
-        if (in_array('institutional_admin', $sender->roles, true) && $recipient->isParent() && $this->roleStart('institutional_admin', 'parent', $c)) {
-            return true;
-        }
-
-        if ($sender->capacity(false) === null || $recipient->capacity(false) === null) {
+        if (! $capacityOk) {
             return false;
         }
 
-        return $this->anyPair(array_diff($sender->roles, ['parent']), array_diff($recipient->roles, ['parent']), $c);
-    }
+        // 3. Pair rules. Parent <-> student and parent <-> parent cannot pass step 2 (D2).
+        if ($subjectStudentId === null && $sender->capacity(false) === 'student' && $recipient->capacity(false) === 'student') {
+            $inScope = match ($c->studentScope) {
+                'institution' => true,
+                'course'      => $c->sharedCourse,
+                default       => false,
+            };
 
-    /**
-     * @param list<string> $senderRoles
-     * @param list<string> $recipientRoles
-     */
-    private function anyPair(array $senderRoles, array $recipientRoles, StartContext $c): bool
-    {
-        foreach ($senderRoles as $senderRole) {
-            foreach ($recipientRoles as $recipientRole) {
-                if ($this->roleStart($senderRole, $recipientRole, $c)) {
-                    return true;
-                }
+            if (! $inScope) {
+                return false;
             }
         }
 
-        return false;
+        // A minor recipient, even one holding a staff role (S2-f): own instructor, chair or dean, classmate, or the institution's admin (D9).
+        if ($c->recipientMinor && ! $this->reachesMinor($sender, $c)) {
+            return false;
+        }
+
+        // 4. Blocks (D5): only a binding one; the resolver already leaves out paused blocks and institutional admins' blocks.
+        return ! $c->blockedByRecipient;
     }
 
-    private function roleStart(string $senderRole, string $recipientRole, StartContext $c): bool
+    /** D9: the sender teaches the minor, chairs or deans them, is a classmate, or is the institution's admin. */
+    public function reachesMinor(Party $sender, StartContext $c): bool
     {
-        $requirement = self::START[$senderRole][$recipientRole] ?? null;
-
-        if ($requirement === null) {
-            return false;
-        }
-
-        if ($c->isSelf) {
-            return false;
-        }
-
-        if (! $c->sameInstitution || ! $c->senderActive || ! $c->recipientActive) {
-            return false;
-        }
-
-        if ($c->blockedByRecipient || $c->senderRestriction !== 'none') {
-            return false;
-        }
-
-        if ($senderRole === 'student' && $recipientRole === 'student' && ! $c->studentDmEnabled) {
-            return false;
-        }
-
-        $facts = [
-            'sharedCourse' => $c->sharedCourse,
-            'sameCollege'  => $c->sameCollege,
-            'inScope'      => $c->inScope,
-            // Each orientation reads the fact for its own parent side.
-            'linkedChild'  => $senderRole === 'parent' ? $c->linkedChildAsSenderParent : $c->linkedChildAsRecipientParent,
-        ];
-
-        return $requirement === self::NOTHING || $facts[$requirement];
+        return $c->senderTeachesRecipient || $c->senderLeadsRecipient
+            || (in_array('student', $sender->roles, true) && $c->sharedCourse)
+            || in_array('institutional_admin', $sender->roles, true);
     }
 
     /**
@@ -155,7 +84,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->type === 'direct' && ($c->blocked || $c->studentDmBlocked)) {
+        if ($c->type === 'direct' && ($c->blocked || $c->scopeLost || $c->minorLost || $c->deactivatedOther)) {
             return false;
         }
 
@@ -230,7 +159,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->type === 'direct' && ($c->blocked || $c->studentDmBlocked)) {
+        if ($c->type === 'direct' && ($c->blocked || $c->scopeLost || $c->minorLost || $c->deactivatedOther)) {
             return false;
         }
 

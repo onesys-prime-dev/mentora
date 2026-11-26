@@ -16,8 +16,8 @@ use Throwable;
  * Stored as an institution value that is only saved when it is not the default, so "institution" removes it.
  * The settings store audits each change.
  *
- * Until Phase 7, enabled() is `scope !== 'off'` for every existing caller: 'course' is stored and shown but
- * its reach rule (classmates only) lands in Phase 7, so today it behaves like 'institution'.
+ * Starting a thread (MessagingContextResolver::forStart) and posting in an existing student thread (forPost:
+ * a thread the scope no longer covers is read-only) both read scope().
  */
 final class StudentMessaging
 {
@@ -39,11 +39,6 @@ final class StudentMessaging
 
             return 'off';
         }
-    }
-
-    public function enabled(int $institutionId): bool
-    {
-        return $this->scope($institutionId) !== 'off';
     }
 
     /** @throws InvalidArgumentException for a scope that is not one of SCOPES */

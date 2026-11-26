@@ -132,21 +132,16 @@ final class GroupServiceTest extends DatabaseTestCase
 
     public function testEveryMemberTheCreatorMayNotAddRefusesTheWholeGroup(): void
     {
-        $student   = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
         $parent    = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
-        $admin     = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $outsider  = PeopleFactory::person('instructor', 'Out', 'Sider', null, DeanFactory::college('GR2')['institution']);
         $inactive  = PeopleFactory::person('instructor', 'Ina', 'Ctive', null, $this->institution, false);
         $before    = $this->counts();
 
-        // A chairperson: another department's instructor, an unrelated student, a parent, an administrator, outsiders and the inactive.
-        foreach ([$this->teacherB, $student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
-        }
-
-        // A dean: students out of scope, parents, admins, outsiders and the inactive stay out.
-        foreach ([$student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groupService()->create($this->dean, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+        // D1 opens the institution; a parent (no group capacity), outsiders and the inactive stay out.
+        foreach ([$this->chairA, $this->dean] as $creator) {
+            foreach ([$parent, $outsider, $inactive] as $bad) {
+                $this->assertNull($this->groupService()->create($creator, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+            }
         }
 
         $this->assertSame($before, $this->counts(), 'nothing was created');
@@ -188,7 +183,7 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertEqualsCanonicalizing([(int) $this->teacherA1->id, (int) $this->teacherA2->id], array_column($chair, 'id'));
         $this->assertSame(['instructor', 'instructor'], array_column($chair, 'role'));
 
-        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Bravo'), 'another department');
+        $this->assertSame([(int) $this->teacherB->id], array_column($this->groupService()->candidates($this->chairA, 'Bravo'), 'id'), 'another department (D1)');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'A'), 'too short');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Cara'), 'never the creator');
 
@@ -314,6 +309,7 @@ final class GroupServiceTest extends DatabaseTestCase
     {
         [$a, $b] = $this->students(2);
         $stranger = PeopleFactory::person('student', 'Far', 'Away', null, $this->institution);
+        (new \App\Services\Messaging\StudentMessaging())->setScope($this->institution, 'course');
         $group    = $this->groupService()->create($a, 'G', [$b->id]);
 
         $this->assertNull($this->groupService()->create($a, 'G2', [$b->id, $stranger->id]));
@@ -436,6 +432,14 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertFalse($this->groupService()->rename($a, $id, 'x'));
         $this->assertFalse($this->groupService()->leave($b, $id));
         $this->assertNotNull((new ConversationService())->find($b, $id), 'still readable');
+
+        // The list must not offer a composer that the send then refuses (FR7).
+        $rows = array_values(array_filter(
+            (new ConversationPresenter($this->cipher()))->present($b, array_merge((new ConversationService())->listFor($b, 'group'), (new ConversationService())->listFor($b, 'group', false, true))),
+            static fn (array $r): bool => (int) $r['id'] === $id,
+        ));
+        $this->assertCount(1, $rows);
+        $this->assertFalse($rows[0]['can_post']);
     }
 
     public function testAnInstitutionAdminManagesAnyGroup(): void

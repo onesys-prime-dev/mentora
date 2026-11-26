@@ -79,12 +79,12 @@ final class StudentDmSwitchTest extends DatabaseTestCase
     {
         $other = DeanFactory::college('DM2')['institution'];
 
-        $this->assertTrue((new StudentMessaging())->enabled($this->institution));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($this->institution));
 
         (new StudentMessaging())->set($this->institution, false);
 
-        $this->assertFalse((new StudentMessaging())->enabled($this->institution));
-        $this->assertTrue((new StudentMessaging())->enabled($other));
+        $this->assertSame('off', (new StudentMessaging())->scope($this->institution));
+        $this->assertNotSame('off', (new StudentMessaging())->scope($other));
     }
 
     public function testEachChangeIsAudited(): void

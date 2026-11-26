@@ -19,7 +19,8 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
      data-user-id="<?= esc((string) auth()->id()) ?>"
      data-tz-offset="<?= (int) (date('Z') / 60) ?>"
      data-open="<?= esc($openId) ?>"
-     data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>">
+     data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>"
+     data-no-child="<?= ($noLinkedChild ?? false) ? '1' : '0' ?>">
 
     <?php // The page itself never scrolls: the header, main's padding (pt-4 pb-10, pt-2 pb-6 once locked) and mt-5 come off. ?>
     <div class="mt-5 grid h-[calc(100dvh-var(--app-header-h,4.5rem)-4.75rem)] lock:h-[calc(100dvh-var(--app-header-h,4.5rem)-3.25rem)] min-h-[440px] gap-3 max-md:relative max-md:overflow-hidden md:grid-cols-[380px_1fr]">
@@ -135,7 +136,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<label for="messages-picker" class="mb-1 block text-xs font-medium text-gray-600">Find a person by name</label>'
             . '<input id="messages-picker" data-role="picker-input" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<ul data-role="picker-results" class="mt-3 flex max-h-64 flex-col overflow-y-auto" aria-live="polite"></ul>'
-            . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">Type at least two letters of a name.</p>'
+            . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">' . (($noLinkedChild ?? false) ? 'Your account is not linked to a child yet, so you cannot start a conversation.' : 'Type at least two letters of a name.') . '</p>'
             . '</div>',
     ], ['saveData' => false]) ?>
 

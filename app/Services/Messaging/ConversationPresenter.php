@@ -54,6 +54,11 @@ class ConversationPresenter
         // may see them (FR2); their gated names replace the legal ones (FR5).
         $avatars     = (new AvatarData())->forViewerJson($viewer, array_values(array_filter(array_map('intval', [...array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
         $starters    = $this->starterRoles($viewer, $viewerParty, $rows);
+        // The other person of each direct chat and their party, loaded once for the list instead of once per row.
+        $otherIds    = array_values(array_unique(array_filter(array_map('intval', array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id')))));
+        $others      = $otherIds === [] ? [] : model(UserModel::class)->whereIn('id', $otherIds)->findAll();
+        $otherById   = array_combine(array_map(static fn (User $u): int => (int) $u->id, $others), $others);
+        $otherParty  = $this->resolver->parties($others);
         $out         = [];
 
         foreach ($rows as $row) {
@@ -85,10 +90,14 @@ class ConversationPresenter
             $row['avatar']   = $row['type'] === 'direct' && $other !== null ? ($avatars[$other] ?? null) : null;
             $row['subtitle'] = $subject === null ? null : ($avatars[$subject]['name'] ?? $people[$subject] ?? null);
             $row['preview']  = $this->preview((int) $row['id'], (int) $viewer->id);
-            $row['can_post'] = $this->policy->canPost($this->resolver->forPost($viewer, [
-                'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution,
+            $post            = $this->resolver->forPost($viewer, [
+                'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution, 'created_by' => $row['created_by'] ?? null,
                 'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'], 'subject_student_id' => $row['subject_student_id'],
-            ]));
+                'closed_at' => $row['closed_at'] ?? null,
+            ], $viewerParty, $other !== null && isset($otherById[$other]) ? [$otherById[$other], $otherParty[$other]] : null);
+            $row['can_post'] = $this->policy->canPost($post);
+            // Only the deactivated account is named (D11); a block, scope or minor flag stays the generic line.
+            $row['composer_note'] = $post->type === 'direct' && $post->deactivatedOther ? 'This account is deactivated' : null;
 
             $row['pinned']        = ($row['pinned_at'] ?? null) !== null;
             $row['archived']      = ($row['archived_at'] ?? null) !== null;

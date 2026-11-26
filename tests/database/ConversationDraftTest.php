@@ -82,6 +82,21 @@ final class ConversationDraftTest extends DatabaseTestCase
         $this->assertSame($id, (int) (new ConversationService())->existingDirect($this->instructor, (int) $this->student->id)['id']);
     }
 
+    /** FR11: a read-only institution may still read, so an existing thread opens; nothing new may begin. */
+    public function testAReadOnlyInstitutionReopensAnExistingThreadButBeginsNone(): void
+    {
+        $id    = (int) (new ConversationService())->startDirect($this->student, (int) $this->instructor->id)['id'];
+        $other = PeopleFactory::person('instructor', 'Oth', 'Er', null, $this->institution);
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+
+        $this->assertSame($id, (new ConversationService())->draftFor($this->instructor, (int) $this->student->id)['conversation_id']);
+        $this->assertSame($id, (int) (new ConversationService())->existingDirect($this->student, (int) $this->instructor->id)['id']);
+        $this->assertNull((new ConversationService())->draftFor($this->student, (int) $other->id), 'no draft for a new thread');
+        $this->assertNull((new ConversationService())->startDirect($this->student, (int) $other->id));
+        $this->assertFalse($this->messages()->sendFirst($this->student, (int) $other->id, null, 'Hi', $this->uuid())['ok']);
+        $this->assertSame(1, db_connect()->table('conversations')->countAllResults());
+    }
+
     public function testRefusedDraftIsNull(): void
     {
         $this->assertNull((new ConversationService())->draftFor($this->student, 999999));

@@ -1,5 +1,6 @@
-// Messages end to end (docs/test-cases/p2-messages.md, TC-MSG-01 to TC-MSG-14): course chats, direct
-// messages, parents, staff groups, the administrator, blocks and reports, quiet hours, a phone screen.
+// Messages end to end (docs/test-cases/p2-messages.md, TC-MSG-01 to 26 and 43 to 48): course chats, direct
+// messages, parents, groups, the administrator, blocks and reports, quiet hours, a phone screen, chat and message
+// actions, and institution-wide reach (anyone in the institution, minors, first contact, restrictions, scope).
 //
 // Demo data (DemoUsersSeeder and friends): Michael Villanueva (student5) and Juan Dela Cruz (student1) are
 // both in IT101-A; instructor1 (Maria Santos) teaches it; parent1 (Roberto Cruz) follows Juan and Michael;
@@ -26,10 +27,13 @@ import {
     messageMenu,
     openMessagesAs,
     people,
+    restrict,
     rowById,
     rowFor,
+    searchFinds,
     searchFindsNobody,
     sendMessage,
+    setMinor,
     setStudentMessages,
     startThreadWith,
     syncChats,
@@ -140,12 +144,12 @@ test("TC-MSG-03 A student starts a DM with a classmate; switching student messag
     }
 });
 
-test("TC-MSG-04 A student cannot find or reach a chairperson, dean or parent", async ({ browser }) => {
+test("TC-MSG-04 A student finds any staff member of the institution but never a parent", async ({ browser }) => {
     const student = await openMessagesAs(browser, people.michael);
 
     try {
-        await searchFindsNobody(student.page, "Fernandez");
-        await searchFindsNobody(student.page, "Daniel");
+        await searchFinds(student.page, "Fernandez", people.chairperson.name);
+        await searchFinds(student.page, "Daniel", people.dean.name);
         await searchFindsNobody(student.page, "Roberto");
     } finally {
         await student.context.close();
@@ -238,7 +242,7 @@ test("TC-MSG-06 A parent messages the child's instructor; the thread is about th
     }
 });
 
-test("TC-MSG-07 A parent escalates to the child's chairperson, who replies but cannot start with a parent", async ({ browser }) => {
+test("TC-MSG-07 A parent escalates to the child's chairperson, who replies and could start with the parent about a child", async ({ browser }) => {
     const parent = await openMessagesAs(browser, people.parent);
     const chair = await openMessagesAs(browser, people.chairperson);
 
@@ -251,8 +255,8 @@ test("TC-MSG-07 A parent escalates to the child's chairperson, who replies but c
         await expect(thread(chair.page).getByText("I would like to talk about my child's progress.")).toBeVisible();
         await sendMessage(chair.page, "Of course. I'm looking into it.");
 
-        // A chairperson never starts a thread with a parent: the parent is not even offered.
-        await searchFindsNobody(chair.page, "Roberto");
+        // Staff may start with a parent, always about one of the parent's children (D2).
+        await searchFinds(chair.page, "Roberto", people.parent.name, "about ");
     } finally {
         await parent.context.close();
         await chair.context.close();
@@ -290,7 +294,7 @@ test("TC-MSG-08 A parent sees the read-only feed of the instructor's posts and n
     }
 });
 
-test("TC-MSG-09 A chairperson starts a staff group of instructors; a dean cannot add a stranger", async ({ browser }) => {
+test("TC-MSG-09 A chairperson starts a group with an instructor; a parent cannot be added", async ({ browser }) => {
     const chair = await openMessagesAs(browser, people.chairperson);
     const teacher = await openMessagesAs(browser, people.instructor2);
     const dean = await openMessagesAs(browser, people.dean);
@@ -309,9 +313,9 @@ test("TC-MSG-09 A chairperson starts a staff group of instructors; a dean cannot
         await rowFor(teacher.page, "IT college planning").click();
         await expect(thread(teacher.page).getByText("Please send me your exam dates.")).toBeVisible();
 
-        // The dean (General college, no courses) has nobody in scope: a student cannot be added.
+        // Groups are for everyone but parents: the dean finds no parent to add.
         await dean.page.locator("[data-role=new-group]").click();
-        await dean.page.locator("[data-role=group-search]").fill("Villanueva");
+        await dean.page.locator("[data-role=group-search]").fill("Roberto");
         await expect(dean.page.locator("[data-role=group-note]")).toHaveText("No one found.");
         await expect(dean.page.locator("[data-role=group-results] button")).toHaveCount(0);
     } finally {
@@ -334,8 +338,8 @@ test("TC-MSG-10 The institution's administrator messages a student and gets a re
         await expect(thread(student.page).getByText("Welcome note from the registrar's office.")).toBeVisible();
         await sendMessage(student.page, "Thank you, noted.");
 
-        // Nobody else can start a thread with the administrator.
-        await searchFindsNobody(student.page, "Administrador");
+        // Anyone may start a thread with the administrator (D21).
+        await searchFinds(student.page, "Administrador", people.institutionAdmin.name);
 
         await admin.page.reload();
         await rowFor(admin.page, people.michael.name).click();
@@ -394,14 +398,12 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
     }
 });
 
-/** Sets (from, to) or clears (null) quiet hours on the open Settings page and saves. */
+/** Sets own quiet hours (from, to) or None (null) on the open Settings page and saves. */
 async function setQuietHours(page, from, to) {
-    const quiet = page.getByRole("switch", { name: "Quiet hours" });
-
     if (from === null) {
-        await quiet.uncheck();
+        await page.locator("#notify-quiet-none").check();
     } else {
-        await quiet.check();
+        await page.locator("#notify-quiet-own").check();
         await page.getByLabel("From").fill(from);
         await page.getByLabel("to", { exact: true }).fill(to);
     }
@@ -936,6 +938,174 @@ test("TC-MSG-26 The institution's administrator turns off Forwarding, Reactions 
             await setSwitches(true);
         }
     } finally {
+        await student.context.close();
+        await admin.context.close();
+    }
+});
+
+// ---- institution-wide Messages, Phase 7 (TC-MSG-43 to 48) ---------------------------------------------------------
+// Reach is the whole institution (D1). The dean (General college, no courses) shares nothing with any student, so
+// every thread with them is a first contact. A minor mark and a restriction are set in the database (their screens
+// are TC-MSG-36 and 32) and always cleared again.
+
+test("TC-MSG-43 A student messages a dean they have no link to, and the dean replies", async ({ browser }) => {
+    const student = await openMessagesAs(browser, people.michael);
+    const dean = await openMessagesAs(browser, people.dean);
+
+    try {
+        await startThreadWith(student.page, "Daniel", people.dean.name, "Dean");
+        await sendMessage(student.page, "May I ask about the scholarship rules?");
+
+        await dean.page.reload();
+        await rowFor(dean.page, people.michael.name).click();
+        await expect(thread(dean.page).getByText("May I ask about the scholarship rules?")).toBeVisible();
+        await sendMessage(dean.page, "Of course, ask away.");
+    } finally {
+        await student.context.close();
+        await dean.context.close();
+    }
+});
+
+test("TC-MSG-44 A minor cannot be found by staff with no link to them, but a classmate finds them", async ({ browser }) => {
+    setMinor(people.juan, true);
+
+    const dean = await openMessagesAs(browser, people.dean);
+    const classmate = await openMessagesAs(browser, people.michael);
+
+    try {
+        // Same answer as for someone who does not exist: nothing tells the dean why.
+        await searchFindsNobody(dean.page, "Juan");
+        await searchFinds(classmate.page, "Juan", people.juan.name);
+    } finally {
+        setMinor(people.juan, false);
+        await dean.context.close();
+        await classmate.context.close();
+    }
+});
+
+test("TC-MSG-45 A first message between strangers shows the first-contact line until the recipient replies", async ({ browser }) => {
+    const dean = await openMessagesAs(browser, people.dean);
+    const student = await openMessagesAs(browser, people.juan);
+
+    try {
+        await startThreadWith(dean.page, "Juan", people.juan.name);
+        // The sender sees a quiet note in the draft.
+        await expect(thread(dean.page).getByText(`First message to ${people.juan.name}`)).toBeVisible();
+        await sendMessage(dean.page, "Hello Juan, a note about the honours list.");
+
+        await student.page.reload();
+        await rowFor(student.page, people.dean.name).click();
+        await expect(thread(student.page).getByText(`First message from ${people.dean.name} · Dean · you haven't talked before`)).toBeVisible();
+        await expect(thread(student.page).getByRole("button", { name: "Block" })).toBeVisible();
+        await expect(thread(student.page).getByRole("button", { name: "Report" })).toBeVisible();
+
+        await sendMessage(student.page, "Thank you, sir.");
+        await student.page.reload();
+        await rowFor(student.page, people.dean.name).click();
+        await expect(thread(student.page).getByText("Thank you, sir.")).toBeVisible();
+        await expect(thread(student.page).getByText(/you haven't talked before/)).toHaveCount(0);
+    } finally {
+        await dean.context.close();
+        await student.context.close();
+    }
+});
+
+test("TC-MSG-46 A restricted student sees the notice, cannot start, and can still reply", async ({ browser }) => {
+    restrict(people.michael, "no_new");
+
+    const student = await openMessagesAs(browser, people.michael);
+
+    try {
+        const notice = student.page.locator("[data-role=restriction]");
+        await expect(notice).toBeVisible();
+        await expect(notice).toContainText("You can't start new conversations");
+        await expect(notice).toContainText("Set by your school.");
+
+        for (const button of ["new", "new-group"]) {
+            await expect(student.page.locator(`[data-role=${button}]`)).toHaveAttribute("aria-disabled", "true");
+        }
+
+        // Pressing + New repeats the reason instead of opening the picker.
+        await student.page.locator("[data-role=new]").click();
+        await expect(student.page.locator("[data-role=list-note]")).toContainText("You can't start new conversations");
+        await expect(student.page.locator("#messages-picker")).toBeHidden();
+
+        // Replying in an existing conversation still works.
+        await rowFor(student.page, people.dean.name).click();
+        await sendMessage(student.page, "One more question, if I may.");
+    } finally {
+        restrict(people.michael, null);
+        await student.context.close();
+    }
+});
+
+test("TC-MSG-47 A student creates a group, adds and renames as its owner; a member can only leave", async ({ browser }) => {
+    const owner = await openMessagesAs(browser, people.michael);
+    const member = await openMessagesAs(browser, people.juan);
+    const title = "Quiz review circle";
+
+    try {
+        await owner.page.locator("[data-role=new-group]").click();
+        await owner.page.locator("[data-role=group-title]").fill(title);
+        await owner.page.locator("[data-role=group-search]").fill("Juan");
+        await owner.page.locator("[data-role=group-results] button", { hasText: people.juan.name }).click();
+        await owner.page.locator("[data-role=group-create]").click();
+        await expect(owner.page.locator("[data-role=head-name]")).toHaveText(title);
+        await sendMessage(owner.page, "Let us review chapter two on Thursday.");
+
+        // The owner adds someone...
+        await owner.page.locator("[data-role=group-settings-open]").click();
+        await owner.page.locator("[data-role=gs-add-toggle]").click();
+        await owner.page.locator("[data-role=gs-search]").fill("Pedro");
+        await owner.page.locator("[data-role=gs-results] button", { hasText: people.pedro.name }).click();
+        await owner.page.locator("[data-role=gs-add-send]").click();
+        await expect(owner.page.locator("[data-role=gs-members]")).toContainText(people.pedro.name);
+
+        // ...and renames it; each change is a grey line in the group.
+        await owner.page.locator("#gs-tab-details").click();
+        await owner.page.locator("[data-role=gs-title]").fill(`${title} 2`);
+        await owner.page.locator("[data-role=gs-save]").click();
+        await owner.page.locator("#messages-group-settings [data-dialog-close]").first().click();
+        await expect(owner.page.locator("[data-role=head-name]")).toHaveText(`${title} 2`);
+        await expect(thread(owner.page).getByText(`You added ${people.pedro.name}`)).toBeVisible();
+        await expect(thread(owner.page).getByText("You renamed the group")).toBeVisible();
+
+        // A member sees no Add, Rename or Close; only Leave.
+        await member.page.reload();
+        await rowFor(member.page, `${title} 2`).click();
+        await expect(thread(member.page).getByText("Let us review chapter two on Thursday.")).toBeVisible();
+        await member.page.locator("[data-role=group-settings-open]").click();
+        await expect(member.page.locator("[data-role=gs-add-toggle]")).toBeHidden();
+        await member.page.locator("#gs-tab-details").click();
+        await expect(member.page.locator("[data-role=gs-rename]")).toBeHidden();
+        await expect(member.page.locator("[data-role=gs-close]")).toBeHidden();
+        await expect(member.page.locator("[data-role=gs-leave]")).toBeVisible();
+    } finally {
+        await owner.context.close();
+        await member.context.close();
+    }
+});
+
+test("TC-MSG-48 Student messaging: Classmates only keeps a classmate, Off freezes the thread, Whole institution brings it back", async ({ browser }) => {
+    const student = await openMessagesAs(browser, people.michael);
+    const admin = await openMessagesAs(browser, people.institutionAdmin);
+
+    try {
+        // Juan is Michael's classmate in IT101-A, so Classmates only still lets them talk.
+        await setStudentMessages(admin.page, "course");
+        await goToMessages(student.page);
+        await searchFinds(student.page, "Juan", people.juan.name);
+        await rowFor(student.page, people.juan.name).first().click();
+        await expect(student.page.locator("[data-role=composer]")).toBeVisible();
+
+        await setStudentMessages(admin.page, "off");
+        await goToMessages(student.page);
+        await searchFindsNobody(student.page, "Juan");
+        await rowFor(student.page, people.juan.name).first().click();
+        await expect(student.page.locator("[data-role=cannot-post]")).toBeVisible();
+        await expect(student.page.locator("[data-role=composer]")).toBeHidden();
+    } finally {
+        await setStudentMessages(admin.page, "institution");
         await student.context.close();
         await admin.context.close();
     }

@@ -34,8 +34,8 @@ class ReportService
 
     /**
      * False for a conversation that is not the reporter's, a message not in it or not visible to them, their own
-     * message, a removed one, an unknown reason, a note that is too long, a message they already reported, or
-     * when the key is unusable.
+     * message, a removed one, an unknown reason, a note that is too long, a message they already reported, a
+     * past institution (FR11; a read-only one still reports), or when the key is unusable.
      *
      * @throws RateLimitedException when the reporter has sent too many reports today
      */
@@ -44,7 +44,7 @@ class ReportService
         $conversation = $this->conversations->find($reporter, $conversationId);
         $note         = $note === null ? null : trim((string) preg_replace('/[\x00-\x08\x0B-\x1F\x7F]/u', '', $note));
 
-        if ($conversation === null || ! in_array($reason, self::REASONS, true) || ! $this->cipher->isUsable() || ($note !== null && mb_strlen($note) > self::NOTE_MAX)) {
+        if ($conversation === null || ChatStateService::past($reporter) || ! in_array($reason, self::REASONS, true) || ! $this->cipher->isUsable() || ($note !== null && mb_strlen($note) > self::NOTE_MAX)) {
             return false;
         }
 

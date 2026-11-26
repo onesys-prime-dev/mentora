@@ -228,7 +228,6 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
                 <fieldset class="<?= $section ?>" <?= $disabled ?> data-field="scope">
                     <legend class="<?= $heading ?> w-full">Students messaging each other</legend>
                     <p class="text-sm text-[#3D3D3D]">Who a student can start a conversation with. Narrowing it keeps existing conversations readable but stops new posts in the ones that no longer qualify. Students marked as minors are always protected. Messages between students and their instructors are not affected.</p>
-                    <?php // 'Classmates only' is saved and shown now; its reach rule applies from Phase 7, until then it behaves like Whole institution. ?>
 
                     <div class="inline-flex w-full flex-wrap gap-1 rounded-2xl border border-gray-200 bg-gray-50 p-1 sm:w-auto sm:self-start" data-scope-switch>
                         <?php foreach (['off' => 'Off', 'course' => 'Classmates only', 'institution' => 'Whole institution'] as $value => $label): ?>

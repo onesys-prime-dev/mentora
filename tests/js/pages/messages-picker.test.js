@@ -95,6 +95,38 @@ describe("the new-message picker", () => {
 
     });
 
+    it("reads the next page from the server's cursor and appends it", async () => {
+
+        const bo = { ...ann, id: 9, name: "Bo Ann" };
+        const search = vi.fn()
+            .mockResolvedValueOnce({ status: 200, data: { recipients: [ann], next: 4 } })
+            .mockResolvedValueOnce({ status: 200, data: { recipients: [bo], next: null } });
+        const picker = createPicker({ search, onPick: () => {}, debounce: 10 });
+
+        picker.input("ann");
+        await vi.advanceTimersByTimeAsync(10);
+        expect(picker.next).toBe(4);
+
+        await picker.more();
+
+        expect(search).toHaveBeenLastCalledWith("ann", 4);
+        expect(picker.results.map((r) => r.id)).toEqual([4, 9]);
+        expect(picker.next).toBeNull();
+
+    });
+
+    it("explains to a parent with no linked child why nobody is listed", async () => {
+
+        const search = vi.fn().mockResolvedValue({ status: 200, data: { recipients: [], next: null, reason: "no_linked_child" } });
+        const picker = createPicker({ search, onPick: () => {}, debounce: 10 });
+
+        picker.input("ann");
+        await vi.advanceTimersByTimeAsync(10);
+
+        expect(picker.state).toBe("no_child");
+
+    });
+
     it("tells its owner when it changes", async () => {
 
         const onChange = vi.fn();

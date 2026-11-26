@@ -6,8 +6,10 @@ namespace App\Services\Messaging;
 
 /**
  * The facts MessagingPolicy needs to decide whether someone may post in an
- * existing conversation. studentDmBlocked means a student-to-student direct
- * thread while the institution's switch is off. blocked means a block that
+ * existing conversation (FR2). scopeLost: a student-to-student direct thread the
+ * institution's scope (D3) no longer covers. minorLost: a direct thread whose
+ * minor recipient its starter can no longer reach (D9); groups never (D26).
+ * deactivatedOther: the other person of a direct thread is deactivated (D11). blocked means a block that
  * binds (not paused by a protected link, not made by an institutional admin).
  * subjectLinkLost means a parent thread about a child
  * whose parent link has ended: the thread stays readable but nobody posts.
@@ -25,7 +27,9 @@ final class PostContext
         public readonly bool $locked = false,
         public readonly bool $isCourseInstructor = false,
         public readonly bool $blocked = false,
-        public readonly bool $studentDmBlocked = false,
+        public readonly bool $scopeLost = false,
+        public readonly bool $minorLost = false,
+        public readonly bool $deactivatedOther = false,
         public readonly bool $subjectLinkLost = false,
         public readonly string $restriction = 'none',
         public readonly bool $closed = false,

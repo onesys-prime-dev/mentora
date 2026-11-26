@@ -113,7 +113,7 @@ final class ConversationServiceTest extends DatabaseTestCase
     public function testRefusedStartsAnswerNullWithoutRevealingWhy(): void
     {
         [$student, $instructor] = $this->pair();
-        $chair   = DeanFactory::chair($this->department);
+        $parent  = $this->person('parent');
         $admin   = CourseFactory::user('admin');
         $far     = $this->person('instructor', true, PeopleFactory::institution('FAR'));
         $off     = $this->person('instructor', false);
@@ -121,7 +121,7 @@ final class ConversationServiceTest extends DatabaseTestCase
         CourseFactory::enroll((int) db_connect()->table('enrollments')->select('offering_id')->where('student_user_id', $student->id)->get()->getRow('offering_id'), $blocker);
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $blocker->id, 'blocked_id' => $student->id, 'created_at' => date('Y-m-d H:i:s')]);
 
-        foreach ([999999, (int) $student->id, (int) $chair->id, (int) $admin->id, (int) $far->id, (int) $off->id, (int) $blocker->id] as $recipientId) {
+        foreach ([999999, (int) $student->id, (int) $parent->id, (int) $admin->id, (int) $far->id, (int) $off->id, (int) $blocker->id] as $recipientId) {
             $this->assertNull($this->service->startDirect($student, $recipientId), "recipient {$recipientId}");
         }
 
