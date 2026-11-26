@@ -9,6 +9,7 @@ use App\Models\Assignments\DeanAssignmentModel;
 use App\Services\Admin\Impersonation;
 use App\Services\Courses\DeanAccessService;
 use App\Services\Institutions\InstitutionAccess;
+use App\Services\Institutions\MinorFlag;
 use App\Services\Parents\ParentAccessService;
 use App\Services\Subscriptions\PlanLimits;
 use App\Services\Users\AccountControl;
@@ -26,7 +27,9 @@ class MessagingContextResolver
     /** Every role the account may use, as Messaging decides on it (no active role involved). */
     public function party(User $user): Party
     {
-        return new Party((int) $user->id, $this->roles($user), $this->accountActive((int) $user->id), $this->institutionOf($user));
+        $institution = $this->institutionOf($user);
+
+        return new Party((int) $user->id, $this->roles($user), $this->accountActive((int) $user->id), $institution, $institution !== null && (new MinorFlag())->isMinor($institution, (int) $user->id));
     }
 
     /** @var array<int, list<string>> roles per user id, for this resolver's lifetime (one request) */

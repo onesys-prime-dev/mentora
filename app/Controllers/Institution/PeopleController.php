@@ -8,6 +8,7 @@ use App\Controllers\BaseController;
 use App\Controllers\Institution\Concerns\AnswersDialogForms;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Institutions\InstitutionScope;
+use App\Services\Institutions\MinorFlag;
 use App\Services\Institutions\PeopleService;
 use App\Services\Institutions\StructureException;
 use App\Services\Profiles\AvatarData;
@@ -125,6 +126,27 @@ class PeopleController extends BaseController
             static fn (mixed $result): string => 'A password link was emailed to ' . ($result['email'] ?? 'them') . '.',
             self::BACK,
         );
+    }
+
+    public function minor(int $id): ResponseInterface|RedirectResponse
+    {
+        return $this->setMinor($id, true);
+    }
+
+    public function unmark(int $id): ResponseInterface|RedirectResponse
+    {
+        return $this->setMinor($id, false);
+    }
+
+    private function setMinor(int $id, bool $minor): ResponseInterface|RedirectResponse
+    {
+        return $this->run(function (int $inst) use ($id, $minor): void {
+            InstitutionScope::forInstitution($inst)->require('person', $id); // another institution's person is a 404
+
+            if (! (new MinorFlag())->set(auth()->user(), $inst, $id, $minor)) {
+                throw new StructureException('Only a student can be marked as a minor.');
+            }
+        }, $minor ? 'They were marked as a minor.' : 'The minor mark was removed.', self::BACK);
     }
 
     public function roles(int $id): ResponseInterface|RedirectResponse

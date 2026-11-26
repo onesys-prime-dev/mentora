@@ -51,6 +51,10 @@ foreach ($peopleRows as $p) {
         $badges .= ' <span class="ml-1 inline-flex items-center gap-1 text-[11px] font-semibold text-[#646464]" data-sis-locked>' . icon('lock', 'h-3 w-3') . 'SIS</span>';
     }
 
+    if ($p['minor']) {
+        $badges .= ' <span class="ml-1 inline-flex items-center rounded-full bg-[#EEF2FF] px-2 py-px text-[11px] font-bold text-[#3730A3]" data-minor-badge>Minor</span>';
+    }
+
     $actions = '';
     $label   = esc($p['name']);
     $built   = [];
@@ -79,6 +83,19 @@ foreach ($peopleRows as $p) {
         $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-roles"'
             . ' data-dialog-title="Roles of ' . $label . '" data-dialog-label="Save roles" data-dialog-action="' . $url('/' . $p['id'] . '/roles') . '"'
             . ' data-dialog-values="' . $json($values) . '">Change roles</button>';
+
+        // Marking is for students (FR8); removing shows for anyone still flagged.
+        if ($p['minor']) {
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Remove the minor mark from ' . $label . '?"'
+                . ' data-dialog-text="Anyone Messages allowed before can message them again."'
+                . ' data-dialog-label="Remove mark" data-dialog-action="' . $url('/' . $p['id'] . '/minor/remove') . '">Remove minor mark</button>';
+        } elseif ($p['student']) {
+            $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'
+                . ' data-dialog-title="Mark ' . $label . ' as a minor?"'
+                . ' data-dialog-text="Only their instructors, department and college leads, classmates and admins will be able to message them. Conversations that no longer qualify become read-only."'
+                . ' data-dialog-label="Mark as minor" data-dialog-action="' . $url('/' . $p['id'] . '/minor') . '">Mark as minor</button>';
+        }
 
         if ($p['has_photo'] ?? false) {
             $items .= '<button type="button"' . $rf . ' class="' . $menuBtn . '" data-dialog-open="person-confirm"'

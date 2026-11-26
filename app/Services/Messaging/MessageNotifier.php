@@ -98,7 +98,7 @@ class MessageNotifier
                 ->orderBy('m.id', 'DESC')->limit(1)->get()->getRowArray();
 
             // Nothing new for them, or they cannot be told right now: a deactivated account, or quiet hours (held, not dropped).
-            if ($unseen === null || ! $this->resolver->accountActive($userId) || $this->prefs->isQuiet($userId, $now)) {
+            if ($unseen === null || ! $this->resolver->accountActive($userId) || $this->prefs->isQuiet($userId, $now, (int) $chat['institution_id'])) {
                 continue;
             }
 
@@ -134,7 +134,7 @@ class MessageNotifier
     {
         $conversationId = (int) $chat['id'];
         $body          = $chat['type'] === 'direct' || $chatName === null ? "{$sender} sent you a message." : "{$sender} sent you a message in {$chatName}.";
-        $scope          = $this->prefs->get($userId)['email_scope'];
+        $scope          = $this->prefs->get($userId, (int) $chat['institution_id'])['email_scope'];
         $emails         = ($scope === 'everyone' || ($scope === 'talked' && $this->talked($chat, $senderId, $userId))) && ! $this->emailedRecently($userId, $conversationId, $now);
 
         // Never any message text: who, where, and a link.

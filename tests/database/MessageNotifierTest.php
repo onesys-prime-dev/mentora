@@ -185,7 +185,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testQuietHoursHoldTheNoticeAndTheMorningReleasesExactlyOne(): void
     {
-        $this->assertTrue((new MessagePreferences())->save($this->instructor, '22:00', '07:00', 'everyone'));
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, '22:00', '07:00', 'everyone', 'own'));
         $this->plant($this->thread, $this->parent, 'late one');
         $this->plant($this->thread, $this->parent, 'later one');
 
@@ -194,6 +194,34 @@ final class MessageNotifierTest extends DatabaseTestCase
         $this->assertCount(0, $this->mail->sent);
         $this->assertNull(db_connect()->table('conversation_participants')->where(['conversation_id' => $this->thread, 'user_id' => $this->instructor->id])->get()->getRowArray()['last_notified_message_id'], 'held, not dropped');
 
+        $this->assertSame(1, $this->notifier()->notifyConversation($this->thread, new DateTimeImmutable('2026-11-04 07:05:00')));
+        $this->assertCount(1, $this->notices($this->instructor));
+    }
+
+    public function testNotifierHoldsDuringDefaultQuietHours(): void
+    {
+        $institution = (int) db_connect()->table('conversations')->where('id', $this->thread)->get()->getRow('institution_id');
+        $settings    = new \App\Services\Admin\PlatformSettings();
+        $settings->set('defaultQuietStart', '22:00', $institution);
+        $settings->set('defaultQuietEnd', '07:00', $institution);
+        $this->plant($this->thread, $this->parent, 'late one');
+
+        $this->assertSame(0, $this->notifier()->notifyConversation($this->thread, new DateTimeImmutable('2026-11-03 23:00:00')));
+        $this->assertSame([], $this->notices($this->instructor), 'a person who never chose follows the school default');
+
+        (new MessagePreferences())->save($this->instructor, null, null, 'everyone', 'none');
+        $this->assertSame(1, $this->notifier()->notifyConversation($this->thread, new DateTimeImmutable('2026-11-03 23:00:00')), 'None overrides the default');
+    }
+
+    public function testTheNoticeHeldByTheDefaultQuietHoursGoesOutOnceTheyEnd(): void
+    {
+        $institution = (int) db_connect()->table('conversations')->where('id', $this->thread)->get()->getRow('institution_id');
+        $settings    = new \App\Services\Admin\PlatformSettings();
+        $settings->set('defaultQuietStart', '22:00', $institution);
+        $settings->set('defaultQuietEnd', '07:00', $institution);
+        $this->plant($this->thread, $this->parent, 'late one');
+
+        $this->assertSame(0, $this->notifier()->notifyConversation($this->thread, new DateTimeImmutable('2026-11-03 23:00:00')));
         $this->assertSame(1, $this->notifier()->notifyConversation($this->thread, new DateTimeImmutable('2026-11-04 07:05:00')));
         $this->assertCount(1, $this->notices($this->instructor));
     }
@@ -232,14 +260,14 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testNoEmailWhenTheSwitchIsOffAndAFailedEmailKeepsTheNotice(): void
     {
-        (new MessagePreferences())->save($this->instructor, null, null, 'off');
+        (new MessagePreferences())->save($this->instructor, null, null, 'off', 'default');
         $this->plant($this->thread, $this->parent, 'hello');
         $this->notifier()->notifyConversation($this->thread);
 
         $this->assertCount(1, $this->notices($this->instructor));
         $this->assertCount(0, $this->mail->sent);
 
-        (new MessagePreferences())->save($this->instructor, null, null, 'everyone');
+        (new MessagePreferences())->save($this->instructor, null, null, 'everyone', 'default');
         $this->mail->failToSend = true;
         (new NotificationService())->markRead((int) $this->instructor->id);
         $this->plant($this->thread, $this->parent, 'again');
@@ -283,7 +311,7 @@ final class MessageNotifierTest extends DatabaseTestCase
     public function testOffScopeSendsNoEmail(): void
     {
         [$stranger, $thread] = $this->strangerThread();
-        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'off'));
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'off', 'default'));
 
         $this->plant($thread, $stranger, 'hi');
         $this->notifier()->notifyConversation($thread);
@@ -294,7 +322,7 @@ final class MessageNotifierTest extends DatabaseTestCase
     public function testTalkedScopeSkipsEmailFromStranger(): void
     {
         [$stranger, $thread] = $this->strangerThread();
-        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked'));
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked', 'default'));
 
         $this->plant($thread, $stranger, 'hi');
         $this->notifier()->notifyConversation($thread);
@@ -306,7 +334,7 @@ final class MessageNotifierTest extends DatabaseTestCase
     public function testTalkedScopeEmailsAfterReply(): void
     {
         [$stranger, $thread] = $this->strangerThread();
-        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked'));
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked', 'default'));
         $this->plant($thread, $stranger, 'hi');
         $this->notifier()->notifyConversation($thread);
         $this->assertCount(0, $this->mail->sent);
@@ -322,7 +350,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testTalkedScopeEmailsSomeoneTheyShareACourseWith(): void
     {
-        (new MessagePreferences())->save($this->instructor, null, null, 'talked');
+        (new MessagePreferences())->save($this->instructor, null, null, 'talked', 'default');
         $this->plant($this->thread, $this->parent, 'hi');
         $this->notifier()->notifyConversation($this->thread);
 
@@ -332,7 +360,7 @@ final class MessageNotifierTest extends DatabaseTestCase
     public function testTalkedScopeDoesNotApplyToCourseChats(): void
     {
         $chat = (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
-        (new MessagePreferences())->save($this->child, null, null, 'talked');
+        (new MessagePreferences())->save($this->child, null, null, 'talked', 'default');
         $this->plant($chat, $this->instructor, 'hi');
 
         $calls    = new ArrayObject();
@@ -358,7 +386,7 @@ final class MessageNotifierTest extends DatabaseTestCase
         [$stranger, $thread] = $this->strangerThread();
 
         foreach (['off', 'talked', 'everyone'] as $scope) {
-            (new MessagePreferences())->save($this->instructor, null, null, $scope);
+            (new MessagePreferences())->save($this->instructor, null, null, $scope, 'default');
             db_connect()->table('notifications')->where('user_id', $this->instructor->id)->delete();
             db_connect()->table('conversation_participants')->where(['conversation_id' => $thread, 'user_id' => $this->instructor->id])->update(['last_notified_message_id' => null]);
             $this->plant($thread, $stranger, 'hi ' . $scope);

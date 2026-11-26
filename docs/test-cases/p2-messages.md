@@ -640,3 +640,59 @@ Restrictions, administrator DM removal, the automatic pause and reports by perso
 - **Already automated:** `tests/database/ReportReviewByPersonTest.php`, `tests/database/ReportReviewServiceTest.php`
 - **Basis:** `ReportReviewService::review`, `MessageService`
 - **Review:** Draft
+
+## Institution-wide Messages, Phase 5 (TC-MSG-36 to 39)
+
+Minor flag, student scope and quiet hours for everyone (FR8, FR9, FR10, BC-3).
+
+### TC-MSG-36 Mark a student as a minor
+
+- **Role:** Institution admin, a classmate, the student. **Priority:** P1
+- **Steps:**
+  1. People → the student's Actions → **Mark as minor**; read the confirm and accept.
+  2. A classmate writes to the student; an unrelated staff member tries to.
+  3. The student, the classmate and the staff member look at the student's name everywhere they can.
+  4. **Remove minor mark**.
+- **Expected:**
+  - A "Minor" badge appears in People for admins and staff only; nobody else ever sees the flag.
+  - The student always sees the first-contact line for a first message; the sender sees nothing different.
+  - Removing the student role also clears the mark. Every change is audited with ids only.
+- **Already automated:** `tests/database/MinorFlagTest.php`, `tests/feature/InstitutionPeopleMinorTest.php`, `tests/database/FirstContactTest.php`
+- **Basis:** `MinorFlag`, `MessagingContextResolver::party`
+- **Review:** Draft
+
+### TC-MSG-37 Minor column in the students CSV
+
+- **Role:** Institution admin. **Priority:** P2
+- **Steps:**
+  1. Download the students template; add `minor` yes/no/1/0 values; preview, then apply.
+- **Expected:**
+  - The template has a `minor` column; preview changes nothing; apply sets or clears the mark; an empty cell leaves it as is; a row that fails changes nothing.
+- **Already automated:** `tests/database/SisImporterMinorTest.php`, `tests/unit/SisCsvParserTest.php`
+- **Basis:** `SisCsvParser`, `SisImporter`
+- **Review:** Draft
+
+### TC-MSG-38 Student messaging: Off / Classmates only / Whole institution
+
+- **Role:** Institution admin. **Priority:** P2
+- **Steps:**
+  1. Institution settings → Messages: pick each value and save; set default quiet hours; try one time only.
+- **Expected:**
+  - Each choice saves and is audited; one time only is refused and nothing is saved. An institution that had student messages off before this release reads "Off".
+  - Until Phase 7, Classmates only allows the same as Whole institution.
+- **Already automated:** `tests/feature/InstitutionMessagesSettingsTest.php`, `tests/database/MapStudentDmSettingTest.php`
+- **Basis:** `StudentMessaging`, `InstitutionSettingsController`
+- **Review:** Draft
+
+### TC-MSG-39 Quiet hours for everyone
+
+- **Role:** Student. **Priority:** P2
+- **Steps:**
+  1. `/settings` Notifications: Quiet hours **School default**; have someone message during the school's quiet hours.
+  2. Switch to **My own** with times; then **None**.
+- **Expected:**
+  - School default holds notifications during the institution's times; My own uses the person's times (fields only shown for My own); None never holds. Messages still arrive and are counted.
+  - Staff who had times before this release now read My own with the same times.
+- **Already automated:** `tests/database/MessagePreferencesTest.php`, `tests/database/MessageNotifierTest.php`, `tests/database/AddQuietModeTest.php`
+- **Basis:** `MessagePreferences`, `MessageNotifier`
+- **Review:** Draft

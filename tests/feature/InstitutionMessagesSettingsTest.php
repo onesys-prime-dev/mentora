@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Admin\PlatformSettings;
 use App\Services\Messaging\StudentMessaging;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
@@ -54,11 +55,12 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
         $this->withSession();
     }
 
-    private function save(string $value): \CodeIgniter\Test\TestResponse
+    /** @param array<string, string>|string $input a scope, or the whole form */
+    private function save(array|string $input): \CodeIgniter\Test\TestResponse
     {
         $this->withHeaders(['Accept' => 'application/json']);
 
-        return $this->step('POST', 'institution/settings/messages', ['enabled' => $value]);
+        return $this->step('POST', 'institution/settings/messages', is_array($input) ? $input : ['scope' => $input]);
     }
 
     /** @return iterable<string, array{string}> */
@@ -75,7 +77,7 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
         $this->signIn(PeopleFactory::person($role, 'Some', 'One', "{$role}@msg.example", $role === 'admin' ? null : $this->institution));
 
         $this->assertSame(302, $this->step('GET', 'institution/settings/messages')->response()->getStatusCode(), $role);
-        $this->assertSame(302, $this->save('0')->response()->getStatusCode(), $role);
+        $this->assertSame(302, $this->save('off')->response()->getStatusCode(), $role);
         $this->assertTrue((new StudentMessaging())->enabled($this->institution), $role . ' changed nothing');
     }
 
@@ -85,16 +87,19 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
 
         $this->assertStringContainsString('Students messaging each other', $body);
         $this->assertStringContainsString('institution/settings/messages', $body);
-        $this->assertMatchesRegularExpression('/name="enabled"[^>]*value="1"[^>]*checked/s', $body);
+        $this->assertStringContainsString('<legend', $body);
+        $this->assertMatchesRegularExpression('/name="scope"[^>]*value="institution"[^>]*checked/s', $body);
+        $this->assertStringContainsString('Classmates only', $body);
+        $this->assertStringContainsString('Default quiet hours', $body);
     }
 
     public function testSwitchingItOffShowsOffAndOnAgainRestoresIt(): void
     {
-        $this->assertSame(200, $this->save('0')->response()->getStatusCode());
+        $this->assertSame(200, $this->save('off')->response()->getStatusCode());
         $this->assertFalse((new StudentMessaging())->enabled($this->institution));
-        $this->assertMatchesRegularExpression('/name="enabled"[^>]*value="0"[^>]*checked/s', $this->step('GET', 'institution/settings/messages')->response()->getBody());
+        $this->assertMatchesRegularExpression('/name="scope"[^>]*value="off"[^>]*checked/s', $this->step('GET', 'institution/settings/messages')->response()->getBody());
 
-        $this->assertSame(200, $this->save('1')->response()->getStatusCode());
+        $this->assertSame(200, $this->save('institution')->response()->getStatusCode());
         $this->assertTrue((new StudentMessaging())->enabled($this->institution));
     }
 
@@ -108,8 +113,62 @@ final class InstitutionMessagesSettingsTest extends RouteTestCase
 
     public function testItDoesNotTouchAnotherInstitution(): void
     {
-        $this->save('0');
+        $this->save('off');
 
         $this->assertTrue((new StudentMessaging())->enabled($this->other));
+    }
+
+    public function testSavesScopeAndAudits(): void
+    {
+        $this->assertSame(200, $this->save('course')->response()->getStatusCode());
+
+        $this->assertSame('course', (new StudentMessaging())->scope($this->institution));
+        $this->assertTrue((new StudentMessaging())->enabled($this->institution));
+        $this->assertSame('institution', (new StudentMessaging())->scope($this->other));
+
+        $row = db_connect()->table('audit_logs')->where(['action' => 'settings.changed', 'target_id' => 'studentMessagingScope'])->get()->getRowArray();
+        $this->assertNotNull($row);
+        $this->assertSame($this->institution, (int) $row['institution_id']);
+        $this->assertStringContainsString('course', (string) $row['new_values']);
+    }
+
+    public function testSavesDefaultQuietHours(): void
+    {
+        $this->assertSame(200, $this->save(['scope' => 'institution', 'quietStart' => '21:00', 'quietEnd' => '07:00'])->response()->getStatusCode());
+
+        $platform = new PlatformSettings();
+        $this->assertSame('21:00', $platform->get('defaultQuietStart', $this->institution));
+        $this->assertSame('07:00', $platform->get('defaultQuietEnd', $this->institution));
+        $this->assertNull($platform->get('defaultQuietStart', $this->other));
+
+        // None: both empty clears them.
+        $this->assertSame(200, $this->save(['scope' => 'institution', 'quietStart' => '', 'quietEnd' => ''])->response()->getStatusCode());
+        $this->assertNull($platform->get('defaultQuietStart', $this->institution));
+        $this->assertNull($platform->get('defaultQuietEnd', $this->institution));
+    }
+
+    public function testEqualDefaultTimesAreRefused(): void
+    {
+        $this->assertSame(422, $this->save(['scope' => 'off', 'quietStart' => '21:00', 'quietEnd' => '21:00'])->response()->getStatusCode());
+        $this->assertNull((new PlatformSettings())->get('defaultQuietStart', $this->institution));
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function provideBadTimes(): iterable
+    {
+        yield 'hour 24'  => ['24:00', '07:00'];
+        yield 'not time' => ['soon', '07:00'];
+        yield 'one only' => ['21:00', ''];
+        yield 'no colon' => ['2100', '0700'];
+    }
+
+    #[DataProvider('provideBadTimes')]
+    public function testRejectsBadTimes(string $start, string $end): void
+    {
+        $this->save('course');
+
+        $this->assertSame(422, $this->save(['scope' => 'off', 'quietStart' => $start, 'quietEnd' => $end])->response()->getStatusCode());
+        $this->assertSame('course', (new StudentMessaging())->scope($this->institution), 'nothing saved');
+        $this->assertNull((new PlatformSettings())->get('defaultQuietStart', $this->institution));
     }
 }

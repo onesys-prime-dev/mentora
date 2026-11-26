@@ -12,5 +12,5 @@ class MessagePreferenceModel extends Model
     protected $returnType       = 'array';
     protected $useTimestamps    = false;
 
-    protected $allowedFields = ['user_id', 'quiet_start', 'quiet_end', 'email_alerts'];
+    protected $allowedFields = ['user_id', 'quiet_mode', 'quiet_start', 'quiet_end', 'email_alerts'];
 }

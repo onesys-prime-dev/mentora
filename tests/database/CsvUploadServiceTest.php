@@ -144,6 +144,18 @@ final class CsvUploadServiceTest extends DatabaseTestCase
         return $counts;
     }
 
+    public function testAPreviewLeavesNoMinorFlagAndNoAuditRow(): void
+    {
+        $this->service->apply($this->institution, $this->service->preview($this->institution, ['students' => self::STUDENTS], $this->actor)['token'], $this->actor);
+
+        $this->service->preview($this->institution, ['students' => "student_number,email,first_name,last_name,minor
+2026-001,ann@example.com,Ann,Lee,yes
+"], $this->actor);
+
+        $this->assertSame(0, db_connect()->table('institution_users')->where('is_minor', 1)->countAllResults());
+        $this->assertSame(0, db_connect()->table('audit_logs')->like('action', 'messages.minor_flag', 'after')->countAllResults());
+    }
+
     public function testAPreviewWritesNothingAndItsCountsAreWhatApplyingThenDoes(): void
     {
         $before = $this->snapshot();
@@ -343,7 +355,7 @@ final class CsvUploadServiceTest extends DatabaseTestCase
 
     public function testEachTemplateIsItsHeaderRowWithNoSisIds(): void
     {
-        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix\r\n", CsvUploadService::template('students'));
+        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix,minor\r\n", CsvUploadService::template('students'));
         $this->assertSame("email,first_name,middle_name,last_name,suffix\r\n", CsvUploadService::template('instructors'));
         $this->assertSame("program_code,course_code,course_title,units\r\n", CsvUploadService::template('courses'));
         $this->assertSame("student_number,email,program_code,course_code,section,status\r\n", CsvUploadService::template('enrollments'));

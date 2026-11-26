@@ -271,7 +271,7 @@ final class InstitutionPagesResponsiveTest extends CIUnitTestCase
     /** @return array<string, mixed> */
     private function personRow(): array
     {
-        return ['id' => 7, 'name' => 'Sam Lee', 'first_name' => 'Sam', 'last_name' => 'Lee', 'email' => 's@x.y', 'roles' => ['student'], 'sis' => false, 'viewable' => true, 'active' => true, 'self' => false, 'last_admin' => false, 'last_active' => null];
+        return ['id' => 7, 'name' => 'Sam Lee', 'first_name' => 'Sam', 'last_name' => 'Lee', 'email' => 's@x.y', 'roles' => ['student'], 'sis' => false, 'viewable' => true, 'active' => true, 'self' => false, 'last_admin' => false, 'last_active' => null, 'student' => true, 'minor' => false];
     }
 
     public function testPeopleAndParentsAreDataTablesWithTouchSizedActionsAndTheRightDialogVariants(): void
@@ -362,7 +362,7 @@ final class InstitutionPagesResponsiveTest extends CIUnitTestCase
         $academic = ['passing' => 75, 'passingFromInstitution' => true, 'scales' => [], 'scaleId' => 0, 'scaleFromInstitution' => false, 'categories' => [], 'categoriesFromInstitution' => false, 'inactiveDays' => 7, 'inactiveFromInstitution' => false, 'behindBelow' => 50, 'behindFromInstitution' => false, 'overdueGradingDays' => 5, 'overdueFromInstitution' => false, 'highLoadUnits' => 24, 'highLoadFromInstitution' => false];
         $keys     = ['passwordMinLength' => 8, 'sessionTimeoutMinutes' => 30, 'lockoutAttempts' => 5, 'lockoutMinutes' => 15];
         $base     = ['settingsData' => $d, 'settingsCanEdit' => true, 'settingsDefaults' => ['primary' => '#0A5C36', 'accent' => '#C9A227'],
-            'settingsAnnouncement' => ['text' => 'Hi', 'until' => '', 'showing' => true], 'settingsParents' => ['own' => true, 'platform' => true], 'settingsMessages' => ['studentsOn' => true],
+            'settingsAnnouncement' => ['text' => 'Hi', 'until' => '', 'showing' => true], 'settingsParents' => ['own' => true, 'platform' => true], 'settingsMessages' => ['scope' => 'institution', 'quietStart' => null, 'quietEnd' => null],
             'settingsSecurity' => ['own' => $keys, 'ownRoles' => ['dean'], 'platform' => $keys + ['twoFactorRoles' => ['institutional_admin']], 'effective' => $keys], 'settingsAcademic' => $academic];
 
         $forms = 0;

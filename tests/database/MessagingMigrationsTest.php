@@ -347,6 +347,12 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 db_connect()->resetDataCache();
             }
 
+            // message_preferences was rebuilt without its quiet_mode column.
+            if (! db_connect()->fieldExists('quiet_mode', 'message_preferences')) {
+                $this->migration('2026-12-03-000007_AddQuietMode', 'AddQuietMode')->up();
+                db_connect()->resetDataCache();
+            }
+
             // message_reports was rebuilt without its pause_id column (the restrictions table itself survives).
             if (! db_connect()->fieldExists('pause_id', 'message_reports')) {
                 db_connect()->query('ALTER TABLE message_reports ADD COLUMN pause_id INT UNSIGNED NULL');

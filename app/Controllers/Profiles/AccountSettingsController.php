@@ -79,8 +79,18 @@ class AccountSettingsController extends BaseController
         $post  = fn (string $key): string => (string) $this->request->getPost($key);
 
         if ($parts['messages'] !== null) {
-            // The switch off, or hours not offered to them, means no quiet hours.
-            $quiet = $parts['messages']['quiet_allowed'] && $post('quiet_on') === '1';
+            // A form that sends no choice leaves the stored one; an unknown value is refused.
+            $mode = $this->request->getPost('quiet_mode') === null ? $parts['messages']['quiet_mode'] : $post('quiet_mode');
+
+            if (! in_array($mode, MessagePreferences::QUIET_MODES, true)) {
+                return redirect()->to(site_url(self::PAGE) . '#notifications')->withInput()->with('errors', ['quiet_mode' => 'Choose when you want quiet hours.']);
+            }
+
+            // Times only count for `own`; one not posted keeps what is stored.
+            // The stored times are theirs only when the stored mode is `own` (else they are the school's or none).
+            $keep  = $parts['messages']['quiet_mode'] === 'own';
+            $start = $this->request->getPost('quiet_start') === null ? ($keep ? $parts['messages']['quiet_start'] : null) : $post('quiet_start');
+            $end   = $this->request->getPost('quiet_end') === null ? ($keep ? $parts['messages']['quiet_end'] : null) : $post('quiet_end');
 
             // A form that sends no choice leaves the stored one; an unknown value is refused.
             $scope = $this->request->getPost('email_scope') === null ? $parts['messages']['email_scope'] : $post('email_scope');
@@ -89,7 +99,7 @@ class AccountSettingsController extends BaseController
                 return redirect()->to(site_url(self::PAGE) . '#notifications')->withInput()->with('errors', ['email_scope' => 'Choose who may email you about new messages.']);
             }
 
-            if (! (new MessagePreferences())->save($user, $quiet ? $post('quiet_start') : null, $quiet ? $post('quiet_end') : null, $scope)) {
+            if (! (new MessagePreferences())->save($user, $start, $end, $scope, $mode)) {
                 return redirect()->to(site_url(self::PAGE) . '#notifications')->withInput()->with('errors', ['quiet_start' => 'Enter both times, as hours and minutes.']);
             }
         }
@@ -217,7 +227,7 @@ class AccountSettingsController extends BaseController
      * parent part for a parent (their children only while the portal is on, as before).
      *
      * @return array{
-     *     messages: array{quiet_start: ?string, quiet_end: ?string, email_alerts: bool, email_scope: string, quiet_allowed: bool}|null,
+     *     messages: array{quiet_mode: string, quiet_start: ?string, quiet_end: ?string, email_alerts: bool, email_scope: string, school_default: array{0: ?string, 1: ?string}}|null,
      *     parent: array{portal_on: bool, children: list<array{student_id: int, name: string, email: bool}>}|null,
      * }
      */
@@ -227,7 +237,7 @@ class AccountSettingsController extends BaseController
 
         if (! MessagesFilter::closed() && (new RolePermissions())->allows($user, 'messages.use')) {
             $prefs    = new MessagePreferences();
-            $messages = $prefs->get((int) $user->id) + ['quiet_allowed' => $prefs->quietHoursAllowed($user)];
+            $messages = $prefs->get((int) $user->id) + ['school_default' => $prefs->schoolDefault((int) $user->id)];
         }
 
         $parent = null;

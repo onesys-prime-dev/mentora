@@ -121,36 +121,53 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertStringContainsString('Save notifications', $body);
     }
 
-    public function testQuietHoursAreOfferedOnlyToInstructorsChairpersonsAndDeansByTheirRoles(): void
+    public function testEveryoneIsOfferedQuietHoursAsAThreeWayChoice(): void
     {
-        foreach (['chairperson', 'dean'] as $role) {
-            $this->assertTrue($this->quietHoursShown($this->page(PeopleFactory::person($role, 'Q', ucfirst($role), null, $this->institution))), $role);
+        foreach ([$this->ivo, $this->ann, $this->pam, PeopleFactory::person('dean', 'Q', 'Dean', null, $this->institution)] as $person) {
+            $body = $this->page($person);
+            $this->assertTrue($this->quietHoursShown($body), (string) $person->username);
+            $this->assertMatchesRegularExpression('#<fieldset[^>]*>\s*<legend[^>]*>Quiet hours</legend>#', $body);
+
+            foreach (['default', 'own', 'none'] as $mode) {
+                $this->assertMatchesRegularExpression('#type="radio"[^>]*name="quiet_mode" value="' . $mode . '"#', $body);
+            }
+
+            $this->assertMatchesRegularExpression('#name="quiet_mode" value="default"[^>]*\schecked[\s>]#', $body, 'the school default is the starting choice');
         }
+    }
 
-        foreach ([$this->ann, $this->pam] as $other) {
-            $body = $this->page($other);
-            $this->assertStringContainsString('Email me about new messages', $body, 'the email switch is for everyone');
-            $this->assertFalse($this->quietHoursShown($body), (string) $other->username);
-        }
+    public function testTheSchoolDefaultIsNamedOnTheCard(): void
+    {
+        $settings = new \App\Services\Admin\PlatformSettings();
+        $settings->set('defaultQuietStart', '21:00', $this->institution);
+        $settings->set('defaultQuietEnd', '07:00', $this->institution);
 
-        // A parent who also teaches is offered them whichever role they are using (Shield groups, not the active role).
-        $both = PeopleFactory::person('parent', 'Dua', 'Role', null, $this->institution);
-        $both->addGroup('instructor');
-        $both = model(UserModel::class)->findById($both->id);
-        $this->signIn($both);
-        session()->set('active_role', 'parent');
-        $this->assertTrue($this->quietHoursShown((string) $this->step('GET', 'settings')->response()->getBody()));
+        $this->assertStringContainsString('21:00 to 07:00', $this->page($this->ann));
+    }
 
-        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => '21:00', 'quiet_end' => '06:00']);
-        $this->assertSame('Notifications saved', session('message'));
-        $this->assertSame('21:00:00', db_connect()->table('message_preferences')->where('user_id', $both->id)->get()->getRow('quiet_start'));
+    public function testOwnTimesAreShownOnlyWhenMyOwnIsChosen(): void
+    {
+        $this->assertStringContainsString('group-has-[#notify-quiet-own:checked]/quiet:flex', $this->page($this->ann));
+    }
+
+    public function testPostingOwnWithNoTimesDoesNotCopyTheSchoolDefault(): void
+    {
+        $settings = new \App\Services\Admin\PlatformSettings();
+        $settings->set('defaultQuietStart', '21:00', $this->institution);
+        $settings->set('defaultQuietEnd', '07:00', $this->institution);
+        $this->signIn($this->ann);
+
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_mode' => 'own']);
+
+        $this->assertNotEmpty(session('errors')['quiet_start'] ?? null);
+        $this->assertNull(db_connect()->table('message_preferences')->where('user_id', $this->ann->id)->get()->getRowArray());
     }
 
     public function testAnInstructorSavesQuietHoursAndTheEmailSwitch(): void
     {
         $this->signIn($this->ivo);
 
-        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_mode' => 'own', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
 
         $this->assertSame('Notifications saved', session('message'));
         $row = db_connect()->table('message_preferences')->where('user_id', $this->ivo->id)->get()->getRowArray();
@@ -160,8 +177,8 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertMatchesRegularExpression('#name="quiet_start"[^>]*value="22:00"#', $body);
         $this->assertMatchesRegularExpression('#name="email_scope" value="off"[^>]*\schecked[\s>]#', $body);
 
-        // Turning the quiet-hours switch off clears them.
-        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        // Going back to the school default clears them.
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_mode' => 'default', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $this->assertNull(db_connect()->table('message_preferences')->where('user_id', $this->ivo->id)->get()->getRow('quiet_start'));
     }
 
@@ -187,33 +204,40 @@ final class SettingsNotificationsTest extends RouteTestCase
     public function testBadTimesAreRefusedAndChangeNothing(): void
     {
         $this->signIn($this->ivo);
-        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_mode' => 'own', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $before = $this->rows();
 
         foreach ([['25:00', '07:00'], ['22:00', ''], ['', '07:00'], ['22:60', '07:00']] as [$start, $end]) {
-            $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => $start, 'quiet_end' => $end]);
+            $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_mode' => 'own', 'quiet_start' => $start, 'quiet_end' => $end]);
             $this->assertSame('Enter both times, as hours and minutes.', session('errors')['quiet_start'] ?? null, "{$start}-{$end}");
         }
 
         $this->assertSame($before, $this->rows());
     }
 
-    public function testAStudentCannotSetQuietHoursEvenByPostingThem(): void
+    public function testAStudentSavesQuietHoursAndNoneAndTheirChoiceIsShown(): void
     {
         $this->signIn($this->ann);
 
-        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
-
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_mode' => 'own', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $row = db_connect()->table('message_preferences')->where('user_id', $this->ann->id)->get()->getRowArray();
-        $this->assertNull($row['quiet_start'], 'the hours are not theirs to set; the email switch still saves');
-        $this->assertSame(0, (int) $row['email_alerts']);
+        $this->assertSame(['own', '22:00:00', '07:00:00', 0], [$row['quiet_mode'], $row['quiet_start'], $row['quiet_end'], (int) $row['email_alerts']]);
+        $this->assertMatchesRegularExpression('#name="quiet_mode" value="own"[^>]*\schecked[\s>]#', (string) $this->step('GET', 'settings')->response()->getBody());
+
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_mode' => 'none']);
+        $row = db_connect()->table('message_preferences')->where('user_id', $this->ann->id)->get()->getRowArray();
+        $this->assertSame(['none', null], [$row['quiet_mode'], $row['quiet_start']]);
+
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_mode' => 'weekends']);
+        $this->assertNotEmpty(session('errors')['quiet_mode'] ?? null);
+        $this->assertSame('none', db_connect()->table('message_preferences')->where('user_id', $this->ann->id)->get()->getRow('quiet_mode'));
     }
 
     public function testSavingWithoutChangesLeavesEveryStoredChoiceByteIdentical(): void
     {
         // AC8: choices made on the old pages, then the new card saved untouched.
         $db = db_connect();
-        $db->table('message_preferences')->insert(['user_id' => $this->ivo->id, 'quiet_start' => '21:30:00', 'quiet_end' => '06:15:00', 'email_alerts' => 0]);
+        $db->table('message_preferences')->insert(['user_id' => $this->ivo->id, 'quiet_mode' => 'own', 'quiet_start' => '21:30:00', 'quiet_end' => '06:15:00', 'email_alerts' => 0]);
         $db->table('message_preferences')->insert(['user_id' => $this->pam->id, 'quiet_start' => null, 'quiet_end' => null, 'email_alerts' => 1]);
         $db->table('parent_child_preferences')->insert(['parent_user_id' => $this->pam->id, 'student_user_id' => $this->ann->id, 'email_enabled' => 0, 'created_at' => '2026-01-02 03:04:05', 'updated_at' => '2026-01-02 03:04:05']);
         $before = $this->rows();
@@ -330,7 +354,7 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertFalse((new ParentPreferences())->emailEnabled((int) $this->pam->id, (int) $this->ann->id));
 
         $this->signIn($this->ivo);
-        $this->step('POST', 'settings/notifications', ['quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['quiet_mode' => 'own', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $this->assertSame('Notifications saved', session('message'));
     }
 

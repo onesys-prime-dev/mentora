@@ -42,8 +42,8 @@ export function disableMessages() {
         "DELETE FROM conversations",
         "DELETE FROM user_blocks",
         "DELETE FROM message_preferences",
-        // The institution's "students messaging each other" switch, if a case left it off.
-        "DELETE FROM settings WHERE `key` LIKE '%studentDmEnabled%'",
+        // The institution's "students messaging each other" scope and default quiet hours, if a case left them set.
+        "DELETE FROM settings WHERE `key` LIKE '%studentDmEnabled%' OR `key` LIKE '%studentMessagingScope%' OR `key` LIKE '%defaultQuietStart%' OR `key` LIKE '%defaultQuietEnd%'",
         "DELETE FROM feature_flag_overrides WHERE flag_key = 'messages'",
     ]) {
         runSql(statement);
@@ -53,7 +53,7 @@ export function disableMessages() {
 /** Switches students messaging each other on or off as the institution's administrator does, and waits for the server. */
 export async function setStudentMessages(page, on) {
     await page.goto("/institution/settings/messages");
-    await page.locator(`input[name=enabled][value='${on ? 1 : 0}']`).check();
+    await page.locator(`input[name=scope][value='${on ? "institution" : "off"}']`).check();
 
     const saved = page.waitForResponse((response) => response.url().includes("/institution/settings/messages") && response.request().method() === "POST");
 

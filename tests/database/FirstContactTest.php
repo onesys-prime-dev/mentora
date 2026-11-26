@@ -196,6 +196,23 @@ final class FirstContactTest extends DatabaseTestCase
         $this->assertFalse($present($this->child)['first_contact_line']);
     }
 
+    public function testFirstContactAlwaysForMinorRecipient(): void
+    {
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $mate  = PeopleFactory::person('student', 'Mate', 'Class', null, $this->institution);
+        CourseFactory::enroll($this->offering, $mate);
+        $this->assertTrue((new \App\Services\Institutions\MinorFlag())->set($admin, $this->institution, (int) $this->child->id, true));
+
+        $id = $this->first($mate, $this->child);
+
+        // Nothing stored and nothing shown to the sender; the minor still gets the line.
+        $this->assertSame(0, (int) db_connect()->table('conversations')->where('id', $id)->get()->getRow('first_contact'));
+        $sender = (new ConversationPresenter())->present($mate, (new ConversationService())->listFor($mate))[0];
+        $this->assertFalse($sender['first_contact_sender']);
+        $this->assertFalse($sender['first_contact_line']);
+        $this->assertTrue($this->row($this->child)['first_contact_line']);
+    }
+
     public function testNamingTheStarterCostsTheSameForTwoOrTenFirstContacts(): void
     {
         $cost = function (int $starters): int {

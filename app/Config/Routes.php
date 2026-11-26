@@ -1205,6 +1205,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/deactivate', 'Institution\PeopleController::deactivate/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('(:num)/reactivate', 'Institution\PeopleController::reactivate/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/sign-out', 'Institution\PeopleController::signOut/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/minor', 'Institution\PeopleController::minor/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/minor/remove', 'Institution\PeopleController::unmark/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/reset-password', 'Institution\PeopleController::resetPassword/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('(:num)/roles', 'Institution\PeopleController::roles/$1', ['filter' => ['permission:people.manage', 'reauth']]);
         });
