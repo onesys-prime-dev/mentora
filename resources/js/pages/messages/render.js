@@ -381,3 +381,24 @@ export function conversationRow(conversation, { selected }) {
 
     return row;
 }
+
+/**
+ * The words of a group's membership line (group.js events from the server), for the person looking: "You added Ben",
+ * "Ana added you". Empty for an event this page does not know, so the caller draws nothing.
+ */
+export function groupEventText(event, meId) {
+    const mine = (id) => id !== null && id !== undefined && Number(id) === Number(meId);
+    const actor = mine(event.actor_id) ? "You" : (event.actor_name ?? "Someone");
+    const target = mine(event.target_id) ? "you" : (event.target_name ?? "someone");
+
+    switch (event.event) {
+        case "group_created": return `${actor} created the group`;
+        case "member_added": return `${actor} added ${target}`;
+        case "member_removed": return `${actor} removed ${target}`;
+        case "member_left": return `${actor} left`;
+        case "renamed": return `${actor} renamed the group`;
+        case "closed": return event.actor_id === null || event.actor_id === undefined ? "The group closed" : `${actor} closed the group`;
+        case "owner_changed": return mine(event.target_id) ? "You are now the owner" : `${event.target_name ?? "Someone"} is now the owner`;
+        default: return "";
+    }
+}

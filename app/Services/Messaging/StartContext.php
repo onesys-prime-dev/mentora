@@ -50,6 +50,15 @@ final class StartContext
         );
     }
 
+    /** Only the relationship between the pair: both accounts count as active, no restriction, no block. */
+    public function relationshipOnly(): self
+    {
+        return new self(
+            $this->sameInstitution, true, true, $this->sharedCourse, $this->sameCollege, $this->inScope,
+            $this->linkedChildAsSenderParent, $this->linkedChildAsRecipientParent, $this->studentDmEnabled, false, $this->isSelf,
+        );
+    }
+
     /** A child links the pair in either direction. */
     public function linkedChild(): bool
     {

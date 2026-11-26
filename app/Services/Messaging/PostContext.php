@@ -11,6 +11,7 @@ namespace App\Services\Messaging;
  * binds (not paused by a protected link, not made by an institutional admin).
  * subjectLinkLost means a parent thread about a child
  * whose parent link has ended: the thread stays readable but nobody posts.
+ * closed is a group its owner or an administrator closed (or that fell to one member): read-only for everyone.
  * restriction is the poster's own: 'no_send' stops posting and reacting except in a course chat they teach.
  */
 final class PostContext
@@ -27,6 +28,7 @@ final class PostContext
         public readonly bool $studentDmBlocked = false,
         public readonly bool $subjectLinkLost = false,
         public readonly string $restriction = 'none',
+        public readonly bool $closed = false,
     ) {
     }
 }

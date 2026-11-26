@@ -250,7 +250,7 @@ class ConversationService
     {
         $offeringId = $conversation['offering_id'] === null ? null : (int) $conversation['offering_id'];
         $teaches    = $offeringId !== null && $this->resolver->isCourseInstructor((int) $user->id, $offeringId);
-        $created    = $conversation['type'] === 'group' && (int) ($conversation['created_by'] ?? 0) === (int) $user->id;
+        $created    = $conversation['type'] === 'group' && (int) ($conversation['owner_id'] ?? 0) === (int) $user->id;
 
         $party = $this->resolver->party($user);
 
@@ -308,7 +308,7 @@ class ConversationService
             return [];
         }
 
-        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.institution_id, c.is_locked, c.allow_reactions, c.allow_replies, c.allow_forwarding, c.allow_bump, c.allow_delete_everyone, c.last_message_at, c.first_contact, c.first_contact_cleared_at,
+        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.owner_id, c.closed_at, c.institution_id, c.is_locked, c.allow_reactions, c.allow_replies, c.allow_forwarding, c.allow_bump, c.allow_delete_everyone, c.last_message_at, c.first_contact, c.first_contact_cleared_at,
                     p.is_muted, p.is_starred, p.pinned_at, p.archived_at, p.marked_unread,
                     (SELECT o.user_id FROM conversation_participants o WHERE o.conversation_id = c.id AND o.user_id <> p.user_id LIMIT 1) AS other_user_id,
                     GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread,

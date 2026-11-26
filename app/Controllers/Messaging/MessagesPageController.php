@@ -16,7 +16,8 @@ class MessagesPageController extends BaseController
 {
     public function index(?string $conversationId = null): string
     {
-        $roles = (new MessagingContextResolver())->roles(auth()->user());
+        $resolver = new MessagingContextResolver();
+        $roles    = $resolver->roles(auth()->user());
 
         return view('pages/messages/index', [
             'title'  => 'Messages',
@@ -27,7 +28,8 @@ class MessagesPageController extends BaseController
             'openId' => $conversationId !== null && ctype_digit($conversationId) ? $conversationId : '',
             // Only the button: GroupService is what decides who may start a group.
             'canReview' => in_array('institutional_admin', $roles, true),
-            'canStartGroups' => array_intersect(['chairperson', 'dean'], $roles) !== [],
+            // Staff and students (FR7); a parent-only person gets no button.
+            'canStartGroups' => $resolver->party(auth()->user())->capacity(false) !== null,
         ]);
     }
 }

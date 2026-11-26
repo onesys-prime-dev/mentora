@@ -23,6 +23,7 @@ import { renderAvatar } from "../../shared/avatar.js";
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
 import { createGroupPicker, MAX_MEMBERS } from "./group.js";
+import { createGroupSettings } from "./group-settings.js";
 import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
 import { createGuard, createPoller, watchVisibility } from "./poller.js";
@@ -32,7 +33,7 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, separatorTime, serverStamp, setServerOffset, systemLine } from "./render.js";
+import { conversationRow, dayLabel, hoverTime, messageNode, groupEventText, minutesBetween, separatorTime, serverStamp, setServerOffset, systemLine } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
@@ -85,6 +86,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         // A person opened but not yet written to: nothing exists on the server until the first send.
         draft: null,
         items: [],
+        // A group's membership lines, merged by id; drawn among the messages by time.
+        events: [],
         hasMore: false,
         composer: null,
         sending: null,
@@ -345,6 +348,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             avatar.setAttribute("aria-hidden", "true");
         }
 
+        const settingsBtn = $("[data-role=group-settings-open]");
+
+        if (settingsBtn) {
+            settingsBtn.hidden = !(c?.type === "group" && c.group_settings);
+        }
+
         const canPost = c === null || c.can_post !== false;
         const locked = Number(c?.is_locked) === 1;
 
@@ -560,7 +569,23 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             nodes.push(line);
         }
 
+        // Membership lines sit among the messages by time; those older than the loaded page wait for "Load older".
+        const oldest = state.hasMore ? serverItems()[0]?.created_at : null;
+        const lines = state.events.filter((e) => oldest === null || oldest === undefined || e.created_at >= oldest);
+        let next = 0;
+        const flushLines = (until) => {
+            while (next < lines.length && (until === null || lines[next].created_at <= until)) {
+                const text = groupEventText(lines[next++], Number(root.dataset.userId));
+
+                if (text !== "") {
+                    nodes.push(systemLine(text));
+                }
+            }
+        };
+
         for (const item of state.items) {
+            flushLines(item.created_at);
+
             const label = dayLabel(item.created_at, now());
 
             if (label !== day) {
@@ -585,10 +610,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             nodes.push(messageRow(item, lastMine && item.id === lastMine.id ? deliveryStatus(item) : null));
         }
 
+        flushLines(null);
         messagesEl.replaceChildren(...nodes);
         olderEl.hidden = !state.hasMore;
 
-        if (state.items.length === 0 && !state.draft) {
+        if (state.items.length === 0 && !state.draft && lines.length === 0) {
             threadState("thread-empty");
         } else {
             threadState(null);
@@ -601,9 +627,22 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
+    /** Folds in the membership lines a page or a poll brought; true when any was new. */
+    function mergeEvents(incoming) {
+        const known = new Set(state.events.map((e) => e.id));
+        const fresh = (incoming ?? []).filter((e) => !known.has(e.id));
+
+        if (fresh.length > 0) {
+            state.events = [...state.events, ...fresh].sort((a, b) => a.id - b.id);
+        }
+
+        return fresh.length > 0;
+    }
+
     function showGone() {
         state.poller?.stop();
         state.items = [];
+        state.events = [];
         state.hasMore = false;
         messagesEl.replaceChildren();
         olderEl.hidden = true;
@@ -647,13 +686,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         state.myLast = data.my_last ?? state.myLast;
 
+        const newLines = mergeEvents(data.events);
+
         if (fresh.length > 0) {
             state.items.push(...fresh);
             state.cursor = Math.max(state.cursor, ...fresh.map((m) => m.id));
             sortItems();
             renderMessages();
             readUpTo();
-        } else if (JSON.stringify(state.myLast) !== seenBefore) {
+        } else if (newLines || JSON.stringify(state.myLast) !== seenBefore) {
             renderMessages();
         }
 
@@ -668,7 +709,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return;
         }
 
-        const { status, data } = await api.changes(id, state.since);
+        const lastEvent = state.events.length > 0 ? Math.max(...state.events.map((e) => e.id)) : undefined;
+        const { status, data } = await api.changes(id, state.since, lastEvent);
 
         if (!threadGuard.isCurrent(token) || status !== 200 || !data) {
             return;
@@ -684,8 +726,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         // A message whose reaction is still on its way keeps what the person just picked.
         const busy = new Set(state.items.filter((i) => i.reacting).map((i) => i.id));
         const relevant = data.messages.filter((m) => !busy.has(m.id) && (known.has(m.id) || m.id > newest));
+        const newLines = mergeEvents(data.events);
 
-        if (relevant.length > 0) {
+        if (relevant.length > 0 || newLines) {
             state.items = mergeById(state.items, relevant);
             renderMessages();
             refreshThread();
@@ -704,6 +747,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         renderPinbar();
         showSafetyNote("");
         state.items = [];
+        state.events = [];
         state.hasMore = false;
         state.sending = null;
     }
@@ -763,6 +807,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         state.items = data.messages;
+        mergeEvents(data.events);
         state.cursor = Math.max(0, ...data.messages.map((m) => m.id));
         state.hasMore = data.has_more;
         state.pinned = data.pinned ?? [];
@@ -811,6 +856,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         const known = new Set(serverItems().map((item) => item.id));
 
         state.items = [...data.messages.filter((m) => !known.has(m.id)), ...state.items];
+        mergeEvents(data.events);
         state.hasMore = data.has_more;
         renderMessages({ keepPosition: true });
     }
@@ -1221,7 +1267,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     $("[data-role=prefs-open]")?.addEventListener("click", () => settings.sync());
 
     // ---- starting a staff group ----------------------------------------
-    // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.
+    // Staff and students are offered the button; the server decides who may be added and who may start.
 
     const groupBtn = newGroupEl;
     const groupTitle = $("[data-role=group-title]");
@@ -1240,7 +1286,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     function syncGroup() {
         const count = groupPicker.ids().length;
 
-        groupCreate.disabled = creatingGroup || groupTitle.value.trim() === "" || count < 1 || count > MAX_MEMBERS;
+        // The person starting the group is a member too.
+        groupCreate.disabled = creatingGroup || groupTitle.value.trim() === "" || count < 1 || count + 1 > MAX_MEMBERS;
     }
 
     function renderGroup() {
@@ -1315,6 +1362,16 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         groupFailure = "Couldn't create the group";
         renderGroup();
+    });
+
+    // ---- group settings ------------------------------------------------
+
+    const groupSettings = createGroupSettings({
+        root,
+        api,
+        getGroupId: () => state.openId,
+        onChanged: async () => { await loadList(); state.poller?.nudge(); },
+        onLeft: () => { closeThread(); loadList(); $("[data-role=search]")?.focus(); },
     });
 
     // ---- the message menu ----------------------------------------------
@@ -1737,6 +1794,13 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             archive: act("archive"),
             unarchive: act("unarchive"),
             delete: act("delete"),
+            "group-settings": async () => {
+                await open(c.id);
+
+                if (state.openId === c.id) {
+                    $("[data-role=group-settings-open]")?.click();
+                }
+            },
             // The existing block flow: open the chat and ask for the second click there.
             block: async () => {
                 await open(c.id);
@@ -1854,6 +1918,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             listPoller.stop();
             state.poller?.stop();
             unwatch();
+            groupSettings.destroy();
             phoneNav.destroy();
         },
     };

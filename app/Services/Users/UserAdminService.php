@@ -11,6 +11,7 @@ use App\Services\Concerns\InTransaction;
 use App\Services\Institutions\DeanAssignmentService;
 use App\Services\Institutions\InvitationInput;
 use App\Services\Institutions\InvitationService;
+use App\Services\Messaging\GroupService;
 use App\Services\Profiles\EmailChangeService;
 use App\Services\Profiles\SecurityNotice;
 use App\Services\Sis\SisOwnership;
@@ -207,6 +208,13 @@ class UserAdminService
 
             $this->audit('user.deactivated', $actor, $userId, $user, ['old' => ['active' => (int) $user['active']], 'new' => ['active' => 0]]);
         });
+
+        // Their messaging groups pass to another member; a failure here must not undo the deactivation.
+        try {
+            (new GroupService())->handOverFor($userId, $actor);
+        } catch (Throwable) {
+            log_message('error', 'Group handover failed for user ' . $userId . '.');
+        }
     }
 
     /**

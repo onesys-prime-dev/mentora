@@ -266,7 +266,7 @@ class MessageService
      * before that message; `$afterId` what came after it (for polling).
      * Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
+     * @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
      */
     public function page(User $user, int $conversationId, ?int $beforeId = null, ?int $afterId = null, int $limit = self::PAGE): ?array
     {
@@ -303,11 +303,23 @@ class MessageService
         }
 
         $pins    = $this->pinnedRows($userId, $conversationId, $first);
+        // A group's membership lines belong to the window this page covers (callers merge them by id, so overlap is harmless).
+        $events = [];
+
+        // Only the first page and "Load older" carry a group's membership lines; a poll gets new ones from changedSince().
+        if (($conversation['type'] ?? '') === 'group' && $afterId === null) {
+            $stamp  = fn (int $id): ?string => ($t = db_connect()->table('messages')->select('created_at')->where(['id' => $id, 'conversation_id' => $conversationId])->get()->getRow('created_at')) === null ? null : (string) $t;
+            $from   = $more && $rows !== [] ? (string) $rows[0]['created_at'] : null;
+            $to     = $beforeId !== null ? $stamp($beforeId) : null;
+            $events = (new GroupService())->events($user, $conversationId, $from, $to);
+        }
+
         // One lookup for the page: the messages' senders, the quoted ones and the pinned ones (FR2, FR5).
         $avatars = $this->avatarsFor($user, [...$rows, ...$pins]);
 
         return [
             'messages' => $this->presentRows($rows, $user, $conversation, $avatars),
+            'events'   => $events,
             'has_more' => $more,
             'pinned'   => $this->pinnedPreviews($pins, $conversationId, $avatars),
             'my_last'  => $this->myLastSeen($userId, $conversationId),
@@ -344,11 +356,12 @@ class MessageService
      * the same second as that clock is delivered again rather than missed; the client merges changed messages by id
      * (replace in place), which makes the repeat harmless. When more than PAGE_MAX changed, the oldest PAGE_MAX come
      * back, `more` is true and `server_time` is the last returned change time, so the next call continues from there.
-     * An unreadable `$since` counts as now, so nothing comes back. Null when the conversation is not the user's.
+     * An unreadable `$since` counts as now, so nothing comes back. A group's membership lines come back from `$afterEvent`
+     * (the newest the client holds) on, or from `$since` when it is not given. Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, server_time: string, more: bool}|null
+     * @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>, server_time: string, more: bool}|null
      */
-    public function changedSince(User $user, int $conversationId, string $since): ?array
+    public function changedSince(User $user, int $conversationId, string $since, ?int $afterEvent = null): ?array
     {
         $conversation = $this->conversations->find($user, $conversationId);
 
@@ -373,6 +386,7 @@ class MessageService
 
         return [
             'messages'    => $this->presentRows($rows, $user, $conversation),
+            'events'      => ($conversation['type'] ?? '') === 'group' ? (new GroupService())->events($user, $conversationId, $afterEvent === null ? $since : null, null, $afterEvent) : [],
             'server_time' => $more ? (string) $rows[array_key_last($rows)]['changed_at'] : (string) $clock['lagged'],
             'more'        => $more,
         ];
@@ -481,7 +495,8 @@ class MessageService
         $userId  = (int) $user->id;
         $context = $this->resolver->forPost($user, $conversation);
         $view    = [
-            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation)),
+            'closed'    => ($conversation['closed_at'] ?? null) !== null,
+            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation), ($conversation['closed_at'] ?? null) !== null),
             'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
             'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
             'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
@@ -533,7 +548,7 @@ class MessageService
             'pinned'              => ($row['pinned_at'] ?? null) !== null,
             'can_pin'             => $canPin && ! $removed && ! $erased,
             'deleted_everyone'    => $erased,
-            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
+            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone'), $view['closed'] ?? false),
         ];
     }
 

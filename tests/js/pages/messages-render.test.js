@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { clockTime, conversationRow, dayLabel, escapeHtml, formatTime, hoverTime, minutesBetween, separatorTime, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
+import { clockTime, conversationRow, groupEventText, systemLine, dayLabel, escapeHtml, formatTime, hoverTime, minutesBetween, separatorTime, serverStamp, setServerOffset, linkify, messageNode } from "../../../resources/js/pages/messages/render.js";
 
 const fragment = (html) => new DOMParser().parseFromString(`<body>${html}</body>`, "text/html").body;
 
@@ -395,4 +395,34 @@ describe("separatorTime", () => {
 
     });
 
+});
+
+describe("group system lines", () => {
+    const ev = (event, over = {}) => ({ id: 1, event, actor_id: 1, target_id: 2, actor_name: "Ana", target_name: "Ben", created_at: "2026-11-03 10:00:00", ...over });
+
+    it("renders system lines for member events", () => {
+        expect(groupEventText(ev("group_created", { target_id: null }), 9)).toBe("Ana created the group");
+        expect(groupEventText(ev("member_added"), 9)).toBe("Ana added Ben");
+        expect(groupEventText(ev("member_removed"), 9)).toBe("Ana removed Ben");
+        expect(groupEventText(ev("member_left", { target_id: 1, target_name: "Ana" }), 9)).toBe("Ana left");
+        expect(groupEventText(ev("renamed", { target_id: null }), 9)).toBe("Ana renamed the group");
+        expect(groupEventText(ev("closed", { target_id: null }), 9)).toBe("Ana closed the group");
+        expect(groupEventText(ev("owner_changed", { actor_id: null, actor_name: null }), 9)).toBe("Ben is now the owner");
+    });
+
+    it("says you for the viewer", () => {
+        expect(groupEventText(ev("member_added"), 1)).toBe("You added Ben");
+        expect(groupEventText(ev("member_added"), 2)).toBe("Ana added you");
+        expect(groupEventText(ev("member_left", { target_id: 1, target_name: "Ana" }), 1)).toBe("You left");
+        expect(groupEventText(ev("owner_changed", { actor_id: null, actor_name: null }), 2)).toBe("You are now the owner");
+    });
+
+    it("shows a line it does not know as nothing, and draws names as text", () => {
+        expect(groupEventText(ev("mystery"), 9)).toBe("");
+
+        const line = systemLine(groupEventText(ev("member_added", { target_name: "<b>Ben</b>" }), 9));
+
+        expect(line.querySelector("b")).toBeNull();
+        expect(line.textContent).toBe("Ana added <b>Ben</b>");
+    });
 });

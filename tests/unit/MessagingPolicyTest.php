@@ -370,7 +370,8 @@ final class MessagingPolicyTest extends CIUnitTestCase
 
         $this->assertFalse($policy->canModerate(self::party(['chairperson']), 'course', true));
         $this->assertFalse($policy->canModerate(self::party(['dean']), 'course', true));
-        $this->assertFalse($policy->canModerate(self::party(['instructor']), 'group', true));
+        $this->assertFalse($policy->canModerate(self::party(['instructor']), 'group', false));
+        $this->assertTrue($policy->canModerate(self::party(['student']), 'group', true), 'any owner');
         $this->assertFalse($policy->canModerate(self::party(['admin']), 'course', true));
         $this->assertFalse($policy->canModerate(self::party(['admin']), 'group', true));
     }

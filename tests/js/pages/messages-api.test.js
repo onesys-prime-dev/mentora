@@ -85,6 +85,14 @@ describe("messages api client: actions", () => {
         expect(last()).toMatchObject({ method: "GET", url: "/messages/api/conversations/7/changes?since=2026-11-04%2010%3A00%3A00" });
     });
 
+    it("sends the last group event it holds with the changes feed", async () => {
+        const { api, last } = setup();
+
+        await api.changes(7, "2026-11-04 10:00:00", 12);
+
+        expect(last().url).toBe("/messages/api/conversations/7/changes?since=2026-11-04%2010%3A00%3A00&after_event=12");
+    });
+
     it("sets a control switch", async () => {
         const { api, last } = setup();
 

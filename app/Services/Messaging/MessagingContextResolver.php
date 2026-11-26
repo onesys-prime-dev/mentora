@@ -186,6 +186,7 @@ class MessagingContextResolver
             studentDmBlocked: $type === 'direct' && $this->studentDmBlocked($conversation),
             subjectLinkLost: $type === 'direct' && $this->linkLost($conversation),
             restriction: $this->restrictionKind($userId),
+            closed: ($conversation['closed_at'] ?? null) !== null,
         );
     }
 

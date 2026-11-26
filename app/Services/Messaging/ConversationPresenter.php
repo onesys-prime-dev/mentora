@@ -96,12 +96,16 @@ class ConversationPresenter
             $row['marked_unread'] = (int) ($row['marked_unread'] ?? 0) === 1;
             $row['can_pin_chat']  = $row['type'] !== 'course';
             $row['can_delete']    = in_array($row['type'], ['direct', 'group'], true);
+            // Every member of a group may open its settings (the server decides what the dialog lets them do).
+            $row['group_settings'] = $row['type'] === 'group';
 
             $row['blocked_by_me'] = $row['type'] === 'direct' && $other !== null && isset($blocked[$other]);
             $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && isset($blockable[$other]);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
-            $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
+            $created             = $row['type'] === 'group' && (int) ($row['owner_id'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($teaches ? $viewerParty->withRole('instructor') : $viewerParty, (string) $row['type'], $teaches || $created);
+            // A closed group, or a course chat already closed with its course above.
+            $row['closed']       = $row['closed'] || ($row['closed_at'] ?? null) !== null;
 
             // The line is the recipient's: a stored first contact, or a minor viewer until they reply (FR5). The sender
             // sees only the stored fact, so a recipient's minor flag never shows on their side.

@@ -625,6 +625,12 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('blocks', 'Messaging\BlockController::create');
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
     $routes->post('groups', 'Messaging\GroupController::create');
+    $routes->get('groups/(:num)/members', 'Messaging\GroupController::members/$1');
+    $routes->post('groups/(:num)/members', 'Messaging\GroupController::add/$1');
+    $routes->post('groups/(:num)/members/(:num)/remove', 'Messaging\GroupController::removeMember/$1/$2');
+    $routes->post('groups/(:num)/leave', 'Messaging\GroupController::leave/$1');
+    $routes->post('groups/(:num)/rename', 'Messaging\GroupController::rename/$1');
+    $routes->post('groups/(:num)/close', 'Messaging\GroupController::close/$1');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
     $routes->get('conversations/(:num)/changes', 'Messaging\MessageController::changes/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');

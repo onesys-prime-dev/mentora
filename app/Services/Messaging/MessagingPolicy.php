@@ -143,7 +143,7 @@ final class MessagingPolicy
      */
     public function canPost(PostContext $c): bool
     {
-        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost || $c->closed) {
             return false;
         }
 
@@ -172,8 +172,8 @@ final class MessagingPolicy
     }
 
     /**
-     * $inScope is "instructor of that course" for a course chat, "created or
-     * leads that staff group" for a group. Direct threads are never moderated.
+     * $inScope is "instructor of that course" for a course chat, "owns that group"
+     * for a group (an institutional admin moderates every group and course chat). Direct threads are never moderated.
      * Any held role counts (the caller adds `instructor` for someone who teaches the course); the
      * system admin never moderates.
      */
@@ -193,7 +193,7 @@ final class MessagingPolicy
 
         return match ($conversationType) {
             'course' => in_array('instructor', $actor->roles, true) && $inScope,
-            'group'  => array_intersect(['chairperson', 'dean'], $actor->roles) !== [] && $inScope,
+            'group'  => $inScope,
         };
     }
 
@@ -217,16 +217,16 @@ final class MessagingPolicy
         return $role === 'institutional_admin';
     }
 
-    /** A course chat pins by moderators only; direct and group chats by anyone in them. */
-    public function canPinMessage(string $type, bool $isModerator): bool
+    /** A course chat pins by moderators only; direct and group chats by anyone in them; a closed group by nobody. */
+    public function canPinMessage(string $type, bool $isModerator, bool $closed = false): bool
     {
-        return $type === 'course' ? $isModerator : true;
+        return ! $closed && ($type === 'course' ? $isModerator : true);
     }
 
     /** Like canPost, but a lock does not stop a reaction (it is not a post). */
     public function canReact(PostContext $c): bool
     {
-        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost || $c->closed) {
             return false;
         }
 

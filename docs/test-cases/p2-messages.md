@@ -696,3 +696,47 @@ Minor flag, student scope and quiet hours for everyone (FR8, FR9, FR10, BC-3).
 - **Already automated:** `tests/database/MessagePreferencesTest.php`, `tests/database/MessageNotifierTest.php`, `tests/database/AddQuietModeTest.php`
 - **Basis:** `MessagePreferences`, `MessageNotifier`
 - **Review:** Draft
+
+## Institution-wide Messages, Phase 6 (TC-MSG-40 to 42)
+
+Owner-run groups (FR7, D26, S2-c, S2-g).
+
+### TC-MSG-40 A student creates and runs a group
+
+- **Role:** Student (owner), classmates. **Priority:** P1
+- **Steps:**
+  1. **+ New group**, name it, add classmates; send a message.
+  2. "⋯" → **Group settings** → Members: add someone, remove someone; Details: rename.
+  3. A member opens Group settings.
+- **Expected:**
+  - The owner sees Add and Remove; a member sees Details → Leave only.
+  - Each change shows a grey line in the conversation ("X added Y", "X renamed the group") and is audited.
+  - Added people get an in-app notification at once. A parent can neither create nor be added. At most 50 members.
+- **Already automated:** `tests/database/GroupServiceTest.php`, `tests/feature/MessagesGroupRoutesTest.php`, `tests/js/pages/messages-group.test.js`
+- **Basis:** `GroupService`, `GroupController`, `group-settings.js`
+- **Review:** Draft
+
+### TC-MSG-41 Groups with a minor
+
+- **Role:** Staff (owner), a minor student, an unrelated student. **Priority:** P1
+- **Steps:**
+  1. Try to add the minor to a group where someone cannot reach them; try to add the unrelated student to a group that has the minor.
+- **Expected:**
+  - Both adds are refused with the same generic message; nothing reveals the minor flag.
+  - A member who is later deactivated or paused does not stop other changes to the group.
+- **Already automated:** `tests/database/GroupMinorRulesTest.php`
+- **Basis:** `GroupService::minorsAllowed`
+- **Review:** Draft
+
+### TC-MSG-42 Leaving, handover and closing
+
+- **Role:** Owner, staff member, students. **Priority:** P2
+- **Steps:**
+  1. The owner leaves; later the new owner is deactivated; then everyone but one leaves.
+- **Expected:**
+  - Ownership passes to the longest-standing staff member, otherwise the longest-standing member.
+  - A group left with one member closes: still readable, no posting, reacting, pinning or changes.
+  - People who left or were removed can no longer open the group.
+- **Already automated:** `tests/database/GroupServiceTest.php`
+- **Basis:** `GroupService::leave`, `handOverFor`
+- **Review:** Draft
