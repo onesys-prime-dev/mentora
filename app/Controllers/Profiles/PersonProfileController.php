@@ -9,7 +9,6 @@ use App\Filters\MessagesFilter;
 use App\Services\Auth\RolePermissions;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationService;
-use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\ProfileModeration;
 use App\Services\Profiles\ProfilePhotoService;
@@ -55,18 +54,19 @@ class PersonProfileController extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
-        try {
-            $conversation = (new ConversationService())->startDirect($viewer, $id);
-        } catch (RateLimitedException $e) {
-            return redirect()->to(site_url('people/' . $id))->with('error', $e->getMessage());
-        }
-
+        // Opening a person stores nothing: an existing thread opens, otherwise the page opens the draft.
         // Refused as the Messages API refuses: a 404, never a reason.
-        if ($conversation === null) {
+        $draft = (new ConversationService())->draftFor($viewer, $id, null);
+
+        if ($draft === null) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        return redirect()->to(site_url('messages/' . $conversation['id']));
+        if ($draft['conversation_id'] !== null) {
+            return redirect()->to(site_url('messages/' . $draft['conversation_id']));
+        }
+
+        return redirect()->to(site_url('messages?to=' . $id));
     }
 
     /** Per-viewer HTML, never kept by a shared cache. */

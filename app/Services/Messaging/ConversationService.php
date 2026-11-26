@@ -80,10 +80,71 @@ class ConversationService
     }
 
     /**
-     * The direct conversation between $sender and the recipient, created if it
-     * does not exist (the same pair, and for a parent the same child, is one
-     * conversation whichever side starts it). Null when the policy refuses or
-     * the recipient is not someone the sender can reach.
+     * The direct conversation that already exists between $sender and the recipient (same pair, and for a
+     * parent the same child), or null: refused by the policy, or nothing sent yet. Creates nothing.
+     *
+     * @return array<string, mixed>|null a `conversations` row
+     */
+    public function existingDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
+    {
+        $start = $this->startFor($sender, $recipientId, $subjectStudentId);
+
+        return $start === null ? null : $this->byKey(DirectKey::for((int) $this->resolver->institutionOf($sender), (int) $sender->id, $recipientId, $start['subject_student_id']));
+    }
+
+    /**
+     * What opening a person shows before anything is sent: nothing is stored until the first message goes.
+     * Null when the policy refuses. `conversation_id` is the existing thread, if there is one.
+     *
+     * @return array{recipient_id: int, subject_student_id: ?int, first_contact: bool, conversation_id: ?int}|null
+     */
+    public function draftFor(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
+    {
+        $start = $this->startFor($sender, $recipientId, $subjectStudentId);
+
+        if ($start === null) {
+            return null;
+        }
+
+        $existing = $this->byKey(DirectKey::for((int) $this->resolver->institutionOf($sender), (int) $sender->id, $recipientId, $start['subject_student_id']));
+
+        return [
+            'recipient_id'       => $recipientId,
+            'subject_student_id' => $start['subject_student_id'],
+            'first_contact'      => $this->neverTalked($sender, $recipientId),
+            'conversation_id'    => $existing === null ? null : (int) $existing['id'],
+        ];
+    }
+
+    /**
+     * Never talked before (FR5). This is the one value the sender sees and the email scope reads; the recipient's
+     * minor override (Party::$minor, from Phase 5) is applied where the recipient's line is presented, so it never
+     * reaches the sender (NFR Privacy).
+     */
+    private function neverTalked(User $sender, int $recipientId): bool
+    {
+        return ! $this->resolver->talkedBefore((int) $sender->id, $recipientId);
+    }
+
+    /** @return array{subject_student_id: ?int}|null */
+    private function startFor(User $sender, int $recipientId, ?int $subjectStudentId): ?array
+    {
+        $recipient = $recipientId < 1 ? null : model(UserModel::class)->findById($recipientId);
+
+        return $recipient === null ? null : $this->resolveDirectStart($sender, $recipient, $subjectStudentId);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function byKey(string $key): ?array
+    {
+        return db_connect()->table('conversations')->where('direct_key', $key)->get()->getRowArray() ?: null;
+    }
+
+    /**
+     * The direct conversation between $sender and the recipient, created if it does not exist (the same pair, and
+     * for a parent the same child, is one conversation whichever side starts it). Null when the policy refuses or
+     * the recipient is not someone the sender can reach. The app never calls this to open a person:
+     * MessageService::sendFirst does, with the first message in the same transaction. Tests use it to set up a thread.
      *
      * @throws RateLimitedException when the sender has started too many new threads this hour
      *
@@ -91,8 +152,23 @@ class ConversationService
      */
     public function startDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
     {
-        $recipient = $recipientId < 1 ? null : model(UserModel::class)->findById($recipientId);
-        $start     = $recipient === null ? null : $this->resolveDirectStart($sender, $recipient, $subjectStudentId);
+        $plan = $this->planDirect($sender, $recipientId, $subjectStudentId);
+
+        return $plan === null ? null : $this->createDirect($sender, $recipientId, $plan);
+    }
+
+    /**
+     * Everything startDirect reads before it writes: the policy, the new-thread limit and the first-contact fact.
+     * Run it before the transaction that creates the thread opens, so the transaction's own read view only starts
+     * after the insert and sees a thread the other side committed meanwhile.
+     *
+     * @throws RateLimitedException when the sender has started too many new threads this hour
+     *
+     * @return array{key: string, institution_id: int, subject_student_id: ?int, first_contact: bool}|null
+     */
+    public function planDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
+    {
+        $start = $this->startFor($sender, $recipientId, $subjectStudentId);
 
         if ($start === null) {
             return null;
@@ -100,25 +176,37 @@ class ConversationService
 
         $inst             = (int) $this->resolver->institutionOf($sender);
         $subjectStudentId = $start['subject_student_id'];
-
-        $db  = db_connect();
-        $key = DirectKey::for($inst, (int) $sender->id, $recipientId, $subjectStudentId);
-        $now = date('Y-m-d H:i:s');
+        $key              = DirectKey::for($inst, (int) $sender->id, $recipientId, $subjectStudentId);
 
         // Starting a thread that exists returns it and creates nothing, so it is not counted.
-        if ($db->table('conversations')->where('direct_key', $key)->countAllResults() === 0) {
-            (new MessageRateLimiter())->check('thread', (int) $sender->id);
+        if (db_connect()->table('conversations')->where('direct_key', $key)->countAllResults() === 0) {
+            (new MessageRateLimiter())->check('thread', (int) $sender->id, null, $this->resolver->party($sender));
         }
 
-        // INSERT IGNORE then read by key: two people starting at once end up with the one row either way.
+        return ['key' => $key, 'institution_id' => $inst, 'subject_student_id' => $subjectStudentId, 'first_contact' => $this->neverTalked($sender, $recipientId)];
+    }
+
+    /**
+     * Creates the thread planDirect planned, or finds it. INSERT IGNORE then a read by key: two people starting at
+     * once end up with the one row either way. Null only if the row cannot be read back.
+     *
+     * @param array{key: string, institution_id: int, subject_student_id: ?int, first_contact: bool} $plan
+     *
+     * @return array<string, mixed>|null a `conversations` row
+     */
+    public function createDirect(User $sender, int $recipientId, array $plan): ?array
+    {
+        $db  = db_connect();
+        $now = date('Y-m-d H:i:s');
+
         $db->transStart();
         $db->table('conversations')->ignore(true)->insert([
-            'institution_id' => $inst, 'type' => 'direct', 'subject_student_id' => $subjectStudentId,
-            'created_by' => (int) $sender->id, 'is_locked' => 0, 'direct_key' => $key, 'created_at' => $now, 'updated_at' => $now,
+            'institution_id' => $plan['institution_id'], 'type' => 'direct', 'subject_student_id' => $plan['subject_student_id'],
+            'created_by' => (int) $sender->id, 'is_locked' => 0, 'direct_key' => $plan['key'], 'first_contact' => $plan['first_contact'] ? 1 : 0, 'created_at' => $now, 'updated_at' => $now,
         ]);
-        $conversation = $db->table('conversations')->where('direct_key', $key)->get()->getRowArray();
+        $conversation = $this->byKey($plan['key']);
 
-        foreach ([(int) $sender->id, $recipientId] as $userId) {
+        foreach ($conversation === null ? [] : [(int) $sender->id, $recipientId] as $userId) {
             $db->table('conversation_participants')->ignore(true)->insert([
                 'conversation_id' => $conversation['id'], 'user_id' => $userId, 'joined_at' => $now, 'first_visible_message_id' => 0,
             ]);
@@ -213,14 +301,14 @@ class ConversationService
             return [];
         }
 
-        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.institution_id, c.is_locked, c.allow_reactions, c.allow_replies, c.allow_forwarding, c.allow_bump, c.allow_delete_everyone, c.last_message_at,
+        $sql = 'SELECT c.id, c.type, c.title, c.offering_id, c.subject_student_id, c.created_by, c.institution_id, c.is_locked, c.allow_reactions, c.allow_replies, c.allow_forwarding, c.allow_bump, c.allow_delete_everyone, c.last_message_at, c.first_contact, c.first_contact_cleared_at,
                     p.is_muted, p.is_starred, p.pinned_at, p.archived_at, p.marked_unread,
                     (SELECT o.user_id FROM conversation_participants o WHERE o.conversation_id = c.id AND o.user_id <> p.user_id LIMIT 1) AS other_user_id,
                     GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread,
                     (' . $this->unreadSql() . ') AS new_messages
                 FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
-                WHERE p.user_id = ? AND c.institution_id = ?
+                WHERE p.user_id = ? AND c.institution_id = ? AND NOT (c.type = \'direct\' AND c.last_message_id IS NULL)
                   AND NOT (p.cleared_before_message_id > 0 AND COALESCE(c.last_message_id, 0) <= p.cleared_before_message_id)
                   AND p.archived_at IS ' . ($archived ? 'NOT NULL' : 'NULL');
         $binds = [(int) $user->id, $inst];
@@ -259,7 +347,7 @@ class ConversationService
         $row = db_connect()->query(
             'SELECT COUNT(*) AS total FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
-                WHERE p.user_id = ? AND c.institution_id = ? AND p.archived_at IS NOT NULL
+                WHERE p.user_id = ? AND c.institution_id = ? AND p.archived_at IS NOT NULL AND NOT (c.type = \'direct\' AND c.last_message_id IS NULL)
                   AND NOT (p.cleared_before_message_id > 0 AND COALESCE(c.last_message_id, 0) <= p.cleared_before_message_id)',
             [(int) $user->id, $inst],
         )->getRowArray();
@@ -280,7 +368,7 @@ class ConversationService
                 SELECT GREATEST((' . $this->unreadSql() . '), p.marked_unread) AS unread
                 FROM conversations c
                 JOIN conversation_participants p ON p.conversation_id = c.id AND p.left_at IS NULL
-                WHERE p.user_id = ? AND c.institution_id = ? AND p.is_muted = 0
+                WHERE p.user_id = ? AND c.institution_id = ? AND p.is_muted = 0 AND NOT (c.type = \'direct\' AND c.last_message_id IS NULL)
             ) t',
             [(int) $user->id, $inst],
         )->getRowArray();

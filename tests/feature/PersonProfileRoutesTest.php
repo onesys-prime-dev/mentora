@@ -316,17 +316,16 @@ final class PersonProfileRoutesTest extends RouteTestCase
         $this->step('POST', "people/{$this->instructor->id}/message")->assertRedirectTo(site_url('messages/' . $this->conversation));
     }
 
-    public function testPostingMessageStartsANewConversation(): void
+    public function testPostingMessageOpensTheDraftAndCreatesNothing(): void
     {
         $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $this->signIn($admin);
         $this->withSession();
 
         $result = $this->step('POST', "people/{$this->stud->id}/message");
-        $id     = (int) db_connect()->table('conversations')->where('created_by', $admin->id)->get()->getRow('id');
 
-        $this->assertGreaterThan(0, $id);
-        $result->assertRedirectTo(site_url('messages/' . $id));
+        $result->assertRedirectTo(site_url('messages?to=' . $this->stud->id));
+        $this->assertSame(0, db_connect()->table('conversations')->where('created_by', $admin->id)->countAllResults());
     }
 
     public function testPostingMessageToARefusedPairIsRefused(): void
@@ -396,7 +395,7 @@ final class PersonProfileRoutesTest extends RouteTestCase
             $this->assertStringContainsString('data-person-message', $body, $uri);
         }
         $this->assertSame(302, $this->postMessageStatus($parent, $this->instructor));
-        $this->assertSame(1, db_connect()->table('conversations')->where('created_by', $parent->id)->where('subject_student_id IS NOT NULL', null, false)->countAllResults());
+        $this->assertSame(0, db_connect()->table('conversations')->where('created_by', $parent->id)->countAllResults());
     }
 
     public function testAParentSharingTwoChildrenWithTheInstructorGetsNoButtonThatWouldFail(): void

@@ -508,3 +508,78 @@ Each case writes texts of its own. The design is
 - **Playwright:** `tests/e2e/messages.spec.js`
 - **Basis:** `app/Services/Messaging/ChatControls.php`
 - **Review:** Draft
+
+## Institution-wide Messages, Phase 3 (TC-MSG-27 to 31)
+
+Drafts, first contact, new-conversation limits and the email choice (`docs/feature-development/messages-institution-wide/`, FR3, FR5, D18).
+
+### TC-MSG-27 Opening a person creates nothing until the first message
+
+- **Role:** Student. **Priority:** P1
+- **Data:** `student5@mentora.test`, a staff member they have never written to
+- **Steps:**
+  1. Press **+ New**, pick the staff member, type a few words and do not send.
+  2. Reload the page.
+  3. Send the message.
+- **Expected:**
+  - Before sending, no conversation appears in either person's list.
+  - After the reload the draft text is still in the composer.
+  - Sending creates the conversation with the message; the draft text is gone.
+- **Already automated:** `tests/database/ConversationDraftTest.php`, `tests/js/pages/messages-page.test.js`
+- **Basis:** `MessageService::sendFirst`, `ConversationService::draftFor`
+- **Review:** Draft
+
+### TC-MSG-28 The profile Message button opens a draft
+
+- **Role:** Instructor. **Priority:** P2
+- **Steps:**
+  1. Open a person's profile popover and press **Message** for someone with no conversation yet.
+  2. Repeat for someone with an existing conversation.
+- **Expected:**
+  - The first opens Messages on a draft for that person; nothing is created.
+  - The second opens the existing conversation.
+- **Already automated:** `tests/feature/PersonProfileRoutesTest.php`
+- **Basis:** `PersonProfileController::message`
+- **Review:** Draft
+
+### TC-MSG-29 First-contact line
+
+- **Role:** Student and a staff member who have never talked. **Priority:** P1
+- **Steps:**
+  1. The student sends a first message to the staff member.
+  2. The staff member opens it; then replies.
+- **Expected:**
+  - The student sees "First message to {name}".
+  - The staff member sees "First message from {name} · {role} · you haven't talked before" with **Block** and **Report**.
+  - After the reply (or a block) the line is gone for both.
+  - Classmates, a student and their instructor, and a parent and their child's instructor never get the line.
+- **Already automated:** `tests/database/FirstContactTest.php`, `tests/js/pages/messages-page.test.js`
+- **Basis:** `MessagingContextResolver::talkedBefore`, `ConversationPresenter`
+- **Review:** Draft
+
+### TC-MSG-30 New-conversation limits
+
+- **Role:** Student, Instructor, Institution admin. **Priority:** P2
+- **Steps:**
+  1. Each starts new conversations with different people in quick succession.
+- **Expected:**
+  - Student: the 11th within an hour is refused; the 26th within a day says "You've started a lot of conversations today. Try again tomorrow."
+  - Instructor (and a student who also teaches): 20 an hour, 60 a day.
+  - Institution admin: no limit. Writing into an existing conversation never counts.
+- **Already automated:** `tests/database/MessageRateLimiterTest.php`, `tests/database/ConversationDraftTest.php`
+- **Basis:** `MessageRateLimiter::check`
+- **Review:** Draft
+
+### TC-MSG-31 Email me about new messages: Off / Everyone / People I've talked to
+
+- **Role:** Any. **Priority:** P2
+- **Steps:**
+  1. In `/settings` Notifications choose **People I've talked to** and save.
+  2. Have a stranger send a first message; then reply and have them write again.
+- **Expected:**
+  - No email for the stranger's first message; the in-app notification still arrives.
+  - After the reply, the next message emails.
+  - **Off** sends no email; **Everyone** (the default) emails every new message. Course chats email unless the choice is **Off** (People I've talked to does not filter them).
+- **Already automated:** `tests/database/MessageNotifierTest.php`, `tests/database/MessagePreferencesTest.php`
+- **Basis:** `MessageNotifier::tell`, `MessagePreferences`
+- **Review:** Draft

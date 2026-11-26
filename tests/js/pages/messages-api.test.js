@@ -27,6 +27,13 @@ describe("messages api client: actions", () => {
         expect(last().url).toBe("/messages/api/conversations");
     });
 
+    it("sends the first message to a person with the draft's identity", async () => {
+        const { api, last } = setup();
+
+        await api.sendFirst(4, 9, "hi", "u1");
+        expect(last()).toEqual({ url: "/messages/api/conversations/first", method: "POST", body: { recipient_id: 4, subject_student_id: 9, body: "hi", client_uuid: "u1" } });
+    });
+
     it.each(["pin", "unpin", "mute", "unmute", "archive", "unarchive", "unread", "delete"])("posts chat action %s", async (action) => {
         const { api, last } = setup();
 

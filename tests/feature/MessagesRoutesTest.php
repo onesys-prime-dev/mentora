@@ -65,6 +65,7 @@ final class MessagesRoutesTest extends RouteTestCase
         return [
             ['GET', 'conversations', []],
             ['POST', 'conversations', ['recipient_id' => 1]],
+            ['POST', 'conversations/first', ['recipient_id' => 1, 'body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['GET', "conversations/{$c}/messages", []],
             ['POST', "conversations/{$c}/messages", ['body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['POST', "conversations/{$c}/read", ['message_id' => 1]],
@@ -183,14 +184,20 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->signIn($this->student);
         $started = json_decode($this->api('POST', 'conversations', ['recipient_id' => $peer->id])->response()->getBody(), true);
-        $id      = (int) $started['conversation']['id'];
-        $uuid    = $this->uuid();
+        $this->assertSame((int) $peer->id, $started['draft']['recipient_id']);
+        $this->assertNull($started['draft']['conversation_id']);
+        $this->assertNotSame('', $started['draft']['name']);
+        $before = db_connect()->table('conversations')->where('type', 'direct')->countAllResults();
+        $uuid = $this->uuid();
 
-        $sent = $this->api('POST', "conversations/{$id}/messages", ['body' => 'hello there', 'client_uuid' => $uuid]);
-        $this->assertSame(201, $sent->response()->getStatusCode());
-        $messageId = (int) json_decode($sent->response()->getBody(), true)['message']['id'];
+        $first = $this->api('POST', 'conversations/first', ['recipient_id' => $peer->id, 'body' => 'hello there', 'client_uuid' => $uuid]);
+        $this->assertSame(201, $first->response()->getStatusCode());
+        $firstBody = json_decode($first->response()->getBody(), true);
+        $id        = (int) $firstBody['conversation']['id'];
+        $messageId = (int) $firstBody['message']['id'];
+        $this->assertSame($before + 1, db_connect()->table('conversations')->where('type', 'direct')->countAllResults());
 
-        $again = $this->api('POST', "conversations/{$id}/messages", ['body' => 'hello there', 'client_uuid' => $uuid]);
+        $again = $this->api('POST', 'conversations/first', ['recipient_id' => $peer->id, 'body' => 'hello there', 'client_uuid' => $uuid]);
         $this->assertSame($messageId, (int) json_decode($again->response()->getBody(), true)['message']['id']);
 
         $this->signIn($peer);
@@ -263,5 +270,22 @@ final class MessagesRoutesTest extends RouteTestCase
         }
 
         $this->assertSame(404, $this->api('POST', 'conversations', [])->response()->getStatusCode());
+    }
+
+    public function testRefusedDraftIs404(): void
+    {
+        $this->signIn($this->student);
+
+        $this->assertSame(404, $this->api('POST', 'conversations', ['recipient_id' => (int) $this->student->id])->response()->getStatusCode());
+    }
+
+    public function testSendFirstRefusedIs404(): void
+    {
+        $this->signIn($this->student);
+
+        $response = $this->api('POST', 'conversations/first', ['recipient_id' => (int) $this->student->id, 'body' => 'hi', 'client_uuid' => $this->uuid()])->response();
+
+        $this->assertSame(404, $response->getStatusCode());
+        $this->assertSame(0, db_connect()->table('messages')->countAllResults());
     }
 }

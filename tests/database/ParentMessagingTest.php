@@ -64,7 +64,7 @@ final class ParentMessagingTest extends DatabaseTestCase
 
     public function testBothSidesSeeTheChildsNameOnTheThread(): void
     {
-        $this->conversations()->startDirect($this->parent, (int) $this->instructor->id);
+        \Tests\Support\Threads::withMessage((int) $this->conversations()->startDirect($this->parent, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
 
         foreach ([$this->parent, $this->instructor] as $viewer) {
             $row = (new ConversationPresenter($this->parentCipher()))->present($viewer, $this->conversations()->listFor($viewer))[0];

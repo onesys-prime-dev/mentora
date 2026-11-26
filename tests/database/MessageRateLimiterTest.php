@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\GroupService;
 use App\Services\Messaging\MessageRateLimiter;
+use App\Services\Messaging\Party;
 use App\Services\Messaging\RateLimitedException;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\ParentScenario;
@@ -39,9 +41,9 @@ final class MessageRateLimiterTest extends DatabaseTestCase
         }
     }
 
-    private function threads(int $creatorId, int $count, string $type = 'direct'): void
+    private function threads(int $creatorId, int $count, string $type = 'direct', ?string $at = null): void
     {
-        $now = date('Y-m-d H:i:s');
+        $now = $at ?? date('Y-m-d H:i:s');
 
         for ($i = 0; $i < $count; $i++) {
             db_connect()->table('conversations')->insert([
@@ -63,15 +65,16 @@ final class MessageRateLimiterTest extends DatabaseTestCase
         }
     }
 
-    private function limited(string $kind, int $userId, ?DateTimeImmutable $now = null): bool
+    private function limited(string $kind, int $userId, ?DateTimeImmutable $now = null, ?Party $party = null, ?string &$sentence = null): bool
     {
         try {
-            (new MessageRateLimiter())->check($kind, $userId, $now);
+            (new MessageRateLimiter())->check($kind, $userId, $now, $party);
 
             return false;
         } catch (RateLimitedException $e) {
             $this->assertSame($kind, $e->kind());
             $this->assertNotSame('', $e->getMessage());
+            $sentence = $e->getMessage();
 
             return true;
         }
@@ -111,6 +114,70 @@ final class MessageRateLimiterTest extends DatabaseTestCase
         $this->threads((int) $this->chair->id, 10, 'course');
 
         $this->assertFalse($this->limited('thread', (int) $this->chair->id));
+    }
+
+    private function party(int $id, string $role): Party
+    {
+        return new Party($id, [$role], true, $this->institution);
+    }
+
+    private function hoursAgo(int $hours): string
+    {
+        return date('Y-m-d H:i:s', time() - $hours * 3600);
+    }
+
+    public function testStudentHourlyAndDailyCaps(): void
+    {
+        $id = (int) $this->child->id;
+        $p  = $this->party($id, 'student');
+
+        $this->threads($id, 9);
+        $this->assertFalse($this->limited('thread', $id, null, $p));
+        $this->threads($id, 1);
+        $this->assertTrue($this->limited('thread', $id, null, $p));
+
+        $other = (int) $this->parent->id;
+        $this->threads($other, 23, 'direct', $this->hoursAgo(2));
+        $this->assertFalse($this->limited('thread', $other, null, $this->party($other, 'student')));
+        $this->threads($other, 1, 'direct', $this->hoursAgo(2));
+        $this->assertTrue($this->limited('thread', $other, null, $this->party($other, 'student'), $sentence));
+        $this->assertSame("You've started a lot of conversations today. Try again tomorrow.", $sentence);
+    }
+
+    public function testStaffCaps(): void
+    {
+        $id = (int) $this->instructor->id;
+        $p  = $this->party($id, 'instructor');
+
+        $this->threads($id, 19);
+        $this->assertFalse($this->limited('thread', $id, null, $p));
+        $this->threads($id, 1);
+        $this->assertTrue($this->limited('thread', $id, null, $p));
+
+        $chair = (int) $this->chair->id;
+        $this->threads($chair, 59, 'direct', $this->hoursAgo(2));
+        $this->assertFalse($this->limited('thread', $chair, null, $this->party($chair, 'chairperson')));
+        $this->threads($chair, 1, 'direct', $this->hoursAgo(2));
+        $this->assertTrue($this->limited('thread', $chair, null, $this->party($chair, 'chairperson')));
+    }
+
+    public function testAdminExempt(): void
+    {
+        $id = (int) $this->chair->id;
+        $this->threads($id, 70);
+
+        $this->assertFalse($this->limited('thread', $id, null, new Party($id, ['institutional_admin'], true, $this->institution)));
+    }
+
+    public function testGroupCreationCounts(): void
+    {
+        $this->threads((int) $this->chair->id, 19);
+        $service = new GroupService();
+
+        $this->assertNotNull($service->create($this->chair, 'Dept', [(int) $this->instructor->id]));
+
+        $this->expectException(RateLimitedException::class);
+        $service->create($this->chair, 'Dept 2', [(int) $this->instructor->id]);
     }
 
     public function testTwentyReportsADay(): void

@@ -32,27 +32,54 @@ final class MessageRateLimiter
         'report'   => [self::REPORTS_PER_DAY, 86400, "You've sent a lot of reports today. Try again tomorrow."],
     ];
 
+    /** New threads a day: staff start more of them than students (S2-b). */
+    public const THREADS_PER_DAY = 25;
+
+    public const STAFF_THREADS_PER_HOUR = 20;
+
+    public const STAFF_THREADS_PER_DAY = 60;
+
+    private const THREAD_DAY_SENTENCE = "You've started a lot of conversations today. Try again tomorrow.";
+
     /**
+     * $party only matters for `thread`: an institutional admin has no limit, staff get the higher caps.
+     *
      * @param 'message'|'reaction'|'thread'|'report' $kind
      *
      * @throws RateLimitedException when the person is already at the limit
      */
-    public function check(string $kind, int $userId, ?DateTimeImmutable $now = null): void
+    public function check(string $kind, int $userId, ?DateTimeImmutable $now = null, ?Party $party = null): void
     {
-        [$limit, $window, $sentence] = self::LIMITS[$kind];
+        $limits = [self::LIMITS[$kind]];
 
-        $since = ($now ?? new DateTimeImmutable())->sub(new DateInterval('PT' . $window . 'S'))->format('Y-m-d H:i:s');
-        $db    = db_connect();
+        if ($kind === 'thread') {
+            if ($party !== null && in_array('institutional_admin', $party->roles, true)) {
+                return;
+            }
 
-        $count = match ($kind) {
-            'message'  => $db->table('messages')->where('sender_id', $userId)->where('created_at >', $since)->countAllResults(),
-            'reaction' => $db->table('message_reactions')->where('user_id', $userId)->where('created_at >', $since)->countAllResults(),
-            'thread'   => $db->table('conversations')->where('created_by', $userId)->whereIn('type', ['direct', 'group'])->where('created_at >', $since)->countAllResults(),
-            'report'   => $db->table('message_reports')->where('reporter_id', $userId)->where('created_at >', $since)->countAllResults(),
-        };
+            $staff    = $party !== null && $party->isStaff();
+            $limits   = [
+                [$staff ? self::STAFF_THREADS_PER_HOUR : self::THREADS_PER_HOUR, 3600, self::LIMITS['thread'][2]],
+                [$staff ? self::STAFF_THREADS_PER_DAY : self::THREADS_PER_DAY, 86400, self::THREAD_DAY_SENTENCE],
+            ];
+        }
 
-        if ($count >= $limit) {
-            throw new RateLimitedException($kind, $sentence);
+        $now = $now ?? new DateTimeImmutable();
+        $db  = db_connect();
+
+        foreach ($limits as [$limit, $window, $sentence]) {
+            $since = $now->sub(new DateInterval('PT' . $window . 'S'))->format('Y-m-d H:i:s');
+
+            $count = match ($kind) {
+                'message'  => $db->table('messages')->where('sender_id', $userId)->where('created_at >', $since)->countAllResults(),
+                'reaction' => $db->table('message_reactions')->where('user_id', $userId)->where('created_at >', $since)->countAllResults(),
+                'thread'   => $db->table('conversations')->where('created_by', $userId)->whereIn('type', ['direct', 'group'])->where('created_at >', $since)->countAllResults(),
+                'report'   => $db->table('message_reports')->where('reporter_id', $userId)->where('created_at >', $since)->countAllResults(),
+            };
+
+            if ($count >= $limit) {
+                throw new RateLimitedException($kind, $sentence);
+            }
         }
     }
 }

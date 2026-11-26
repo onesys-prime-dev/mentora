@@ -115,7 +115,8 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertStringContainsString('href="#notifications"', $body);
         $this->assertLessThan(strpos($body, 'id="notifications"'), strpos($body, 'id="devices"'));
         $this->assertStringContainsString('Email me about new messages', $body);
-        $this->assertMatchesRegularExpression('#role="switch" name="email_alerts"[^>]*\schecked[\s>]#', $body, 'emails are on by default');
+        $this->assertMatchesRegularExpression('#type="radio" name="email_scope" value="everyone"[^>]*\schecked[\s>]#', $body, 'everyone is the default');
+        $this->assertStringContainsString('People I&#039;ve talked to', $body);
         $this->assertTrue($this->quietHoursShown($body));
         $this->assertStringContainsString('Save notifications', $body);
     }
@@ -140,7 +141,7 @@ final class SettingsNotificationsTest extends RouteTestCase
         session()->set('active_role', 'parent');
         $this->assertTrue($this->quietHoursShown((string) $this->step('GET', 'settings')->response()->getBody()));
 
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1', 'quiet_on' => '1', 'quiet_start' => '21:00', 'quiet_end' => '06:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => '21:00', 'quiet_end' => '06:00']);
         $this->assertSame('Notifications saved', session('message'));
         $this->assertSame('21:00:00', db_connect()->table('message_preferences')->where('user_id', $both->id)->get()->getRow('quiet_start'));
     }
@@ -149,7 +150,7 @@ final class SettingsNotificationsTest extends RouteTestCase
     {
         $this->signIn($this->ivo);
 
-        $this->step('POST', 'settings/notifications', ['quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
 
         $this->assertSame('Notifications saved', session('message'));
         $row = db_connect()->table('message_preferences')->where('user_id', $this->ivo->id)->get()->getRowArray();
@@ -157,21 +158,40 @@ final class SettingsNotificationsTest extends RouteTestCase
 
         $body = (string) $this->step('GET', 'settings')->response()->getBody();
         $this->assertMatchesRegularExpression('#name="quiet_start"[^>]*value="22:00"#', $body);
-        $this->assertDoesNotMatchRegularExpression('#name="email_alerts"[^>]*\schecked[\s>]#', $body);
+        $this->assertMatchesRegularExpression('#name="email_scope" value="off"[^>]*\schecked[\s>]#', $body);
 
         // Turning the quiet-hours switch off clears them.
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $this->assertNull(db_connect()->table('message_preferences')->where('user_id', $this->ivo->id)->get()->getRow('quiet_start'));
+    }
+
+    public function testEachScopeRoundTripsAndAnInvalidOneIsRefusedWithoutChangingTheStoredOne(): void
+    {
+        $this->signIn($this->ivo);
+
+        foreach (['talked', 'off', 'everyone'] as $scope) {
+            $this->step('POST', 'settings/notifications', ['email_scope' => $scope]);
+            $this->assertSame('Notifications saved', session('message'), $scope);
+            $this->assertSame($scope, (new \App\Services\Messaging\MessagePreferences())->get((int) $this->ivo->id)['email_scope']);
+            $this->assertMatchesRegularExpression('#name="email_scope" value="' . $scope . '"[^>]*\schecked[\s>]#', (string) $this->step('GET', 'settings')->response()->getBody());
+        }
+
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'talked']);
+        $before = $this->rows();
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'bogus']);
+
+        $this->assertNotEmpty(session('errors')['email_scope'] ?? null);
+        $this->assertSame($before, $this->rows());
     }
 
     public function testBadTimesAreRefusedAndChangeNothing(): void
     {
         $this->signIn($this->ivo);
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
         $before = $this->rows();
 
         foreach ([['25:00', '07:00'], ['22:00', ''], ['', '07:00'], ['22:60', '07:00']] as [$start, $end]) {
-            $this->step('POST', 'settings/notifications', ['quiet_on' => '1', 'quiet_start' => $start, 'quiet_end' => $end]);
+            $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'quiet_on' => '1', 'quiet_start' => $start, 'quiet_end' => $end]);
             $this->assertSame('Enter both times, as hours and minutes.', session('errors')['quiet_start'] ?? null, "{$start}-{$end}");
         }
 
@@ -182,7 +202,7 @@ final class SettingsNotificationsTest extends RouteTestCase
     {
         $this->signIn($this->ann);
 
-        $this->step('POST', 'settings/notifications', ['quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'off', 'quiet_on' => '1', 'quiet_start' => '22:00', 'quiet_end' => '07:00']);
 
         $row = db_connect()->table('message_preferences')->where('user_id', $this->ann->id)->get()->getRowArray();
         $this->assertNull($row['quiet_start'], 'the hours are not theirs to set; the email switch still saves');
@@ -225,7 +245,7 @@ final class SettingsNotificationsTest extends RouteTestCase
             preg_match('#value="([^"]*)"#', $input, $value);
             preg_match('#type="([^"]+)"#', $input, $type);
 
-            if ($name === [] || $name[1] === 'csrf_test_name' || (($type[1] ?? '') === 'checkbox' && preg_match('#\schecked[\s>]#', $input) !== 1)) {
+            if ($name === [] || $name[1] === 'csrf_test_name' || (in_array($type[1] ?? '', ['checkbox', 'radio'], true) && preg_match('#\schecked[\s>]#', $input) !== 1)) {
                 continue;
             }
 
@@ -243,7 +263,7 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertTrue($this->childChecked($body, $this->ann));
         $this->assertTrue($this->childChecked($body, $this->ben));
 
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1', 'email' => [(string) $this->ben->id]]);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'email' => [(string) $this->ben->id]]);
 
         $this->assertSame('Notifications saved', session('message'));
         $this->assertFalse((new ParentPreferences())->emailEnabled((int) $this->pam->id, (int) $this->ann->id));
@@ -254,7 +274,7 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertTrue($this->childChecked($body, $this->ben));
 
         // Nothing ticked turns every child off.
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1']);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone']);
         $this->assertFalse((new ParentPreferences())->emailEnabled((int) $this->pam->id, (int) $this->ben->id));
     }
 
@@ -290,7 +310,7 @@ final class SettingsNotificationsTest extends RouteTestCase
         $this->assertStringNotContainsString('Ann Lee', $body);
         $this->assertStringNotContainsString('name="email[]"', $body);
 
-        $this->step('POST', 'settings/notifications', ['email_alerts' => '1', 'email' => [(string) $this->ben->id]]);
+        $this->step('POST', 'settings/notifications', ['email_scope' => 'everyone', 'email' => [(string) $this->ben->id]]);
         $this->assertSame(0, db_connect()->table('parent_child_preferences')->countAllResults());
     }
 

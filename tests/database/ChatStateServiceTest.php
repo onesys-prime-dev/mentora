@@ -10,6 +10,7 @@ use Tests\Support\CourseFactory;
 use Tests\Support\DatabaseTestCase;
 use Tests\Support\DeanFactory;
 use Tests\Support\PeopleFactory;
+use Tests\Support\Threads;
 
 /**
  * Pin, mute, archive, mark unread and delete for me: the caller's own row only.
@@ -124,6 +125,26 @@ final class ChatStateServiceTest extends DatabaseTestCase
         $this->assertNull($this->row($chats[5], $student)['pinned_at']);
     }
 
+    public function testAnEmptyOlderThreadDoesNotCountTowardsThePinLimit(): void
+    {
+        $student = $this->person('student');
+        $chats   = $this->fiveChatsPlusOne($student);
+
+        // Pinned before Phase 3, when opening a person made an empty thread the list now hides.
+        $other    = $this->person('instructor');
+        $offering = DeanFactory::offering($this->program, $this->term, 'KH' . random_int(100, 999));
+        CourseFactory::enroll($offering, $student);
+        CourseFactory::assignInstructor($offering, $other);
+        $hidden = $this->direct($student, $other);
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $hidden, 'user_id' => $student->id])->update(['pinned_at' => date('Y-m-d H:i:s')]);
+
+        foreach (array_slice($chats, 0, ChatStateService::MAX_PINNED) as $chat) {
+            $this->assertSame(['ok' => true], $this->service->pin($student, $chat));
+        }
+
+        $this->assertSame(['ok' => false, 'reason' => 'limit'], $this->service->pin($student, $chats[5]));
+    }
+
     public function testUnpinningFreesASlot(): void
     {
         $student = $this->person('student');
@@ -209,6 +230,7 @@ final class ChatStateServiceTest extends DatabaseTestCase
             $instructor = $this->person('instructor');
             CourseFactory::assignInstructor($offering, $instructor);
             $chats[] = $this->direct($student, $instructor);
+            Threads::withMessage($chats[$i], (int) $student->id);
         }
 
         return $chats;

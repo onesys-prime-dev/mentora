@@ -156,8 +156,8 @@ final class BlockServiceTest extends DatabaseTestCase
     public function testTheListRowsSayWhetherABlockIsOfferedOrInForce(): void
     {
         $service = new ConversationService();
-        (new ConversationService())->startDirect($this->ann, (int) $this->ben->id);
-        (new ConversationService())->startDirect($this->ann, (int) $this->instructor->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $this->ben->id)['id'], (int) $this->ben->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
 
         $rows = fn (): array => array_column((new ConversationPresenter($this->parentCipher()))->present($this->ann, $service->listFor($this->ann, 'direct')), null, 'name');
 
@@ -179,9 +179,9 @@ final class BlockServiceTest extends DatabaseTestCase
         $other = PeopleFactory::person('instructor', 'Una', 'Related', null, $this->institution);
         $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         CourseFactory::assignInstructor($this->offering, $other);
-        (new ConversationService())->startDirect($this->ann, (int) $other->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $other->id)['id'], (int) $other->id);
         db_connect()->table('instructor_assignments')->where('instructor_user_id', $other->id)->delete();
-        (new ConversationService())->startDirect($this->parent, (int) $this->instructor->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->parent, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
 
         $present = fn (User $viewer): array => array_column((new ConversationPresenter($this->parentCipher()))->present($viewer, (new ConversationService())->listFor($viewer, 'direct')), null, 'name');
 

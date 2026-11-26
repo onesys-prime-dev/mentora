@@ -18,10 +18,14 @@ class MessagePreferences
     /** Roles that are offered quiet hours (spec call 6). */
     public const QUIET_ROLES = ['instructor', 'chairperson', 'dean'];
 
+    /** Which new messages are also emailed (D18); in-app notices are always sent. */
+    public const SCOPES = ['off', 'everyone', 'talked'];
+
     /**
-     * Times are `HH:MM`; defaults are no quiet hours and emails on.
+     * Times are `HH:MM`; defaults are no quiet hours and emails from everyone. `email_scope` is `off` whenever
+     * `email_alerts` is 0, else the stored scope.
      *
-     * @return array{quiet_start: ?string, quiet_end: ?string, email_alerts: bool}
+     * @return array{quiet_start: ?string, quiet_end: ?string, email_alerts: bool, email_scope: string}
      */
     public function get(int $userId): array
     {
@@ -31,6 +35,7 @@ class MessagePreferences
             'quiet_start'  => $row === null || $row['quiet_start'] === null ? null : substr((string) $row['quiet_start'], 0, 5),
             'quiet_end'    => $row === null || $row['quiet_end'] === null ? null : substr((string) $row['quiet_end'], 0, 5),
             'email_alerts' => $row === null ? true : (bool) $row['email_alerts'],
+            'email_scope'  => $row === null ? 'everyone' : ((int) $row['email_alerts'] === 0 ? 'off' : (string) $row['email_scope']),
         ];
     }
 
@@ -42,10 +47,15 @@ class MessagePreferences
 
     /**
      * False for a time that is not `HH:MM`, for only one of the two times, or for quiet hours on a role that is
-     * not offered them. The email switch is for everyone.
+     * not offered them, or for an unknown email scope. The email choice is for everyone; `off` only clears
+     * `email_alerts` and leaves the stored scope column as it was.
      */
-    public function save(User $user, ?string $quietStart, ?string $quietEnd, bool $emailAlerts): bool
+    public function save(User $user, ?string $quietStart, ?string $quietEnd, string $emailScope): bool
     {
+        if (! in_array($emailScope, self::SCOPES, true)) {
+            return false;
+        }
+
         $quietStart = $quietStart === '' ? null : $quietStart;
         $quietEnd   = $quietEnd === '' ? null : $quietEnd;
 
@@ -60,9 +70,9 @@ class MessagePreferences
         }
 
         db_connect()->query(
-            'INSERT INTO message_preferences (user_id, quiet_start, quiet_end, email_alerts) VALUES (?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE quiet_start = VALUES(quiet_start), quiet_end = VALUES(quiet_end), email_alerts = VALUES(email_alerts)',
-            [(int) $user->id, $quietStart, $quietEnd, $emailAlerts ? 1 : 0],
+            'INSERT INTO message_preferences (user_id, quiet_start, quiet_end, email_alerts, email_scope) VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE quiet_start = VALUES(quiet_start), quiet_end = VALUES(quiet_end), email_alerts = VALUES(email_alerts), email_scope = IF(VALUES(email_alerts) = 0, email_scope, VALUES(email_scope))',
+            [(int) $user->id, $quietStart, $quietEnd, $emailScope === 'off' ? 0 : 1, $emailScope === 'off' ? 'everyone' : $emailScope],
         );
 
         return true;

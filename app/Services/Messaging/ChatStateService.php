@@ -43,8 +43,10 @@ class ChatStateService
             return ['ok' => true];
         }
 
-        $pinned = $db->table('conversation_participants')->where('user_id', (int) $user->id)->where('left_at IS NULL', null, false)
-            ->where('pinned_at IS NOT NULL', null, false)->countAllResults();
+        // Only the pins the person can see: an empty direct thread is hidden from the list (FR3).
+        $pinned = $db->table('conversation_participants p')->join('conversations c', 'c.id = p.conversation_id')
+            ->where('p.user_id', (int) $user->id)->where('p.left_at IS NULL', null, false)->where('p.pinned_at IS NOT NULL', null, false)
+            ->where("NOT (c.type = 'direct' AND c.last_message_id IS NULL)", null, false)->countAllResults();
 
         if ($pinned >= self::MAX_PINNED) {
             return ['ok' => false, 'reason' => 'limit'];

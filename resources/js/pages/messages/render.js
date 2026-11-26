@@ -225,6 +225,35 @@ export function minutesBetween(earlier, later) {
     return a === null || b === null ? 0 : Math.max(0, Math.floor((b - a) / 60000));
 }
 
+/** A centred grey line in the history (first contact); `actions` are { label, onClick, danger } pills beside it. */
+export function systemLine(text, actions = []) {
+    const line = el("div", "flex flex-col items-center gap-1.5 px-4 py-2 text-center text-xs text-[#646464]");
+
+    line.dataset.role = "system-line";
+    line.append(el("span", "", text));
+
+    if (actions.length > 0) {
+        const pills = el("div", "flex gap-2");
+
+        for (const { label, onClick, danger, action } of actions) {
+            const pill = el("button", `min-h-6 rounded-full border bg-white px-2.5 py-0.5 text-xs font-semibold pointer-coarse:min-h-11 pointer-coarse:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${danger ? "border-red-300 text-red-700" : "border-gray-300 text-gray-700"}`, label);
+
+            pill.type = "button";
+
+            if (action) {
+                pill.dataset.action = action;
+            }
+
+            pill.addEventListener("click", onClick);
+            pills.append(pill);
+        }
+
+        line.append(pills);
+    }
+
+    return line;
+}
+
 export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const node = el("div", `max-w-[70%] min-w-[4.5rem] break-words rounded-2xl border px-4 py-2.5 text-base leading-snug ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 

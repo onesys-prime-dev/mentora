@@ -37,6 +37,7 @@ export function createApi(base, fetchImpl = (...args) => fetch(...args)) {
     return {
         conversations: ({ filter, unread, archived } = {}) => request("GET", `conversations${query({ filter: filter === "all" ? undefined : filter, unread: unread ? 1 : undefined, archived: archived ? 1 : undefined })}`),
         start: (recipientId, subjectStudentId) => request("POST", "conversations", { recipient_id: recipientId, subject_student_id: subjectStudentId ?? null }),
+        sendFirst: (recipientId, subjectStudentId, body, clientUuid) => request("POST", "conversations/first", { recipient_id: recipientId, subject_student_id: subjectStudentId ?? null, body, client_uuid: clientUuid }),
         page: (id, { before, after, limit } = {}) => request("GET", `conversations/${id}/messages${query({ before, after, limit })}`),
         send: (id, body, clientUuid, replyTo) => request("POST", `conversations/${id}/messages`, replyTo ? { body, client_uuid: clientUuid, reply_to: replyTo } : { body, client_uuid: clientUuid }),
         chatAction: (id, action) => request("POST", `conversations/${id}/${action}`, {}),

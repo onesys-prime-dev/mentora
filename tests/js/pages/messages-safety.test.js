@@ -133,7 +133,7 @@ describe("blocking", () => {
         await flush();
 
         expect(api.block).not.toHaveBeenCalled();
-        expect(q("[data-role=block]").textContent).toBe("Click again to block Ben Ng");
+        expect(q("[data-role=block]").textContent).toBe("Press again to block Ben Ng");
 
         q("[data-role=block]").click();
         await flush();

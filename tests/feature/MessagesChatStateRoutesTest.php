@@ -175,6 +175,7 @@ final class MessagesChatStateRoutesTest extends RouteTestCase
             CourseFactory::enroll($offering, $this->student);
             CourseFactory::assignInstructor($offering, $other);
             $chat = (int) $service->startDirect($this->student, (int) $other->id)['id'];
+            \Tests\Support\Threads::withMessage($chat, (int) $this->student->id);
             $this->assertTrue($state->pin($this->student, $chat)['ok']);
         }
 
@@ -187,6 +188,7 @@ final class MessagesChatStateRoutesTest extends RouteTestCase
 
     public function testTheArchivedListHoldsTheArchivedChatAndTheDefaultListDoesNot(): void
     {
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
         $this->signIn($this->student);
         $this->assertSame(200, $this->act('archive', $this->conversation)->response()->getStatusCode());
 

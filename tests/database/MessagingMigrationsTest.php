@@ -340,6 +340,12 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 $messageActions->up();
                 db_connect()->resetDataCache();
             }
+
+            // Later migrations add columns to the tables rebuilt above; put them back too.
+            if (! db_connect()->fieldExists('first_contact', 'conversations')) {
+                $this->migration('2026-12-03-000003_AddFirstContactAndEmailScope', 'AddFirstContactAndEmailScope')->up();
+                db_connect()->resetDataCache();
+            }
         }
 
         foreach (self::TABLES as $table) {

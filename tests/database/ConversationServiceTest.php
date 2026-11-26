@@ -67,7 +67,11 @@ final class ConversationServiceTest extends DatabaseTestCase
             'removed_at' => $removedAt, 'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        return (int) $db->insertID();
+        $id = (int) $db->insertID();
+        // A conversation with a message has a last message (an empty direct thread is hidden from lists).
+        $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $id]);
+
+        return $id;
     }
 
     public function testAnAllowedStartCreatesOneConversationWithTwoParticipants(): void
@@ -264,6 +268,7 @@ final class ConversationServiceTest extends DatabaseTestCase
         $db->table('conversations')->insert(['institution_id' => $this->institution, 'type' => 'course', 'offering_id' => $offering, 'created_at' => date('Y-m-d H:i:s')]);
         $course = (int) $db->insertID();
         $db->table('conversation_participants')->insert(['conversation_id' => $course, 'user_id' => $student->id, 'joined_at' => date('Y-m-d H:i:s')]);
+        $this->post($direct, (int) $student->id);
 
         return [$student, $instructor, $direct, $course];
     }

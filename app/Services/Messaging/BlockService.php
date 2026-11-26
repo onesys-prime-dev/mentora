@@ -98,6 +98,13 @@ class BlockService
             $this->audit('messages.user_blocked', $user, $institution, $blockedId);
         }
 
+        // Blocking someone who opened a first contact with you answers it: the line goes.
+        $db->query(
+            'UPDATE conversations c JOIN conversation_participants p ON p.conversation_id = c.id AND p.user_id = ?
+             SET c.first_contact_cleared_at = ? WHERE c.type = \'direct\' AND c.first_contact = 1 AND c.first_contact_cleared_at IS NULL AND c.created_by = ?',
+            [(int) $user->id, date('Y-m-d H:i:s'), $blockedId],
+        );
+
         return true;
     }
 

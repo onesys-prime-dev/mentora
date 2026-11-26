@@ -93,7 +93,7 @@ final class NotifyMessagesCommandTest extends DatabaseTestCase
 
     public function testItReleasesWhatQuietHoursHeld(): void
     {
-        (new \App\Services\Messaging\MessagePreferences())->save($this->instructor, '00:00', '23:59', true);
+        (new \App\Services\Messaging\MessagePreferences())->save($this->instructor, '00:00', '23:59', 'everyone');
         db_connect()->table('messages')->insert([
             'conversation_id' => $this->chat, 'sender_id' => $this->child->id, 'body_enc' => $this->parentCipher()->encrypt('A question', $this->chat, (int) $this->child->id),
             'client_uuid' => bin2hex(random_bytes(12)), 'created_at' => date('Y-m-d H:i:s'),
@@ -102,7 +102,7 @@ final class NotifyMessagesCommandTest extends DatabaseTestCase
         $this->command('messages:notify');
         $this->assertSame(0, db_connect()->table('notifications')->where(['type' => 'message', 'user_id' => $this->instructor->id])->countAllResults(), 'held inside the hours');
 
-        (new \App\Services\Messaging\MessagePreferences())->save($this->instructor, null, null, true);
+        (new \App\Services\Messaging\MessagePreferences())->save($this->instructor, null, null, 'everyone');
         $this->command('messages:notify');
 
         $this->assertSame(1, db_connect()->table('notifications')->where(['type' => 'message', 'user_id' => $this->instructor->id])->countAllResults());

@@ -309,6 +309,45 @@ class MessagingContextResolver
         return $blocker !== null && ! in_array('institutional_admin', $this->roles($blocker), true) && ! $this->protectedLink($blockerId, $blockedId);
     }
 
+    /**
+     * Whether two people already have a relationship, so a first message is not a cold contact: an earlier direct
+     * thread with a message in it, an active offering they share (teaching or enrolled), or a parent and the
+     * staff of that parent's linked child.
+     */
+    public function talkedBefore(int $a, int $b): bool
+    {
+        $db = db_connect();
+
+        $thread = $db->table('conversations c')
+            ->join('conversation_participants pa', 'pa.conversation_id = c.id AND pa.user_id = ' . $a, 'inner', false)
+            ->join('conversation_participants pb', 'pb.conversation_id = c.id AND pb.user_id = ' . $b, 'inner', false)
+            ->where('c.type', 'direct')->where('c.last_message_id IS NOT NULL', null, false)->countAllResults();
+
+        if ($thread > 0 || array_intersect($this->activeOfferingIds($a), $this->activeOfferingIds($b)) !== []) {
+            return true;
+        }
+
+        $users = model(\CodeIgniter\Shield\Models\UserModel::class);
+        $ua    = $users->findById($a);
+        $ub    = $users->findById($b);
+
+        if ($ua === null || $ub === null) {
+            return false;
+        }
+
+        foreach ([[$ua, $ub], [$ub, $ua]] as [$parent, $staff]) {
+            if (in_array('parent', $this->roles($parent), true)) {
+                foreach ($this->roles($staff) as $role) {
+                    if ($this->sharedLinkedChildIds($parent, $staff, $role) !== []) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** One of the two is an assigned instructor of an active offering the other is enrolled in. */
     public function protectedLink(int $a, int $b): bool
     {

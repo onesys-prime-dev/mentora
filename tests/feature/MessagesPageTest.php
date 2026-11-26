@@ -114,6 +114,7 @@ final class MessagesPageTest extends RouteTestCase
 
     public function testTheListRowsCarryNamesAndNoCiphertext(): void
     {
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->student->id);
         $this->signIn($this->instructor);
         $this->withHeaders(['Accept' => 'application/json']);
 

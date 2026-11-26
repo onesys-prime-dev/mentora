@@ -32,8 +32,13 @@ const SHELL = `
       </div>
       <form data-role="composer"><textarea data-role="body"></textarea><button type="submit" data-role="send" disabled></button></form>
       <p data-role="cannot-post" hidden></p>
+      <p data-role="safety-note" role="status" hidden></p>
     </div>
   </section>
+  <div id="messages-report" data-dialog hidden>
+    <button data-role="report-open"></button><button data-dialog-close></button>
+    <select data-role="report-reason"></select><textarea data-role="report-note"></textarea><p data-role="report-state"></p><button data-role="report-send"></button>
+  </div>
   <div id="messages-new" data-dialog hidden>
     <button data-dialog-close></button>
     <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
@@ -50,6 +55,8 @@ function makeApi(over = {}) {
     return {
         conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv()], unread: 0 })),
         start: vi.fn(),
+        sendFirst: vi.fn(),
+        report: vi.fn().mockResolvedValue(ok({ ok: true })),
         page: vi.fn().mockResolvedValue(ok({ messages: [msg(10), msg(11)], has_more: false })),
         send: vi.fn().mockResolvedValue(ok({ message: msg(12, { mine: true, body: "hello" }) }, 201)),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
@@ -183,7 +190,7 @@ describe("the conversation list", () => {
         await flush();
 
         expect(api.block).toBeUndefined();
-        expect(document.body.textContent).not.toContain("Click again to block");
+        expect(document.body.textContent).not.toContain("Press again to block");
 
     });
 
@@ -748,7 +755,7 @@ describe("starting a conversation", () => {
         const person = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: 9, subject_name: "Stu Dent" };
         const api = makeApi({
             recipients: vi.fn().mockResolvedValue(ok({ recipients: [person] })),
-            start: vi.fn().mockResolvedValue(ok({ conversation: conv({ id: 7, name: "Ann Lee" }) })),
+            start: vi.fn().mockResolvedValue(ok({ draft: { recipient_id: 4, subject_student_id: 9, first_contact: false, conversation_id: 7, name: "Ann Lee" } })),
         });
 
         await mount(api);
@@ -859,4 +866,204 @@ describe("who reacted", () => {
 
     });
 
+});
+
+describe("the draft and the first-contact line", () => {
+
+    const draftOf = (over = {}) => ({ recipient_id: 4, subject_student_id: null, first_contact: false, conversation_id: null, name: "Ann Lee", ...over });
+    const person = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: null, subject_name: null };
+    const KEY = "messages:draft:1:4:0";
+
+    async function pick(api) {
+        await mount(api);
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "ann";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+        q("[data-role=picker-results] button").click();
+        await flush();
+    }
+
+    const apiFor = (draft, over = {}) => makeApi({ recipients: vi.fn().mockResolvedValue(ok({ recipients: [person] })), start: vi.fn().mockResolvedValue(ok({ draft })), ...over });
+    const type = (text) => { q("[data-role=body]").value = text; q("[data-role=body]").dispatchEvent(new Event("input")); };
+    const submitForm = async () => { q("[data-role=composer]").dispatchEvent(new Event("submit", { cancelable: true })); await flush(); };
+    const created = (id) => ok({ message: msg(30, { mine: true, body: "hi" }), conversation: conv({ id, name: "Ann Lee" }) }, 201);
+
+    beforeEach(() => { localStorage.clear(); history.replaceState(null, "", "/"); });
+
+    it("opening a person shows a draft and sends nothing", async () => {
+        const api = apiFor(draftOf());
+
+        await pick(api);
+
+        expect(q("[data-role=thread]").hidden).toBe(false);
+        expect(q("[data-role=head-name]").textContent).toBe("Ann Lee");
+        expect(q("[data-role=composer]").hidden).toBe(false);
+        expect(texts()).toEqual([]);
+        expect(api.page).not.toHaveBeenCalled();
+        expect(api.send).not.toHaveBeenCalled();
+        expect(api.sendFirst).not.toHaveBeenCalled();
+    });
+
+    it("opening a person with an existing thread opens it", async () => {
+        const api = apiFor(draftOf({ conversation_id: 7 }));
+
+        await pick(api);
+
+        expect(api.page).toHaveBeenCalledWith(7, {});
+    });
+
+    it("first send calls sendFirst then switches to the new thread", async () => {
+        const api = apiFor(draftOf(), { conversations: vi.fn().mockResolvedValueOnce(ok({ conversations: [conv()], unread: 0 })).mockResolvedValue(ok({ conversations: [conv({ id: 9 }), conv()], unread: 0 })), sendFirst: vi.fn().mockResolvedValue(created(9)), page: vi.fn().mockResolvedValue(ok({ messages: [msg(30, { mine: true, body: "hi" })], has_more: false })) });
+
+        await pick(api);
+        type("hi");
+        await submitForm();
+
+        expect(api.sendFirst).toHaveBeenCalledWith(4, null, "hi", expect.any(String));
+        expect(api.send).not.toHaveBeenCalled();
+        expect(api.page).toHaveBeenCalledWith(9, {});
+        expect(all("[data-role=rows] button").some((b) => b.dataset.id === "9")).toBe(true);
+    });
+
+    it("draft text survives reload via localStorage and is cleared after send", async () => {
+        const api = apiFor(draftOf(), { sendFirst: vi.fn().mockResolvedValue(created(9)) });
+
+        await pick(api);
+        type("half a thought");
+        expect(localStorage.getItem(KEY)).toBe("half a thought");
+
+        await pick(api);
+        expect(q("[data-role=body]").value).toBe("half a thought");
+        expect(q("[data-role=send]").disabled).toBe(false);
+
+        await submitForm();
+        expect(localStorage.getItem(KEY)).toBeNull();
+    });
+
+    it("a late first-send answer does not cancel a send started in another thread", async () => {
+        let answerFirst;
+        let answerSend;
+        const api = apiFor(draftOf(), {
+            sendFirst: vi.fn().mockReturnValue(new Promise((resolve) => { answerFirst = resolve; })),
+            send: vi.fn().mockReturnValue(new Promise((resolve) => { answerSend = resolve; })),
+        });
+
+        await pick(api);
+        type("first");
+        await submitForm();
+        await openFirst();
+        type("other");
+        await submitForm();
+
+        answerFirst(created(9));
+        await flush();
+        answerSend(ok({ message: msg(12, { mine: true, body: "other" }) }, 201));
+        await flush();
+
+        expect(texts().filter((t) => t.includes("other"))).toHaveLength(1);
+    });
+
+    it("works when localStorage throws", async () => {
+        const spies = ["getItem", "setItem", "removeItem"].map((m) => vi.spyOn(Storage.prototype, m).mockImplementation(() => { throw new Error("denied"); }));
+        const api = apiFor(draftOf(), { sendFirst: vi.fn().mockResolvedValue(created(9)) });
+
+        await pick(api);
+        type("hello");
+        await submitForm();
+
+        expect(api.sendFirst).toHaveBeenCalled();
+        spies.forEach((s) => s.mockRestore());
+    });
+
+    it("?to= opens the draft and removes the params", async () => {
+        const api = makeApi({ start: vi.fn().mockResolvedValue(ok({ draft: draftOf() })) });
+
+        history.replaceState(null, "", "/messages?to=4&child=9");
+        await mount(api);
+
+        expect(api.start).toHaveBeenCalledWith(4, 9);
+        expect(q("[data-role=head-name]").textContent).toBe("Ann Lee");
+        expect(location.search).toBe("");
+    });
+
+    it("recipient sees the first-contact line with Block and Report", async () => {
+        const api = makeApi({
+            block: vi.fn().mockResolvedValue(ok({ ok: true })),
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false, other_user_id: 5, can_block: true })], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+
+        const line = q("[data-role=system-line]");
+
+        expect(line.textContent).toContain("First message from Ana Reyes · Student · you haven't talked before");
+
+        const [block, report] = [...line.querySelectorAll("button")];
+
+        expect(block.textContent).toBe("Block");
+        expect(report.textContent).toBe("Report");
+
+        report.click();
+        q("[data-role=report-reason]").value = "spam";
+        q("[data-role=report-reason]").dispatchEvent(new Event("change"));
+        q("[data-role=report-send]").click();
+        await flush();
+        expect(api.report).toHaveBeenCalledWith(1, 10, "spam", null);
+
+        q("[data-role=system-line] button").click();
+        await flush();
+        q("[data-role=system-line] button").click();
+        await flush();
+        expect(api.block).toHaveBeenCalledWith(5);
+        expect(q("[data-role=system-line]")).toBeNull();
+    });
+
+    it("the Block pill keeps focus and announces itself on the first press", async () => {
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false, other_user_id: 5, can_block: true })], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+        q("[data-role=system-line] button").click();
+        await flush();
+
+        const pill = q("[data-role=system-line] button");
+
+        expect(pill.textContent).toBe("Press again to block");
+        expect(document.activeElement).toBe(pill);
+        expect(q("[data-role=safety-note]").textContent).toContain("Press again to block Ana Reyes");
+    });
+
+    it("line disappears after reply", async () => {
+        const first = conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false });
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [first], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+        expect(q("[data-role=system-line]")).not.toBeNull();
+
+        api.conversations.mockResolvedValue(ok({ conversations: [{ ...first, first_contact_line: false }], unread: 0 }));
+        type("hello");
+        await submitForm();
+        await vi.advanceTimersByTimeAsync(20000);
+
+        expect(q("[data-role=system-line]")).toBeNull();
+    });
+
+    it("sender draft shows \"First message to\"", async () => {
+        await pick(apiFor(draftOf({ first_contact: true })));
+
+        expect(q("[data-role=system-line]").textContent).toBe("First message to Ann Lee");
+        expect(q("[data-role=system-line] button")).toBeNull();
+    });
 });

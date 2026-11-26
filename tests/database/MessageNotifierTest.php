@@ -8,6 +8,7 @@ use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageNotifier;
 use App\Services\Messaging\MessagePreferences;
 use App\Services\Messaging\MessageService;
+use App\Services\Messaging\MessagingContextResolver;
 use App\Services\Notifications\NotificationService;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Database\Query;
@@ -184,7 +185,7 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testQuietHoursHoldTheNoticeAndTheMorningReleasesExactlyOne(): void
     {
-        $this->assertTrue((new MessagePreferences())->save($this->instructor, '22:00', '07:00', true));
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, '22:00', '07:00', 'everyone'));
         $this->plant($this->thread, $this->parent, 'late one');
         $this->plant($this->thread, $this->parent, 'later one');
 
@@ -231,20 +232,140 @@ final class MessageNotifierTest extends DatabaseTestCase
 
     public function testNoEmailWhenTheSwitchIsOffAndAFailedEmailKeepsTheNotice(): void
     {
-        (new MessagePreferences())->save($this->instructor, null, null, false);
+        (new MessagePreferences())->save($this->instructor, null, null, 'off');
         $this->plant($this->thread, $this->parent, 'hello');
         $this->notifier()->notifyConversation($this->thread);
 
         $this->assertCount(1, $this->notices($this->instructor));
         $this->assertCount(0, $this->mail->sent);
 
-        (new MessagePreferences())->save($this->instructor, null, null, true);
+        (new MessagePreferences())->save($this->instructor, null, null, 'everyone');
         $this->mail->failToSend = true;
         (new NotificationService())->markRead((int) $this->instructor->id);
         $this->plant($this->thread, $this->parent, 'again');
         $this->notifier()->notifyConversation($this->thread);
 
         $this->assertCount(2, $this->notices($this->instructor), 'the in-app notice survives a mail failure');
+    }
+
+    /** A student the instructor has never dealt with, and their (first-contact) direct thread to the instructor. */
+    private function strangerThread(): array
+    {
+        $stranger = PeopleFactory::person('student', 'Sam', 'Stranger', null, $this->institution);
+        $db       = db_connect();
+        $now      = date('Y-m-d H:i:s');
+
+        // Written straight to the tables: the policy refuses a student's cold message to staff, but a first contact exists all the same.
+        $db->table('conversations')->insert([
+            'institution_id' => $this->institution, 'type' => 'direct', 'created_by' => $stranger->id, 'is_locked' => 0, 'first_contact' => 1,
+            'direct_key' => 'test-stranger-' . $stranger->id, 'created_at' => $now, 'updated_at' => $now,
+        ]);
+        $thread = (int) $db->insertID();
+
+        foreach ([(int) $stranger->id, (int) $this->instructor->id] as $userId) {
+            $db->table('conversation_participants')->insert(['conversation_id' => $thread, 'user_id' => $userId, 'joined_at' => $now, 'first_visible_message_id' => 0]);
+        }
+
+        return [$stranger, $thread];
+    }
+
+    public function testEveryoneScopeDefault(): void
+    {
+        [$stranger, $thread] = $this->strangerThread();
+        $this->assertSame('everyone', (new MessagePreferences())->get((int) $this->instructor->id)['email_scope']);
+
+        $this->plant($thread, $stranger, 'hi');
+        $this->notifier()->notifyConversation($thread);
+
+        $this->assertCount(1, $this->mail->sent);
+    }
+
+    public function testOffScopeSendsNoEmail(): void
+    {
+        [$stranger, $thread] = $this->strangerThread();
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'off'));
+
+        $this->plant($thread, $stranger, 'hi');
+        $this->notifier()->notifyConversation($thread);
+
+        $this->assertCount(0, $this->mail->sent);
+    }
+
+    public function testTalkedScopeSkipsEmailFromStranger(): void
+    {
+        [$stranger, $thread] = $this->strangerThread();
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked'));
+
+        $this->plant($thread, $stranger, 'hi');
+        $this->notifier()->notifyConversation($thread);
+
+        $this->assertCount(0, $this->mail->sent);
+        $this->assertCount(1, $this->notices($this->instructor), 'the in-app notice still comes');
+    }
+
+    public function testTalkedScopeEmailsAfterReply(): void
+    {
+        [$stranger, $thread] = $this->strangerThread();
+        $this->assertTrue((new MessagePreferences())->save($this->instructor, null, null, 'talked'));
+        $this->plant($thread, $stranger, 'hi');
+        $this->notifier()->notifyConversation($thread);
+        $this->assertCount(0, $this->mail->sent);
+
+        (new MessageService($this->parentCipher()))->send($this->instructor, $thread, 'hello back', 'uuid-reply-1');
+        (new NotificationService())->markRead((int) $this->instructor->id);
+        $this->mail->sent = [];
+        $this->plant($thread, $stranger, 'thanks');
+        $this->notifier()->notifyConversation($thread, new DateTimeImmutable('+2 hours'));
+
+        $this->assertCount(1, $this->mail->sent);
+    }
+
+    public function testTalkedScopeEmailsSomeoneTheyShareACourseWith(): void
+    {
+        (new MessagePreferences())->save($this->instructor, null, null, 'talked');
+        $this->plant($this->thread, $this->parent, 'hi');
+        $this->notifier()->notifyConversation($this->thread);
+
+        $this->assertCount(1, $this->mail->sent, 'the parent is linked to the instructor through the child');
+    }
+
+    public function testTalkedScopeDoesNotApplyToCourseChats(): void
+    {
+        $chat = (new CourseChatSync())->syncOffering($this->offering)['conversation_id'];
+        (new MessagePreferences())->save($this->child, null, null, 'talked');
+        $this->plant($chat, $this->instructor, 'hi');
+
+        $calls    = new ArrayObject();
+        $resolver = new class ($calls) extends MessagingContextResolver {
+            public function __construct(private ArrayObject $calls)
+            {
+            }
+
+            public function talkedBefore(int $a, int $b): bool
+            {
+                $this->calls[] = [$a, $b];
+
+                return parent::talkedBefore($a, $b);
+            }
+        };
+        (new MessageNotifier(null, null, $resolver))->notifyConversation($chat);
+
+        $this->assertCount(0, $calls, 'course chats are unchanged (D18): no talked-before lookup');
+    }
+
+    public function testInAppNoticeAlwaysSent(): void
+    {
+        [$stranger, $thread] = $this->strangerThread();
+
+        foreach (['off', 'talked', 'everyone'] as $scope) {
+            (new MessagePreferences())->save($this->instructor, null, null, $scope);
+            db_connect()->table('notifications')->where('user_id', $this->instructor->id)->delete();
+            db_connect()->table('conversation_participants')->where(['conversation_id' => $thread, 'user_id' => $this->instructor->id])->update(['last_notified_message_id' => null]);
+            $this->plant($thread, $stranger, 'hi ' . $scope);
+
+            $this->assertSame(1, $this->notifier()->notifyConversation($thread), $scope);
+            $this->assertCount(1, $this->notices($this->instructor), $scope);
+        }
     }
 
     public function testASendTellsASmallChatAtOnce(): void

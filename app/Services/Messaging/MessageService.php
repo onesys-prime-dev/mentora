@@ -31,6 +31,9 @@ class MessageService
     /** @var array<int, array{name: string, role: string}> */
     private array $senders = [];
 
+    /** @var list<int>|null conversations to notify once sendFirst has committed; null outside sendFirst */
+    private ?array $held = null;
+
     public function __construct(?MessageCipher $cipher = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null)
     {
         $this->cipher        = $cipher ?? new MessageCipher();
@@ -100,6 +103,66 @@ class MessageService
     }
 
     /**
+     * The first message to someone: the conversation, its participants and the message are created together,
+     * or not at all. If the pair already has a thread (the other side may just have written first) it is used and
+     * not counted as a new one. Returns send's shape plus `conversation_id`.
+     *
+     * @return array{ok: bool, reason?: string, message?: array<string, mixed>, conversation_id?: int}
+     *
+     * @throws RateLimitedException
+     */
+    public function sendFirst(User $sender, int $recipientId, ?int $subjectStudentId, string $body, string $clientUuid): array
+    {
+        // Refused before anything is created, so a bad send leaves no empty thread behind.
+        if (preg_match('/^[A-Za-z0-9-]{8,36}$/', $clientUuid) !== 1 || MessageBody::clean($body) === null) {
+            return ['ok' => false, 'reason' => 'invalid_body'];
+        }
+
+        // Everything that only reads happens before the transaction opens (see ConversationService::planDirect).
+        $plan = $this->conversations->planDirect($sender, $recipientId, $subjectStudentId);
+
+        if ($plan === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $db         = db_connect();
+        $this->held = [];
+        $db->transStart();
+
+        try {
+            $conversation = $this->conversations->createDirect($sender, $recipientId, $plan);
+            $result       = $conversation === null
+                ? ['ok' => false, 'reason' => 'not_found']
+                : $this->send($sender, (int) $conversation['id'], $body, $clientUuid);
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            $this->held = null;
+
+            throw $e;
+        }
+
+        if (! $result['ok']) {
+            $db->transRollback();
+            $this->held = null;
+
+            return $result;
+        }
+
+        // A query that failed inside (and was caught) rolls the whole send back: that is not a success.
+        $held       = $this->held;
+        $this->held = null;
+
+        if (! $db->transComplete()) {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        // Told only now that the thread and message are committed.
+        array_map($this->notify(...), $held);
+
+        return $result + ['conversation_id' => (int) $conversation['id']];
+    }
+
+    /**
      * Inserts the message, advances the sender's read mark, brings the chat back for the others and notifies.
      * The one insert path; `$extra` holds more `messages` columns (reply, forward, bump).
      *
@@ -125,8 +188,17 @@ class MessageService
         $row      = $this->byUuid($conversationId, $userId, $clientUuid);
 
         if ($inserted) {
+            $this->decideFirstContact($conversation, $userId);
             $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $row['id'], 'last_message_at' => $now, 'updated_at' => $now]);
             $this->advanceRead($userId, $conversationId, (int) $row['id']);
+
+            // The recipient's first reply ends the first-contact line; the starter's own messages never do.
+            if (($conversation['type'] ?? '') === 'direct') {
+                $db->query(
+                    'UPDATE conversations SET first_contact_cleared_at = ? WHERE id = ? AND first_contact_cleared_at IS NULL AND created_by <> ?',
+                    [$now, $conversationId, $userId],
+                );
+            }
             // A new message brings an archived chat back for everyone who has not muted it.
             $db->query(
                 'UPDATE conversation_participants SET archived_at = NULL WHERE conversation_id = ? AND user_id <> ? AND is_muted = 0',
@@ -136,11 +208,40 @@ class MessageService
 
         $db->transComplete();
 
-        if ($inserted) {
+        if ($inserted && $this->held !== null) {
+            $this->held[] = $conversationId;
+        } elseif ($inserted) {
             $this->notify($conversationId);
         }
 
         return ['ok' => true, 'message' => $this->presentRows([$row], $user, $conversation)[0]];
+    }
+
+    /**
+     * The first message ever in a direct thread decides whether it is a first contact and who started it. A thread
+     * opened before Phase 3 stands empty with the default (not a first contact) until someone writes; the same
+     * rule applies to it as to a thread made by sendFirst.
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     */
+    private function decideFirstContact(array $conversation, int $senderId): void
+    {
+        if (($conversation['type'] ?? '') !== 'direct' || $conversation['last_message_id'] !== null || (int) $conversation['first_contact'] === 1) {
+            return;
+        }
+
+        $db    = db_connect();
+        $other = $db->table('conversation_participants')->select('user_id')->where('conversation_id', (int) $conversation['id'])->where('user_id !=', $senderId)->get()->getRowArray();
+
+        if ($other === null) {
+            return;
+        }
+
+        $first = ! $this->resolver->talkedBefore($senderId, (int) $other['user_id']);
+        $db->query(
+            'UPDATE conversations SET first_contact = ?, created_by = ? WHERE id = ? AND last_message_id IS NULL',
+            [$first ? 1 : 0, $senderId, (int) $conversation['id']],
+        );
     }
 
     /**

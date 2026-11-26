@@ -6,7 +6,9 @@ namespace App\Controllers\Messaging;
 
 use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
+use App\Services\Messaging\MessageService;
 use App\Services\Messaging\RateLimitedException;
+use App\Services\Profiles\AvatarData;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -30,35 +32,58 @@ class ConversationController extends MessagingController
         ]);
     }
 
+    /** Opening a person: the draft, nothing stored until the first message is sent. */
     public function start(): ResponseInterface
     {
-        $input     = $this->input();
-        $recipient = $input['recipient_id'] ?? null;
-        $subject   = $input['subject_student_id'] ?? null;
+        $input   = $this->input();
+        $subject = $input['subject_student_id'] ?? null;
+        $draft   = is_numeric($input['recipient_id'] ?? null)
+            ? (new ConversationService())->draftFor(auth()->user(), (int) $input['recipient_id'], is_numeric($subject) ? (int) $subject : null)
+            : null;
 
-        $service      = new ConversationService();
-        $user         = auth()->user();
+        if ($draft === null) {
+            return $this->notFound();
+        }
+
+        // The header needs a name before any thread exists: the same gated name and avatar the list uses.
+        $avatar = (new AvatarData())->forViewerJson(auth()->user(), [(int) $draft['recipient_id']])[(int) $draft['recipient_id']] ?? null;
+
+        return $this->response->setJSON(['draft' => $draft + ['name' => $avatar['name'] ?? 'Someone', 'avatar' => $avatar]]);
+    }
+
+    /** The first message: creates the conversation and the message together. */
+    public function sendFirst(): ResponseInterface
+    {
+        $input   = $this->input();
+        $subject = $input['subject_student_id'] ?? null;
+        $user    = auth()->user();
+
+        if (! is_numeric($input['recipient_id'] ?? null)) {
+            return $this->notFound();
+        }
 
         try {
-            $conversation = is_numeric($recipient)
-                ? $service->startDirect($user, (int) $recipient, is_numeric($subject) ? (int) $subject : null)
-                : null;
+            $result = (new MessageService())->sendFirst($user, (int) $input['recipient_id'], is_numeric($subject) ? (int) $subject : null, (string) ($input['body'] ?? ''), (string) ($input['client_uuid'] ?? ''));
         } catch (RateLimitedException $e) {
             return $this->rateLimited($e);
         }
 
-        if ($conversation === null) {
-            return $this->notFound();
+        if (! $result['ok']) {
+            $status = ['invalid_body' => 422, 'not_allowed' => 403, 'unavailable' => 503][$result['reason'] ?? ''] ?? null;
+
+            return $status === null ? $this->notFound() : $this->response->setStatusCode($status)->setJSON(['error' => $result['reason']]);
         }
 
         // Presented like a list row, so the page can show it at once.
-        foreach ((new ConversationPresenter())->present($user, $service->listFor($user)) as $row) {
-            if ((int) $row['id'] === (int) $conversation['id']) {
-                $conversation = [...$conversation, ...$row];
-            }
+        $conversation = ['id' => $result['conversation_id']];
+
+        $mine = array_values(array_filter((new ConversationService())->listFor($user), static fn (array $r): bool => (int) $r['id'] === $result['conversation_id']));
+
+        if ($mine !== []) {
+            $conversation = (new ConversationPresenter())->present($user, $mine)[0];
         }
 
-        return $this->response->setJSON(['conversation' => $conversation]);
+        return $this->response->setStatusCode(201)->setJSON(['message' => $result['message'], 'conversation' => $conversation]);
     }
 
     public function lock(int $conversationId): ResponseInterface

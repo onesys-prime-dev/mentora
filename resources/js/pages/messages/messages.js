@@ -32,7 +32,7 @@ import { chatMenuItems, messageMenuItems } from "./menu-items.js";
 import { mergeById, stepIndex, toggleReaction } from "./thread-state.js";
 import { createSettings } from "./settings.js";
 import { createMenu } from "./menu.js";
-import { conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, separatorTime, serverStamp, setServerOffset } from "./render.js";
+import { conversationRow, dayLabel, hoverTime, messageNode, minutesBetween, separatorTime, serverStamp, setServerOffset, systemLine } from "./render.js";
 
 const CHIP_ON = ["border-brand", "bg-brand", "text-white"];
 const CHIP_OFF = ["border-gray-300", "text-[#646464]"];
@@ -79,6 +79,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         conversations: [],
         listLoaded: false,
         openId: null,
+        // A person opened but not yet written to: nothing exists on the server until the first send.
+        draft: null,
         items: [],
         hasMore: false,
         composer: null,
@@ -142,6 +144,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     };
     // The open chat can leave the list (archived or muted while another filter is on); its last row keeps its menu working.
     const current = () => state.conversations.find((c) => c.id === state.openId) ?? (state.openRow?.id === state.openId ? state.openRow : null);
+
+    // The unsent first message, kept per person (and child) so a reload or a detour does not lose it.
+    const draftKey = (d) => `messages:draft:${root.dataset.userId}:${d.recipientId}:${d.subjectStudentId || 0}`;
+    const savedText = (d) => { try { return localStorage.getItem(draftKey(d)) ?? ""; } catch { return ""; } };
+    const saveText = (d, text) => { try { text === "" ? localStorage.removeItem(draftKey(d)) : localStorage.setItem(draftKey(d), text); } catch { /* no storage: the draft lives in the box only */ } };
 
     // ---- the list ------------------------------------------------------
 
@@ -216,6 +223,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return;
         }
 
+        const lineBefore = lineKey();
+
         state.listLoaded = true;
         listCache.set(cacheKey(), data.conversations);
         state.conversations = data.conversations;
@@ -236,6 +245,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         if (state.openId !== null && current() !== null) {
             applyConversation(current());
+
+            if (lineKey() !== lineBefore) {
+                renderMessages();
+            }
         }
     }
 
@@ -290,7 +303,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             blockEl.hidden = !offered;
 
             if (offered) {
-                blockEl.textContent = c.blocked_by_me ? `Unblock ${c.name}` : state.confirmBlock === c.id ? `Click again to block ${c.name}` : `Block ${c.name}`;
+                blockEl.textContent = c.blocked_by_me ? `Unblock ${c.name}` : state.confirmBlock === c.id ? `Press again to block ${c.name}` : `Block ${c.name}`;
             }
         }
     }
@@ -438,6 +451,37 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         return row;
     }
 
+    const lineKey = () => `${current()?.first_contact_line}|${current()?.first_contact_sender}`;
+
+    // The first-contact line (FR5): for the recipient with Block and Report, for the sender a quiet note.
+    function firstContactLine() {
+        if (state.draft) {
+            return state.draft.firstContact ? systemLine(`First message to ${state.draft.name}`) : null;
+        }
+
+        const c = current();
+
+        if (!c || c.type !== "direct" || state.hasMore) {
+            return null;
+        }
+
+        if (c.first_contact_sender) {
+            return systemLine(`First message to ${c.name}`);
+        }
+
+        if (!c.first_contact_line) {
+            return null;
+        }
+
+        const role = ROLE_WORDS[c.first_contact_role];
+        const first = serverItems().find((item) => !item.mine);
+
+        return systemLine(`First message from ${c.name}${role ? ` · ${role}` : ""} · you haven't talked before`, [
+            { label: state.confirmBlock === c.id ? "Press again to block" : "Block", action: "fc-block", onClick: toggleBlock },
+            { label: "Report", danger: true, onClick: () => first && openReport(first.id) },
+        ]);
+    }
+
     function renderMessages({ stick = false, keepPosition = false } = {}) {
         const nearBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 80;
         const heightBefore = scroller.scrollHeight;
@@ -445,6 +489,11 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         let day = null;
         let previous = null;
         const lastMine = [...state.items].reverse().find((i) => i.mine && typeof i.id === "number" && !i.removed && !i.deleted_everyone);
+        const line = firstContactLine();
+
+        if (line) {
+            nodes.push(line);
+        }
 
         for (const item of state.items) {
             const label = dayLabel(item.created_at, now());
@@ -474,7 +523,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         messagesEl.replaceChildren(...nodes);
         olderEl.hidden = !state.hasMore;
 
-        if (state.items.length === 0) {
+        if (state.items.length === 0 && !state.draft) {
             threadState("thread-empty");
         } else {
             threadState(null);
@@ -578,14 +627,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    async function open(id, { deepLink = false } = {}) {
-        state.poller?.stop();
-
-        const token = threadGuard.next();
-
-        state.openId = id;
-        state.token = token;
-        markOpenedRead(id);
+    function resetThread() {
+        state.draft = null;
         state.cursor = 0;
         state.loadingOlder = false;
         state.confirmBlock = null;
@@ -598,6 +641,17 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.items = [];
         state.hasMore = false;
         state.sending = null;
+    }
+
+    async function open(id, { deepLink = false } = {}) {
+        state.poller?.stop();
+
+        const token = threadGuard.next();
+
+        state.openId = id;
+        state.token = token;
+        markOpenedRead(id);
+        resetThread();
         state.composer = createComposer({
             send: (text, uuid) => api.send(id, text, uuid, state.sending?.replyTo ?? undefined),
             onSent: (message) => sent(id, message),
@@ -660,6 +714,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         state.poller?.stop();
         threadGuard.next();
         state.openId = null;
+        state.draft = null;
         $("[data-role=thread]").hidden = true;
         $("[data-state=none]").hidden = false;
         root.dataset.view = "list";
@@ -708,6 +763,13 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return;
         }
 
+        const row = current();
+
+        // Answering a first message ends the first-contact line (the server clears it the same way).
+        if (row?.first_contact_line) {
+            row.first_contact_line = false;
+        }
+
         state.items = state.items.filter((i) => i !== item && i.id !== message.id);
         state.items.push(message);
         sortItems();
@@ -745,7 +807,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     }
 
     function submit(text, item = null) {
-        if (state.openId === null || !canSend(text, state.composer.state === "sending")) {
+        if ((state.openId === null && state.draft === null) || !canSend(text, state.composer.state === "sending")) {
             return;
         }
 
@@ -790,6 +852,10 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         bodyEl.style.height = "auto";
         bodyEl.style.height = `${Math.min(bodyEl.scrollHeight, 128)}px`;
         syncSend();
+
+        if (state.draft) {
+            saveText(state.draft, bodyEl.value);
+        }
     });
 
     bodyEl.addEventListener("keydown", (event) => {
@@ -861,22 +927,93 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     // ---- starting a conversation ---------------------------------------
 
+    // The person's thread if there is one, else the draft: no thread exists until the first message is sent.
+    function openFromDraft(draft, fallbackName) {
+        if (draft.conversation_id) {
+            listPoller.nudge();
+
+            return open(draft.conversation_id);
+        }
+
+        return openDraft({ recipientId: draft.recipient_id, subjectStudentId: draft.subject_student_id ?? null, name: draft.name ?? fallbackName ?? "Someone", firstContact: draft.first_contact === true, avatar: draft.avatar ?? null });
+    }
+
+    function openDraft(draft) {
+        state.poller?.stop();
+        threadGuard.next();
+        state.openId = null;
+        state.token = null;
+        resetThread();
+        state.draft = draft;
+
+        let created = null;
+
+        state.composer = createComposer({
+            send: async (text, uuid) => {
+                const result = await api.sendFirst(draft.recipientId, draft.subjectStudentId, text, uuid);
+
+                created = result.data;
+
+                return result;
+            },
+            onSent: () => sentFirst(draft, created),
+            onFailed: (reason, data) => failed(null, reason, data),
+        });
+
+        root.dataset.view = "thread";
+        $("[data-state=none]").hidden = true;
+        $("[data-role=thread]").hidden = false;
+        phoneNav.opened(0, {});
+        messagesEl.replaceChildren();
+        olderEl.hidden = true;
+        bodyEl.value = savedText(draft);
+        bodyEl.style.height = "auto";
+        bodyEl.style.height = `${Math.min(bodyEl.scrollHeight, 128)}px`;
+        syncSend();
+        applyConversation({ type: "direct", name: draft.name, initials: draft.name.slice(0, 2).toUpperCase(), avatar: draft.avatar, can_post: true });
+        renderList();
+        renderMessages();
+        bodyEl.focus();
+    }
+
+    // The first message created the thread: it joins the list and opens like any other.
+    function sentFirst(draft, data) {
+        const conversation = data?.conversation;
+
+        // Only this draft's own pending bubble: the user may have moved on and started a send elsewhere.
+        if (state.draft === draft) {
+            state.sending = null;
+        }
+
+        saveText(draft, "");
+
+        if (!conversation?.id) {
+            return;
+        }
+
+        state.conversations = [conversation, ...state.conversations.filter((c) => c.id !== conversation.id)];
+
+        if (state.draft === draft) {
+            open(conversation.id);
+        } else {
+            renderList();
+            listPoller.nudge();
+        }
+    }
+
     async function startWith(entry) {
         const { status, data } = await api.start(entry.id, entry.subject_student_id);
 
-        if (status !== 200 || !data?.conversation) {
+        if (status !== 200 || !data?.draft) {
             pickerNote.textContent = "That person can't be messaged.";
 
             return;
         }
 
-        const conversation = data.conversation;
-
-        state.conversations = [conversation, ...state.conversations.filter((c) => c.id !== conversation.id)];
         $("[data-role=picker-input]").value = "";
         picker.input("");
         $("#messages-new [data-dialog-close]")?.click();
-        open(conversation.id);
+        openFromDraft(data.draft, entry.name);
     }
 
     function renderPicker() {
@@ -914,8 +1051,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
     // ---- block, report, settings ---------------------------------------
 
-    blockEl?.addEventListener("click", async () => {
+    async function toggleBlock(event) {
         const c = current();
+        const fromPill = event?.currentTarget?.dataset?.action === "fc-block";
 
         if (!c || state.openId === null || c.type !== "direct") {
             return;
@@ -933,6 +1071,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         } else if (state.confirmBlock !== c.id) {
             state.confirmBlock = c.id;
+            showSafetyNote(`Press again to block ${c.name}.`);
         } else {
             state.confirmBlock = null;
 
@@ -941,6 +1080,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             if (result.status === 200) {
                 c.blocked_by_me = true;
                 c.can_block = false;
+                c.first_contact_line = false;
                 showSafetyNote(`You blocked ${c.name}. They can't start or reply to messages with you.`);
             } else {
                 showSafetyNote(describeFailure(result, "That person can't be blocked."));
@@ -948,7 +1088,15 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
 
         applyConversation(c);
-    });
+        renderMessages();
+
+        // The history was rebuilt: the pill that had focus is a new element, so focus it again.
+        if (fromPill) {
+            messagesEl.querySelector("[data-action=fc-block]")?.focus();
+        }
+    }
+
+    blockEl?.addEventListener("click", toggleBlock);
 
     const reportReason = $("[data-role=report-reason]");
     const reportNote = $("[data-role=report-note]");
@@ -1603,6 +1751,27 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     // When the tab comes back, both the list and the open thread catch up at once.
     const unwatch = watchVisibility({ nudge: () => { listPoller.nudge(); state.poller?.nudge(); } });
 
+    // /messages?to={id}[&child={id}]: the profile's Message button. The params go at once so a reload does not repeat it.
+    async function openRequested() {
+        const params = new URLSearchParams(location.search);
+        const to = Number(params.get("to"));
+        const child = Number(params.get("child"));
+
+        if (!(to > 0)) {
+            return;
+        }
+
+        history.replaceState(history.state, "", location.pathname + location.hash);
+
+        const { status, data } = await api.start(to, child > 0 ? child : undefined);
+
+        if (status === 200 && data?.draft) {
+            openFromDraft(data.draft);
+        } else {
+            showListNote("That person can't be messaged.");
+        }
+    }
+
     const ready = loadList().then(() => {
         listPoller.start();
 
@@ -1611,7 +1780,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return open(Number(root.dataset.open), { deepLink: true });
         }
 
-        return undefined;
+        return openRequested();
     });
 
     return {

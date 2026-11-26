@@ -117,7 +117,7 @@ class MessageNotifier
         foreach ($due as $d) {
             if ($d['tell']) {
                 $name ??= $this->chatName($chat);
-                $this->tell($d['user'], $chat, $names[$d['sender']][$d['user']] ?? 'Someone', $name, $d['max'], $now);
+                $this->tell($d['user'], $chat, $d['sender'], $names[$d['sender']][$d['user']] ?? 'Someone', $name, $d['max'], $now);
                 $told++;
             }
 
@@ -130,14 +130,34 @@ class MessageNotifier
     /**
      * @param array<string, mixed> $chat a `conversations` row
      */
-    private function tell(int $userId, array $chat, string $sender, ?string $chatName, int $maxId, DateTimeImmutable $now): void
+    private function tell(int $userId, array $chat, int $senderId, string $sender, ?string $chatName, int $maxId, DateTimeImmutable $now): void
     {
         $conversationId = (int) $chat['id'];
         $body          = $chat['type'] === 'direct' || $chatName === null ? "{$sender} sent you a message." : "{$sender} sent you a message in {$chatName}.";
-        $emails         = $this->prefs->get($userId)['email_alerts'] && ! $this->emailedRecently($userId, $conversationId, $now);
+        $scope          = $this->prefs->get($userId)['email_scope'];
+        $emails         = ($scope === 'everyone' || ($scope === 'talked' && $this->talked($chat, $senderId, $userId))) && ! $this->emailedRecently($userId, $conversationId, $now);
 
         // Never any message text: who, where, and a link.
         $this->notes->send($userId, 'message', 'New message', $body, $emails, "msg:{$conversationId}:{$maxId}", (int) $chat['institution_id'], 'messages/' . $conversationId, $now);
+    }
+
+    /**
+     * Whether the recipient has talked with the sender (D18). In a direct thread the thread's own first-contact
+     * fact answers it, because by now the sender's message is in the thread and talkedBefore() would count it.
+     *
+     * @param array<string, mixed> $chat
+     */
+    private function talked(array $chat, int $senderId, int $userId): bool
+    {
+        if ($chat['type'] === 'course') {
+            return true; // course chats are unchanged (D18)
+        }
+
+        if ($chat['type'] === 'direct') {
+            return (int) $chat['first_contact'] === 0 || $chat['first_contact_cleared_at'] !== null;
+        }
+
+        return $this->resolver->talkedBefore($senderId, $userId);
     }
 
     /**

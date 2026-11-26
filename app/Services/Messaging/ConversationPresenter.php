@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\RoleRank;
 use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
@@ -52,6 +53,7 @@ class ConversationPresenter
         // One lookup for the list: the other person of each direct chat and each subject student, as this viewer
         // may see them (FR2); their gated names replace the legal ones (FR5).
         $avatars     = (new AvatarData())->forViewerJson($viewer, array_values(array_filter(array_map('intval', [...array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
+        $starters    = $this->starterRoles($viewer, $viewerParty, $rows);
         $out         = [];
 
         foreach ($rows as $row) {
@@ -101,10 +103,56 @@ class ConversationPresenter
             $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
             $row['can_moderate'] = $this->policy->canModerate($teaches ? $viewerParty->withRole('instructor') : $viewerParty, (string) $row['type'], $teaches || $created);
 
+            // The line is the recipient's: a stored first contact, or a minor viewer until they reply (FR5). The sender
+            // sees only the stored fact, so a recipient's minor flag never shows on their side.
+            $direct                      = $row['type'] === 'direct' && ($row['first_contact_cleared_at'] ?? null) === null;
+            $mine                        = (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
+            $starterRoles                = $starters[(int) ($row['created_by'] ?? 0)] ?? null;
+            $row['first_contact_line']   = $direct && ! $mine && $starterRoles !== null && ((int) ($row['first_contact'] ?? 0) === 1 || $viewerParty->minor);
+            $row['first_contact_role']   = $row['first_contact_line'] ? (RoleRank::highest($starterRoles) ?? '') : null;
+            $row['first_contact_sender'] = $direct && $mine && (int) ($row['first_contact'] ?? 0) === 1;
+
             $row['controls']            = ChatControls::forConversation($row);
             $row['can_manage_controls'] = $this->controls->canManage($viewer, $row, $viewerParty);
 
             $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
+     * The roles of the people who started the open first-contact threads the viewer received, in one query for the
+     * whole list (a person who no longer exists is left out, so their thread shows no line).
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return array<int, list<string>> user id => roles
+     */
+    private function starterRoles(User $viewer, Party $viewerParty, array $rows): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if ($row['type'] === 'direct' && ($row['first_contact_cleared_at'] ?? null) === null && (int) $row['created_by'] !== (int) $viewer->id
+                && ((int) ($row['first_contact'] ?? 0) === 1 || $viewerParty->minor)) {
+                $ids[(int) $row['created_by']] = (int) $row['created_by'];
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach (db_connect()->table('users u')->select('u.id, g.group')->join('auth_groups_users g', 'g.user_id = u.id', 'left')
+            ->where('u.deleted_at', null)->whereIn('u.id', array_values($ids))->get()->getResultArray() as $r) {
+            $out[(int) $r['id']] ??= [];
+
+            if ($r['group'] !== null) {
+                $out[(int) $r['id']][] = (string) $r['group'];
+            }
         }
 
         return $out;

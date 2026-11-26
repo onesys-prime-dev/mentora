@@ -124,7 +124,7 @@ class GroupService
             }
         }
 
-        (new MessageRateLimiter())->check('thread', (int) $creator->id);
+        (new MessageRateLimiter())->check('thread', (int) $creator->id, null, $this->resolver->party($creator));
 
         $db  = db_connect();
         $now = date('Y-m-d H:i:s');
