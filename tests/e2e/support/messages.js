@@ -60,7 +60,8 @@ export async function setStudentMessages(page, on) {
     const scope = typeof on === "string" ? on : on ? "institution" : "off";
 
     await page.goto("/institution/settings/messages");
-    await page.locator(`input[name=scope][value='${scope}']`).check();
+    // The radio is sr-only under its label (a segmented switch), so the label is what takes the click.
+    await page.locator(`label:has(input[name=scope][value='${scope}'])`).check();
 
     const saved = page.waitForResponse((response) => response.url().includes("/institution/settings/messages") && response.request().method() === "POST");
 
