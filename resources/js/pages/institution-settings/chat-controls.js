@@ -45,10 +45,11 @@ export async function initChatControls(root = document.querySelector("[data-chat
     }
 
     const form = root.closest("form");
-    const radios = form ? [...form.querySelectorAll("input[name=enabled]")] : [];
-    const checkedRadio = () => radios.find((r) => r.checked)?.value ?? null;
-    // What the server rendered, not what is ticked once the chats arrive: a choice made while they load still counts as a change.
-    let studentsAtStart = radios.find((r) => r.defaultChecked)?.value ?? null;
+    // The form's own settings (student scope, default quiet hours): every named field outside the chat switches.
+    const fields = form ? [...form.elements].filter((el) => el.name && el.type !== "hidden" && el.type !== "submit" && !root.contains(el)) : [];
+    const valuesOf = (useDefaults) => fields.map((el) => (el.type === "radio" || el.type === "checkbox" ? (useDefaults ? el.defaultChecked : el.checked) : useDefaults ? el.defaultValue : el.value)).join("|");
+    // What the server rendered, not what is set once the chats arrive: a choice made while they load still counts as a change.
+    let settingsAtStart = valuesOf(true);
 
     const { status, data } = await api.chatControls();
     const chats = (status === 200 && Array.isArray(data?.chats) ? data.chats : []).map((c) => ({ ...c, draft: { ...(c.controls ?? {}) } }));
@@ -59,7 +60,7 @@ export async function initChatControls(root = document.querySelector("[data-chat
     const pending = () => chats.flatMap((chat) => SWITCHES
         .filter((s) => Boolean(chat.draft[s.name]) !== Boolean(chat.controls?.[s.name]))
         .map((s) => ({ chat, s, on: Boolean(chat.draft[s.name]) })));
-    const studentsChanged = () => studentsAtStart !== null && checkedRadio() !== studentsAtStart;
+    const settingsChanged = () => valuesOf(false) !== settingsAtStart;
 
     function render() {
         const chat = chats.find((c) => c.id === selected) ?? null;
@@ -163,8 +164,8 @@ export async function initChatControls(root = document.querySelector("[data-chat
 
             const controlsChanged = pending().length > 0;
 
-            if (!controlsChanged && studentsChanged()) {
-                return; // only the students setting: the form saves it as always
+            if (!controlsChanged && settingsChanged()) {
+                return; // only the form's own settings: the form saves them as always
             }
 
             event.preventDefault();
@@ -181,7 +182,7 @@ export async function initChatControls(root = document.querySelector("[data-chat
             saveControls().then(() => {
                 saving = false;
 
-                if (studentsChanged()) {
+                if (settingsChanged()) {
                     saving = true;
                     form.requestSubmit();
                     saving = false;
@@ -190,9 +191,9 @@ export async function initChatControls(root = document.querySelector("[data-chat
         }, true);
     }
 
-    // Once the students setting has gone to the server, that is the new starting point for "changed".
+    // Once the form's settings have gone to the server, they are the new starting point for "changed".
     form?.addEventListener("submit", () => {
-        studentsAtStart = checkedRadio();
+        settingsAtStart = valuesOf(false);
     });
 
     picker.addEventListener("change", () => {

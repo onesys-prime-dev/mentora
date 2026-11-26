@@ -8,7 +8,9 @@ const chat = (extra = {}) => ({ id: 7, name: "IT101", type: "course", controls: 
 beforeEach(() => {
     document.body.innerHTML = `
 <form id="f">
-  <input type="radio" name="enabled" value="1" checked><input type="radio" name="enabled" value="0">
+  <input type="hidden" name="csrf_test_name" value="t">
+  <input type="radio" name="scope" value="off"><input type="radio" name="scope" value="course"><input type="radio" name="scope" value="institution" checked>
+  <input type="time" name="quietStart" value=""><input type="time" name="quietEnd" value="">
 <section data-chat-controls>
   <select data-role="controls-picker" hidden></select>
   <p data-role="controls-empty"></p>
@@ -81,7 +83,7 @@ describe("the institution settings chat controls", () => {
         const chatControls = vi.fn(() => new Promise((resolve) => { answer = resolve; }));
         const loading = initChatControls(q("[data-chat-controls]"), { chatControls, setControl: vi.fn() });
 
-        q('input[value="0"]').checked = true;
+        q('input[name=scope][value="off"]').checked = true;
         answer(ok({ chats: [chat()] }));
         await loading;
 
@@ -90,5 +92,29 @@ describe("the institution settings chat controls", () => {
 
         expect(submit.defaultPrevented).toBe(false);
         expect(document.querySelector('[data-toast="info"]')).toBeNull();
+    });
+
+    it("lets the form save a changed student scope", async () => {
+        await initChatControls(q("[data-chat-controls]"), { chatControls: vi.fn().mockResolvedValue(ok({ chats: [chat()] })), setControl: vi.fn() });
+
+        q('input[name=scope][value="course"]').checked = true;
+
+        const submit = new Event("submit", { cancelable: true });
+        q("#f").dispatchEvent(submit);
+
+        expect(submit.defaultPrevented).toBe(false);
+        expect(document.querySelector('[data-toast="info"]')).toBeNull();
+    });
+
+    it("lets the form save changed default quiet hours", async () => {
+        await initChatControls(q("[data-chat-controls]"), { chatControls: vi.fn().mockResolvedValue(ok({ chats: [chat()] })), setControl: vi.fn() });
+
+        q("input[name=quietStart]").value = "22:00";
+        q("input[name=quietEnd]").value = "06:00";
+
+        const submit = new Event("submit", { cancelable: true });
+        q("#f").dispatchEvent(submit);
+
+        expect(submit.defaultPrevented).toBe(false);
     });
 });
