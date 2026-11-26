@@ -118,7 +118,7 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->blockedByRecipient) {
+        if ($c->blockedByRecipient || $c->senderRestriction !== 'none') {
             return false;
         }
 
@@ -148,6 +148,10 @@ final class MessagingPolicy
         }
 
         if ($c->type === 'course' && $c->locked && ! $c->isCourseInstructor) {
+            return false;
+        }
+
+        if ($c->restriction === 'no_send' && ! ($c->type === 'course' && $c->isCourseInstructor)) {
             return false;
         }
 
@@ -230,7 +234,7 @@ final class MessagingPolicy
             return false;
         }
 
-        return true;
+        return $c->restriction !== 'no_send' || ($c->type === 'course' && $c->isCourseInstructor);
     }
 
     public function canSeeParentFeed(bool $linked, bool $childEnrolled, string $senderRole): bool

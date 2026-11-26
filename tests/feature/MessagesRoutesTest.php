@@ -288,4 +288,23 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->assertSame(404, $response->getStatusCode());
         $this->assertSame(0, db_connect()->table('messages')->countAllResults());
     }
+
+    public function testIndexIncludesOwnRestrictionOnly(): void
+    {
+        db_connect()->table('message_restrictions')->insert([
+            'institution_id' => $this->institution, 'user_id' => (int) $this->student->id, 'kind' => 'no_new', 'source' => 'pause',
+            'starts_at' => date('Y-m-d H:i:s'), 'ends_at' => date('Y-m-d H:i:s', strtotime('+2 days')), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->signIn($this->student);
+        $mine = json_decode($this->api('GET', 'conversations')->response()->getBody(), true);
+        $this->assertSame(['kind', 'ends_at', 'source'], array_keys($mine['restriction']));
+        $this->assertSame(['no_new', 'pause'], [$mine['restriction']['kind'], $mine['restriction']['source']]);
+        $this->assertNotNull($mine['restriction']['ends_at']);
+
+        $this->signIn($this->instructor);
+        $theirs = json_decode($this->api('GET', 'conversations')->response()->getBody(), true);
+        $this->assertArrayHasKey('restriction', $theirs);
+        $this->assertNull($theirs['restriction']);
+    }
 }

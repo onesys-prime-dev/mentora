@@ -7,12 +7,13 @@ const SHELL = `
 <div id="messages-app" data-view="list" data-api="/messages/api" data-user-id="1" data-open="">
   <section data-pane="list">
     <button data-role="new" data-dialog-open="messages-new"></button>
+    <button data-role="new-group" data-dialog-open="messages-group" hidden></button>
     <input data-role="search">
     <button data-chip="all" aria-pressed="true"></button><button data-chip="course" aria-pressed="false"></button>
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
     <button data-role="unread-toggle" aria-pressed="false"></button>
     <div data-role="list">
-      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p>
+      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p><div data-role="restriction" role="status" hidden></div>
       <div data-state="error" hidden><button data-role="retry-list"></button></div>
       <button data-role="archived-open" hidden><span data-role="archived-count"></span></button><button data-role="archived-back" hidden></button>
       <div data-role="rows"></div>
@@ -402,6 +403,15 @@ describe("opening a conversation", () => {
 
         expect(shown).toContain("from B");
         expect(shown).not.toContain("from A");
+
+    });
+
+    it("shows the administrator's wording on a removed message", async () => {
+
+        await mount(makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { removed: true, body: null, removed_text: "Message removed by an administrator" })], has_more: false })) }));
+        await openFirst();
+
+        expect(q("[data-role=messages]").textContent).toContain("Message removed by an administrator");
 
     });
 
@@ -1066,4 +1076,137 @@ describe("the draft and the first-contact line", () => {
         expect(q("[data-role=system-line]").textContent).toBe("First message to Ann Lee");
         expect(q("[data-role=system-line] button")).toBeNull();
     });
+});
+
+describe("restriction notice", () => {
+
+    const withRestriction = (restriction, conversations = [conv()]) => makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations, unread: 0, restriction })) });
+
+    it("shows the restriction card and disables New", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30 17:00:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        const card = q("[data-role=restriction]");
+
+        expect(card.hidden).toBe(false);
+        expect(card.textContent).toContain("You can't start new conversations");
+        expect(card.textContent).toContain("Set by your school");
+        expect(q("[data-role=new]").getAttribute("aria-disabled")).toBe("true");
+
+        q("[data-role=new]").click();
+        expect(q("[data-role=list-note]").textContent).toContain("can't start new conversations");
+
+    });
+
+    it("pause wording says while some reports are reviewed", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30 17:00:00", source: "pause" }) });
+
+        await page.ready;
+        await flush();
+
+        const text = q("[data-role=restriction]").textContent;
+
+        expect(text).toContain("while some reports are reviewed");
+        expect(text).not.toMatch(/\d+ report|reported by/i);
+
+    });
+
+    it("no_send replaces reply boxes except course chats taught", async () => {
+
+        document.body.innerHTML = SHELL;
+        const rows = [conv({ id: 1, can_post: false }), conv({ id: 2, type: "course", name: "Maths", can_post: true })];
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_send", ends_at: null, source: "admin" }, rows) });
+
+        await page.ready;
+        await flush();
+        q("[data-role=rows] button[data-id='1']").click();
+        await flush();
+
+        expect(q("[data-role=composer]").hidden).toBe(true);
+        expect(q("[data-role=cannot-post]").textContent).toContain("can't send messages");
+
+        q("[data-role=rows] button[data-id='2']").click();
+        await flush();
+
+        expect(q("[data-role=composer]").hidden).toBe(false);
+
+    });
+
+    it("greys + New group the same way and repeats the reason on a click", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+00:00", source: "admin" }) });
+        const opened = vi.fn();
+
+        q("[data-role=new-group]").addEventListener("click", opened);
+        await page.ready;
+        await flush();
+
+        expect(q("[data-role=new-group]").getAttribute("aria-disabled")).toBe("true");
+
+        q("[data-role=new-group]").click();
+
+        expect(q("[data-role=list-note]").textContent).toContain("can't start new conversations");
+        expect(opened).not.toHaveBeenCalled();
+
+    });
+
+    it("reads an end time that carries its own offset", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+08:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        expect(q("[data-role=restriction]").textContent).toMatch(/until .*30/);
+
+    });
+
+    it("does not rewrite the status card when a poll brings the same restriction", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+00:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        const first = q("[data-role=restriction]").firstChild;
+
+        await vi.advanceTimersByTimeAsync(15000);
+
+        expect(q("[data-role=restriction]").firstChild).toBe(first);
+
+    });
+
+    it("keeps the real reason a chat is closed, not the restriction text", async () => {
+
+        document.body.innerHTML = SHELL;
+        const rows = [conv({ id: 1, type: "course", name: "Maths", can_post: false, closed: true })];
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_send", ends_at: null, source: "admin" }, rows) });
+
+        await page.ready;
+        await flush();
+        q("[data-role=rows] button[data-id='1']").click();
+        await flush();
+
+        expect(q("[data-role=cannot-post]").textContent).toContain("This course has ended");
+
+    });
+
+    it("shows nothing without a restriction", async () => {
+
+        await mount(makeApi());
+
+        expect(q("[data-role=restriction]").hidden).toBe(true);
+        expect(q("[data-role=new]").hasAttribute("aria-disabled")).toBe(false);
+
+    });
+
 });

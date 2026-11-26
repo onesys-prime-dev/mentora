@@ -313,6 +313,21 @@ final class MessagingPolicyTest extends CIUnitTestCase
         yield 'student switch off, direct'     => [new PostContext('direct', true, true, studentDmBlocked: true), false];
         yield 'group chat'                     => [new PostContext('group', true, true), true];
         yield 'parent link ended'              => [new PostContext('direct', true, true, subjectLinkLost: true), false];
+        yield 'no_new restriction, direct'     => [new PostContext('direct', true, true, restriction: 'no_new'), true];
+        yield 'no_send restriction, direct'    => [new PostContext('direct', true, true, restriction: 'no_send'), false];
+        yield 'no_send, group'                 => [new PostContext('group', true, true, restriction: 'no_send'), false];
+        yield 'no_send, course chat student'   => [new PostContext('course', true, true, restriction: 'no_send'), false];
+        yield 'no_send, own course chat'       => [new PostContext('course', true, true, isCourseInstructor: true, restriction: 'no_send'), true];
+    }
+
+    public function testARestrictedSenderCannotStart(): void
+    {
+        $policy = new MessagingPolicy();
+        $party  = static fn (string $role, int $id): Party => new Party($id, [$role], true, 1);
+
+        foreach (['none' => true, 'no_new' => false, 'no_send' => false] as $restriction => $expected) {
+            $this->assertSame($expected, $policy->canStart($party('instructor', 1), $party('student', 2), null, new StartContext(sharedCourse: true, senderRestriction: $restriction)), $restriction);
+        }
     }
 
     #[DataProvider('providePostRules')]
@@ -447,6 +462,9 @@ final class MessagingPolicyTest extends CIUnitTestCase
             'lost parent link'             => [new PostContext('direct', true, true, subjectLinkLost: true), false],
             'blocked direct thread'        => [new PostContext('direct', true, true, blocked: true), false],
             'student dm switched off'      => [new PostContext('direct', true, true, studentDmBlocked: true), false],
+            'no_send restriction'          => [new PostContext('direct', true, true, restriction: 'no_send'), false],
+            'no_send, own course chat'     => [new PostContext('course', true, true, isCourseInstructor: true, restriction: 'no_send'), true],
+            'no_new restriction'           => [new PostContext('direct', true, true, restriction: 'no_new'), true],
         ];
     }
 

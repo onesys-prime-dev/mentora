@@ -7,8 +7,10 @@ namespace App\Controllers\Messaging;
 use App\Controllers\BaseController;
 use App\Services\Messaging\MessagingContextResolver;
 use App\Services\Messaging\ReportReviewService;
+use App\Services\Messaging\RestrictionService;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
+use DateTimeImmutable;
 
 /**
  * The institutional administrator's reports page: the list, one report with its
@@ -36,7 +38,7 @@ class ReportsPageController extends BaseController
             'page'    => 'messages',
             'user'    => auth()->user(),
             'status'  => $status,
-            'reports' => (new ReportReviewService())->list(auth()->user(), $status),
+            'cases'   => (new ReportReviewService())->cases(auth()->user(), $status),
             'report'  => null,
         ]);
     }
@@ -52,7 +54,7 @@ class ReportsPageController extends BaseController
             'page'    => 'messages',
             'user'    => auth()->user(),
             'status'  => $report['status'],
-            'reports' => [],
+            'cases'   => [],
             'report'  => $report,
         ]);
     }
@@ -63,11 +65,68 @@ class ReportsPageController extends BaseController
 
         $decision = self::DECISIONS[(string) $this->request->getPost('decision')] ?? null;
 
-        if ($decision === null || ! (new ReportReviewService())->review(auth()->user(), $reportId, $decision[0], $decision[1])) {
-            throw PageNotFoundException::forPageNotFound();
+        $service = new ReportReviewService();
+
+        if ($decision === null || ! $service->review(auth()->user(), $reportId, $decision[0], $decision[1])) {
+            // A report of theirs that another administrator already decided is not a missing page.
+            if ($decision === null || $service->view(auth()->user(), $reportId) === null) {
+                throw PageNotFoundException::forPageNotFound();
+            }
+
+            return redirect()->to(site_url('messages/reports'))->with('message', 'That report was already reviewed.');
         }
 
         return redirect()->to(site_url('messages/reports'))->with('message', 'The report was reviewed.');
+    }
+
+    /** Dismisses, or removes the reported messages of, every open report about one person. */
+    public function reviewPerson(int $userId): RedirectResponse
+    {
+        $this->adminOnly();
+
+        $decision = (string) $this->request->getPost('decision');
+
+        if (! in_array($decision, ['dismiss', 'remove'], true)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        // Nothing left open (another administrator decided them first) is told, not a missing page.
+        if ((new ReportReviewService())->reviewAll(auth()->user(), $userId, $decision) < 1) {
+            return redirect()->to(site_url('messages/reports'))->with('message', 'Those reports were already reviewed.');
+        }
+
+        return redirect()->to(site_url('messages/reports'))->with('message', 'The reports were reviewed.');
+    }
+
+    /** Restricts the reported person (this also ends an automatic pause). */
+    public function restrict(int $userId): RedirectResponse
+    {
+        $this->adminOnly();
+
+        $days = ['1d' => 1, '7d' => 7, '30d' => 30, 'lifted' => null];
+        $key  = (string) $this->request->getPost('duration');
+
+        if (! array_key_exists($key, $days) || ! (new RestrictionService())->restrict(auth()->user(), $userId, (string) $this->request->getPost('kind'), $days[$key] === null ? null : new DateTimeImmutable('+' . $days[$key] . ' days'))) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return redirect()->to(site_url('messages/reports'))->with('message', 'The restriction was placed.');
+    }
+
+    /** Ends the person's administrator restriction early (D7). */
+    public function lift(int $userId): RedirectResponse
+    {
+        $this->adminOnly();
+
+        $service = new RestrictionService();
+
+        if (! $service->administers(auth()->user(), $userId)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        $lifted = $service->lift(auth()->user(), $userId);
+
+        return redirect()->to(site_url('messages/reports'))->with('message', $lifted ? 'The restriction was lifted.' : 'That restriction was already lifted.');
     }
 
     private function adminOnly(): void

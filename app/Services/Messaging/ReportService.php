@@ -85,6 +85,8 @@ class ReportService
             'new'            => ['message_id' => $messageId, 'conversation_id' => $conversationId, 'reason' => $reason],
         ]);
 
+        (new RestrictionService())->evaluatePause((int) $message['sender_id']);
+
         return true;
     }
 

@@ -432,6 +432,12 @@ class MessageService
         return true;
     }
 
+    /** Only an administrator ever removes a direct message, so a removal there is theirs. */
+    private function isDirect(int $conversationId): bool
+    {
+        return db_connect()->table('conversations')->where(['id' => $conversationId, 'type' => 'direct'])->countAllResults() > 0;
+    }
+
     private function inConversation(int $conversationId, int $messageId): bool
     {
         return $messageId > 0 && db_connect()->table('messages')->where(['id' => $messageId, 'conversation_id' => $conversationId])->countAllResults() > 0;
@@ -515,6 +521,7 @@ class MessageService
             'sender_name' => $view['avatars'][(int) $row['sender_id']]['name'] ?? $sender['name'], 'sender_role' => $sender['role'],
             'avatar' => (int) $row['sender_id'] === $userId ? null : ($view['avatars'][(int) $row['sender_id']] ?? null),
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
+            'removed_text' => $removed && $row['removed_by'] !== null && $this->isDirect((int) $row['conversation_id']) ? 'Message removed by an administrator' : 'Message removed',
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId, $view['avatars'] ?? []),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,

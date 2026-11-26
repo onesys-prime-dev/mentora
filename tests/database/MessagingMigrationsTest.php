@@ -346,6 +346,12 @@ final class MessagingMigrationsTest extends DatabaseTestCase
                 $this->migration('2026-12-03-000003_AddFirstContactAndEmailScope', 'AddFirstContactAndEmailScope')->up();
                 db_connect()->resetDataCache();
             }
+
+            // message_reports was rebuilt without its pause_id column (the restrictions table itself survives).
+            if (! db_connect()->fieldExists('pause_id', 'message_reports')) {
+                db_connect()->query('ALTER TABLE message_reports ADD COLUMN pause_id INT UNSIGNED NULL');
+                db_connect()->resetDataCache();
+            }
         }
 
         foreach (self::TABLES as $table) {

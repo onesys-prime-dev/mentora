@@ -32,9 +32,9 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <?php if ($canReview ?? false): ?>
                         <a href="<?= esc(site_url('messages/reports')) ?>" class="inline-flex items-center rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
                     <?php endif; ?>
-                    <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
+                    <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand-tint aria-disabled:cursor-not-allowed aria-disabled:border-gray-300 aria-disabled:text-gray-400 aria-disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
                     <button type="button" data-role="prefs-open" data-dialog-open="messages-prefs" aria-label="Settings" class="rounded-full border border-gray-300 px-2.5 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Settings</button>
-                    <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
+                    <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark aria-disabled:cursor-not-allowed aria-disabled:bg-gray-300 aria-disabled:hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
                 </span>
             </div>
 
@@ -63,6 +63,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <p>Messages could not load.</p>
                     <button type="button" data-role="retry-list" class="mt-2 rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand/10">Try again</button>
                 </div>
+                <div data-role="restriction" role="status" hidden class="mx-3 mb-2 mt-1 rounded-xl border border-[#F5D78E] bg-[#FFF8E6] px-3 py-2 text-[13px] text-gray-900"></div>
                 <p data-role="list-note" role="status" aria-live="polite" hidden class="border-b border-gray-100 bg-brand-tint px-4 py-1.5 text-center text-[13px] text-[#646464]"></p>
                 <button type="button" data-role="archived-open" hidden class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span>Archived chats (<span data-role="archived-count">0</span>)</span><span aria-hidden="true">&rsaquo;</span></button>
                 <button type="button" data-role="archived-back" hidden class="flex w-full items-center gap-1 border-b border-gray-100 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span aria-hidden="true">&lsaquo;</span> Back to chats</button>

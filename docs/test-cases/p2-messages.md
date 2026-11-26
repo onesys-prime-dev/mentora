@@ -583,3 +583,60 @@ Drafts, first contact, new-conversation limits and the email choice (`docs/featu
 - **Already automated:** `tests/database/MessageNotifierTest.php`, `tests/database/MessagePreferencesTest.php`
 - **Basis:** `MessageNotifier::tell`, `MessagePreferences`
 - **Review:** Draft
+
+## Institution-wide Messages, Phase 4 (TC-MSG-32 to 35)
+
+Restrictions, administrator DM removal, the automatic pause and reports by person (FR6, D7, D8, BC-2).
+
+### TC-MSG-32 An administrator restricts and lifts
+
+- **Role:** Institution admin, Student. **Priority:** P1
+- **Steps:**
+  1. The administrator opens **Reports**, picks a reported student's card, presses **Restrict…**, chooses "No new conversations" for 1 day.
+  2. The student opens Messages and tries **+ New** and **+ New group**; then replies in an existing conversation.
+  3. The administrator restricts again with "No sending"; the student tries to reply.
+  4. The administrator presses **Lift**.
+- **Expected:**
+  - Step 2: a notice card says they can't start new conversations until the end time; both buttons are greyed and repeat the reason; replying still works; an existing conversation still opens from the picker.
+  - Step 3: reply boxes are replaced by the restriction text, except course chats the person teaches.
+  - Step 4: everything works again. Each step is audited with ids only.
+- **Already automated:** `tests/database/RestrictionServiceTest.php`, `tests/feature/MessagesReportsPageTest.php`, `tests/js/pages/messages-page.test.js`
+- **Basis:** `RestrictionService`, `ReportsPageController`
+- **Review:** Draft
+
+### TC-MSG-33 Three strangers' reports pause a sender
+
+- **Role:** Student (sender), three people who share no course with them, Institution admin. **Priority:** P1
+- **Steps:**
+  1. The sender writes a first message to each of the three; each reports it within 24 hours.
+- **Expected:**
+  - After the third report the sender can't start new conversations; the notice says it lasts while some reports are reviewed (no count, no names).
+  - Every institution administrator gets a notification linking to Reports, where the card shows "Paused · {h}h left".
+  - Reports from classmates (or a class reporting its instructor), from one person twice, or about group/course messages never pause; institution administrators are never paused.
+- **Already automated:** `tests/database/AutomaticPauseTest.php`
+- **Basis:** `RestrictionService::evaluatePause`
+- **Review:** Draft
+
+### TC-MSG-34 The pause ends
+
+- **Role:** Institution admin. **Priority:** P2
+- **Steps:**
+  1. With a paused sender, the administrator decides every counted report (or presses **Dismiss all**).
+  2. Separately: let another pause run 72 hours without review.
+- **Expected:**
+  - The pause ends when the last counted report is decided, or when a restriction is applied, or after 72 hours; one audit entry each, never two.
+- **Already automated:** `tests/database/ReportReviewByPersonTest.php`, `tests/database/AutomaticPauseTest.php`
+- **Basis:** `ReportReviewService`, `RestrictionService`
+- **Review:** Draft
+
+### TC-MSG-35 Remove a reported direct message
+
+- **Role:** Institution admin, the two people in the conversation. **Priority:** P2
+- **Steps:**
+  1. With the conversation open on the recipient's screen, the administrator presses **Remove reported messages** on the case and confirms.
+- **Expected:**
+  - Both people see "Message removed by an administrator" in place of the text, without reloading.
+  - A message its own author deleted for everyone still says "Message removed".
+- **Already automated:** `tests/database/ReportReviewByPersonTest.php`, `tests/database/ReportReviewServiceTest.php`
+- **Basis:** `ReportReviewService::review`, `MessageService`
+- **Review:** Draft

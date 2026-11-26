@@ -65,6 +65,9 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const pinbarEl = $("[data-role=pinbar]");
     const replyStripEl = $("[data-role=reply-strip]");
     const toastEl = $("[data-role=toast]");
+    const restrictionEl = $("[data-role=restriction]");
+    const newEl = $("[data-role=new]");
+    const newGroupEl = $("[data-role=new-group]");
 
     const listGuard = createGuard();
     const threadGuard = createGuard();
@@ -99,6 +102,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         since: "",
         pinned: [],
         pinIndex: 0,
+        restriction: null,
     };
 
     // ---- small helpers -------------------------------------------------
@@ -123,6 +127,65 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             listNoteTimer = setTimeout(() => showListNote(""), 5000);
         }
     }
+
+    const endsWords = (stampText) => {
+        const d = new Date(String(stampText).replace(" ", "T"));
+
+        return Number.isNaN(d.getTime()) ? "" : ` until ${d.toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}`;
+    };
+    const restrictionTitle = () => (state.restriction?.kind === "no_send" ? "You can't send messages" : "You can't start new conversations");
+
+    // The viewer's own restriction (FR6): a card in the list pane, a greyed New that repeats the reason, and no reply boxes for no_send.
+    let shownRestriction;
+
+    function renderRestriction() {
+        const r = state.restriction;
+        const key = JSON.stringify(r);
+
+        // Every list poll comes back here: a live region that is rewritten would be read out again each time.
+        if (key === shownRestriction) {
+            return;
+        }
+
+        shownRestriction = key;
+
+        if (restrictionEl) {
+            restrictionEl.hidden = r === null;
+            restrictionEl.replaceChildren();
+
+            if (r) {
+                const title = document.createElement("b");
+
+                title.textContent = restrictionTitle();
+                restrictionEl.append(title, document.createTextNode(`${endsWords(r.ends_at)}${r.source === "pause" ? ", while some reports are reviewed. " : ". "}`));
+
+                const note = document.createElement("span");
+
+                note.className = "text-[12px] text-[#646464]";
+                note.textContent = r.source === "pause" ? "This lifts by itself." : "Set by your school.";
+                restrictionEl.append(note);
+            }
+        }
+
+        [newEl, newGroupEl].forEach((button) => {
+            if (button) {
+                button.toggleAttribute("aria-disabled", r !== null);
+
+                if (r) {
+                    button.setAttribute("aria-disabled", "true");
+                }
+            }
+        });
+    }
+
+    // Capture phase on the buttons themselves, so the dialog opener never sees the click.
+    [newEl, newGroupEl].forEach((button) => button?.addEventListener("click", (event) => {
+        if (state.restriction) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            showListNote(`${restrictionTitle()}${endsWords(state.restriction.ends_at)}${state.restriction.source === "pause" ? ", while some reports are reviewed" : ""}.`);
+        }
+    }, true));
 
     function updateBadge(count) {
         state.badge = count;
@@ -229,6 +292,8 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         listCache.set(cacheKey(), data.conversations);
         state.conversations = data.conversations;
         state.archivedCount = data.archived_count ?? state.archivedCount;
+        state.restriction = data.restriction ?? null;
+        renderRestriction();
         state.switching = false;
         updateBadge(data.unread ?? 0);
 
@@ -285,7 +350,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
         composerEl.hidden = !canPost;
         cannotPostEl.hidden = canPost;
-        cannotPostEl.textContent = locked ? "Only the instructor can post here" : c?.closed ? "This course has ended, so this chat is read-only." : "You can't post in this conversation";
+        cannotPostEl.textContent = state.restriction?.kind === "no_send" && !locked && !c?.closed ? `${restrictionTitle()}${endsWords(state.restriction.ends_at)}.` : locked ? "Only the instructor can post here" : c?.closed ? "This course has ended, so this chat is read-only." : "You can't post in this conversation";
 
         // The lock belongs to whoever moderates a course chat; a moderator who can still post is told what students see.
         if (lockEl) {
@@ -1158,7 +1223,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     // ---- starting a staff group ----------------------------------------
     // Only a chairperson or dean is offered the button; the server decides who may be added and who may start.
 
-    const groupBtn = $("[data-role=new-group]");
+    const groupBtn = newGroupEl;
     const groupTitle = $("[data-role=group-title]");
     const groupSearch = $("[data-role=group-search]");
     const groupResults = $("[data-role=group-results]");

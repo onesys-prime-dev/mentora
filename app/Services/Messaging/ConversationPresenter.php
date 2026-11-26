@@ -302,7 +302,9 @@ class ConversationPresenter
         }
 
         if ($row['removed_at'] !== null) {
-            return 'Message removed';
+            $direct = $row['removed_by'] !== null && db_connect()->table('conversations')->where(['id' => $conversationId, 'type' => 'direct'])->countAllResults() > 0;
+
+            return $direct ? 'Message removed by an administrator' : 'Message removed';
         }
 
         $body = $this->cipher->decrypt((string) $row['body_enc'], (int) $row['conversation_id'], (int) $row['sender_id']);

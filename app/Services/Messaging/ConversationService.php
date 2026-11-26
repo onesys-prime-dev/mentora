@@ -29,11 +29,12 @@ class ConversationService
     /**
      * Whether $sender may start (or reopen) a direct conversation with $recipient, and about which child.
      * The one check behind startDirect and the profile's Message button, so the button never promises
-     * a conversation that starting refuses. Null when refused.
+     * a conversation that starting refuses. Null when refused. `$opening` ignores the sender's own restriction:
+     * it stops creating threads, not reaching one that exists (the caller checks that one does).
      *
      * @return array{subject_student_id: ?int}|null
      */
-    public function resolveDirectStart(User $sender, User $recipient, ?int $subjectStudentId = null): ?array
+    public function resolveDirectStart(User $sender, User $recipient, ?int $subjectStudentId = null, bool $opening = false): ?array
     {
         $inst = $this->resolver->institutionOf($sender);
 
@@ -52,7 +53,7 @@ class ConversationService
             $subjectStudentId = null;
         } elseif ($subjectStudentId === null) {
             // Two staff who are also parents are a staff pair first; only if that is refused is the thread about the one shared child.
-            $plain = $this->resolver->forStart($sender, $recipient, null);
+            $plain = $opening ? $this->resolver->forStart($sender, $recipient, null)?->withoutRestriction() : $this->resolver->forStart($sender, $recipient, null);
 
             if ($plain !== null && $this->policy->canStart($senderParty, $recipientParty, null, $plain)) {
                 return ['subject_student_id' => null];
@@ -66,6 +67,7 @@ class ConversationService
         }
 
         $context = $this->resolver->forStart($sender, $recipient, $subjectStudentId);
+        $context = $opening ? $context?->withoutRestriction() : $context;
 
         if ($context === null || ! $this->policy->canStart($senderParty, $recipientParty, $subjectStudentId, $context)) {
             return null;
@@ -87,7 +89,7 @@ class ConversationService
      */
     public function existingDirect(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
     {
-        $start = $this->startFor($sender, $recipientId, $subjectStudentId);
+        $start = $this->startFor($sender, $recipientId, $subjectStudentId, true);
 
         return $start === null ? null : $this->byKey(DirectKey::for((int) $this->resolver->institutionOf($sender), (int) $sender->id, $recipientId, $start['subject_student_id']));
     }
@@ -100,13 +102,18 @@ class ConversationService
      */
     public function draftFor(User $sender, int $recipientId, ?int $subjectStudentId = null): ?array
     {
-        $start = $this->startFor($sender, $recipientId, $subjectStudentId);
+        $start = $this->startFor($sender, $recipientId, $subjectStudentId, true);
 
         if ($start === null) {
             return null;
         }
 
         $existing = $this->byKey(DirectKey::for((int) $this->resolver->institutionOf($sender), (int) $sender->id, $recipientId, $start['subject_student_id']));
+
+        // A restriction (FR6) lets someone open a thread they already have, never begin one.
+        if ($existing === null && $this->resolver->restrictionKind((int) $sender->id) !== 'none') {
+            return null;
+        }
 
         return [
             'recipient_id'       => $recipientId,
@@ -127,11 +134,11 @@ class ConversationService
     }
 
     /** @return array{subject_student_id: ?int}|null */
-    private function startFor(User $sender, int $recipientId, ?int $subjectStudentId): ?array
+    private function startFor(User $sender, int $recipientId, ?int $subjectStudentId, bool $opening = false): ?array
     {
         $recipient = $recipientId < 1 ? null : model(UserModel::class)->findById($recipientId);
 
-        return $recipient === null ? null : $this->resolveDirectStart($sender, $recipient, $subjectStudentId);
+        return $recipient === null ? null : $this->resolveDirectStart($sender, $recipient, $subjectStudentId, $opening);
     }
 
     /** @return array<string, mixed>|null */

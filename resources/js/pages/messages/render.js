@@ -276,7 +276,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     }
 
     if (message.removed || message.deleted_everyone) {
-        node.append(el("span", "italic text-gray-500", message.removed ? "Message removed" : mine ? "You deleted a message" : `${message.sender_name ?? "Someone"} deleted a message`));
+        node.append(el("span", "italic text-gray-500", message.removed ? (message.removed_text ?? "Message removed") : mine ? "You deleted a message" : `${message.sender_name ?? "Someone"} deleted a message`));
 
         return node;
     }

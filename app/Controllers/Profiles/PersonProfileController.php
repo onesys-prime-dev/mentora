@@ -129,6 +129,6 @@ class PersonProfileController extends BaseController
             return false;
         }
         // D32: the active-role exception is gone (decisions are on parties now); the same check that starting the conversation makes.
-        return (new ConversationService())->resolveDirectStart($viewer, $subject) !== null;
+        return (new ConversationService())->draftFor($viewer, $id, null) !== null; // opening, so a restricted person still reaches an existing thread
     }
 }

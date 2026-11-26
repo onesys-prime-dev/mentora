@@ -148,6 +148,7 @@ class MessagingContextResolver
             studentDmEnabled: ! $sameInstitution || $this->studentSwitch()->enabled($senderInstitution),
             blockedByRecipient: $this->blockBinds($recipientId, $senderId),
             isSelf: $senderId === $recipientId,
+            senderRestriction: $this->restrictionKind($senderId),
         );
     }
 
@@ -181,7 +182,16 @@ class MessagingContextResolver
             blocked: $blocked,
             studentDmBlocked: $type === 'direct' && $this->studentDmBlocked($conversation),
             subjectLinkLost: $type === 'direct' && $this->linkLost($conversation),
+            restriction: $this->restrictionKind($userId),
         );
+    }
+
+    /** @var array<int, string> each person's restriction kind, read once per resolver (a list or a search asks per row) */
+    private array $restrictionKinds = [];
+
+    public function restrictionKind(int $userId): string
+    {
+        return $this->restrictionKinds[$userId] ??= (new RestrictionService())->kindFor($userId);
     }
 
     private ?StudentMessaging $studentSwitch = null;
@@ -372,7 +382,7 @@ class MessagingContextResolver
     }
 
     /** @return list<int> active offerings this person is enrolled in or assigned to teach */
-    private function activeOfferingIds(int $userId): array
+    public function activeOfferingIds(int $userId): array
     {
         $db = db_connect();
 

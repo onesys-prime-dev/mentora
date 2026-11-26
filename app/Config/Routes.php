@@ -652,6 +652,9 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
 $routes->get('messages/reports', 'Messaging\ReportsPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->get('messages/reports/(:num)', 'Messaging\ReportsPageController::show/$1', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->post('messages/reports/(:num)/review', 'Messaging\ReportsPageController::review/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/review', 'Messaging\ReportsPageController::reviewPerson/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/restrict', 'Messaging\ReportsPageController::restrict/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/lift', 'Messaging\ReportsPageController::lift/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
 $routes->get('messages', 'Messaging\MessagesPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['filter' => ['messages', 'permission:messages.use']]);
 

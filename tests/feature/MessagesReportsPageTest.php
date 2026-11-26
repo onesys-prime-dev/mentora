@@ -127,7 +127,7 @@ final class MessagesReportsPageTest extends RouteTestCase
         $this->assertNotNull($removedAt[2]);
     }
 
-    public function testADirectReportOffersNoRemoveButton(): void
+    public function testADirectReportOffersTheRemoveButton(): void
     {
         $direct = (int) (new ConversationService())->startDirect($this->child, (int) $this->instructor->id)['id'];
         $id     = $this->report('private', $direct);
@@ -136,8 +136,111 @@ final class MessagesReportsPageTest extends RouteTestCase
         [$status, $body] = $this->open('GET', "messages/reports/{$id}");
 
         $this->assertSame(200, $status);
-        $this->assertStringNotContainsString('value="remove"', $body);
-        $this->assertStringContainsString('Direct messages are never removed', $body);
+        $this->assertStringContainsString('value="remove"', $body);
+        $this->assertStringNotContainsString('Direct messages are never removed', $body);
+    }
+
+    /** The instructor is under an automatic pause, with one open report about them. */
+    private function pauseInstructor(): void
+    {
+        $this->report(self::SECRET);
+        $now = date('Y-m-d H:i:s');
+        db_connect()->table('message_restrictions')->insert([
+            'institution_id' => $this->institution, 'user_id' => (int) $this->instructor->id, 'kind' => 'no_new', 'source' => 'pause',
+            'starts_at' => $now, 'ends_at' => date('Y-m-d H:i:s', time() + 50 * 3600), 'created_at' => $now,
+        ]);
+        $this->signIn($this->admin);
+    }
+
+    public function testReportsPageShowsCaseWithPauseMarker(): void
+    {
+        $this->pauseInstructor();
+
+        [$status, $body] = $this->open('GET', 'messages/reports');
+
+        $this->assertSame(200, $status);
+        $this->assertStringContainsString('Ins Tructor', $body);
+        $this->assertMatchesRegularExpression('/Paused · \d+h left/', $body);
+        $this->assertStringContainsString('Dismiss all', $body);
+        $this->assertStringContainsString('Remove reported messages', $body);
+        $this->assertStringContainsString('Restrict', $body);
+        $this->assertStringNotContainsString(self::SECRET, $body);
+        $this->assertStringNotContainsString('Lift restriction', $body, 'nothing to lift yet');
+    }
+
+    public function testRestrictingPlacesTheRestrictionAndEndsThePause(): void
+    {
+        $this->pauseInstructor();
+        $uid = (int) $this->instructor->id;
+
+        $this->assertSame(302, $this->open('POST', "messages/reports/person/{$uid}/restrict", ['kind' => 'no_send', 'duration' => '7d'])[0]);
+        $this->assertSame('no_send', db_connect()->table('message_restrictions')->where(['user_id' => $uid, 'source' => 'admin'])->get()->getRow('kind'));
+        $this->assertSame('restricted', db_connect()->table('message_restrictions')->where(['user_id' => $uid, 'source' => 'pause'])->get()->getRow('end_reason'));
+        $this->assertSame(404, $this->open('POST', "messages/reports/person/{$uid}/restrict", ['kind' => 'bogus', 'duration' => '7d'])[0]);
+    }
+
+    public function testTheCaseCardShowsWhenARestrictionEndsAndOffersToLiftIt(): void
+    {
+        $this->pauseInstructor();
+        $uid = (int) $this->instructor->id;
+        $this->open('POST', "messages/reports/person/{$uid}/restrict", ['kind' => 'no_new', 'duration' => '7d']);
+
+        $body = $this->open('GET', 'messages/reports')[1];
+
+        $this->assertStringContainsString('Restricted · no new conversations · until ' . date('M j', time() + 7 * 86400), $body);
+        $this->assertStringContainsString("messages/reports/person/{$uid}/lift", $body);
+        $this->assertStringContainsString('Lift restriction', $body);
+    }
+
+    public function testLiftingEndsTheRestrictionAndIsAudited(): void
+    {
+        $this->pauseInstructor();
+        $uid = (int) $this->instructor->id;
+        $this->open('POST', "messages/reports/person/{$uid}/restrict", ['kind' => 'no_new', 'duration' => 'lifted']);
+
+        $this->assertSame(302, $this->open('POST', "messages/reports/person/{$uid}/lift")[0]);
+        $this->assertSame('lifted', db_connect()->table('message_restrictions')->where(['user_id' => $uid, 'source' => 'admin'])->get()->getRow('end_reason'));
+        $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'messages.restriction_lifted')->countAllResults());
+        $this->assertSame(302, $this->open('POST', "messages/reports/person/{$uid}/lift")[0], 'already lifted is not an error page');
+    }
+
+    public function testOnlyThePeoplesInstitutionAdministratorCanLift(): void
+    {
+        $this->pauseInstructor();
+        $uid = (int) $this->instructor->id;
+        $this->open('POST', "messages/reports/person/{$uid}/restrict", ['kind' => 'no_new', 'duration' => 'lifted']);
+        $far = PeopleFactory::person('institutional_admin', 'Far', 'Admin', null, DeanFactory::college('RG3')['institution']);
+
+        foreach ([$this->child, $this->instructor, $far] as $user) {
+            $this->signIn($user);
+
+            $this->assertSame(404, $this->open('POST', "messages/reports/person/{$uid}/lift")[0], 'user ' . $user->id);
+        }
+
+        $this->assertNull(db_connect()->table('message_restrictions')->where(['user_id' => $uid, 'source' => 'admin'])->get()->getRow('ended_at'));
+    }
+
+    public function testDecidingAllReportsDismissesThemAndEndsThePause(): void
+    {
+        $this->pauseInstructor();
+        $uid = (int) $this->instructor->id;
+
+        $this->assertSame(302, $this->open('POST', "messages/reports/person/{$uid}/review", ['decision' => 'dismiss'])[0]);
+        $this->assertSame(0, db_connect()->table('message_reports')->where('status', 'open')->countAllResults());
+    }
+
+    public function testASecondAdministratorOnAnAlreadyDecidedCaseIsToldSoNotGivenA404(): void
+    {
+        $this->pauseInstructor();
+        $uid    = (int) $this->instructor->id;
+        $report = (int) db_connect()->table('message_reports')->get()->getRow('id');
+
+        $this->open('POST', "messages/reports/person/{$uid}/review", ['decision' => 'dismiss']);
+
+        $this->assertSame(302, $this->open('POST', "messages/reports/person/{$uid}/review", ['decision' => 'dismiss'])[0]);
+        $this->assertSame(302, $this->open('POST', "messages/reports/{$report}/review", ['decision' => 'dismiss'])[0]);
+        $this->assertSame(404, $this->open('POST', "messages/reports/person/{$uid}/review", ['decision' => 'bogus'])[0], 'a bad decision is still a 404');
+        $this->assertSame(404, $this->open('POST', 'messages/reports/99999/review', ['decision' => 'dismiss'])[0], 'an unknown report is still a 404');
     }
 
     public function testEveryoneElseGetsNotFoundOnAllThreeRoutes(): void

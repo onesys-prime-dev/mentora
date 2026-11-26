@@ -8,6 +8,7 @@ use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\MessageService;
 use App\Services\Messaging\RateLimitedException;
+use App\Services\Messaging\RestrictionService;
 use App\Services\Profiles\AvatarData;
 use CodeIgniter\HTTP\ResponseInterface;
 
@@ -25,7 +26,11 @@ class ConversationController extends MessagingController
 
         $rows = $service->listFor($user, in_array($filter, ['course', 'direct', 'group'], true) ? $filter : 'all', (string) $this->request->getGet('unread') === '1', (string) $this->request->getGet('archived') === '1');
 
+        // Only the viewer's own restriction, never who set it or why beyond its source.
+        $active = (new RestrictionService())->active((int) $user->id);
+
         return $this->response->setJSON([
+            'restriction'   => $active === null ? null : ['kind' => $active['kind'], 'ends_at' => $active['ends_at'] === null ? null : (new \DateTimeImmutable($active['ends_at']))->format(DATE_ATOM), 'source' => $active['source']],
             'conversations' => (new ConversationPresenter())->present($user, $rows),
             'unread'        => $service->unreadCount($user),
             'archived_count' => $service->archivedCount($user),

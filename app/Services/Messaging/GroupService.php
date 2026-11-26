@@ -104,7 +104,8 @@ class GroupService
         $institution = $this->resolver->institutionOf($creator);
         $title       = self::cleanTitle($title);
 
-        if (! isset(self::MEMBER_ROLES[$role]) || $institution === null || $title === null) {
+        // BC-5: any restriction or pause stops creating groups (and adding members).
+        if (! isset(self::MEMBER_ROLES[$role]) || $institution === null || $title === null || (new RestrictionService())->kindFor((int) $creator->id) !== 'none') {
             return null;
         }
 
