@@ -389,7 +389,7 @@ test("TC-MSG-11 A student blocks a classmate and reports a message; the administ
         await admin.page.goto("/messages/reports");
         await admin.page.getByRole("link", { name: /Spam/ }).first().click();
         await expect(admin.page.getByText("This is the message to report.")).toBeVisible();
-        await admin.page.getByRole("button", { name: "Mark as actioned" }).click();
+        await admin.page.getByRole("button", { name: "Mark as actioned", exact: true }).click();
         await expect(admin.page).toHaveURL(/\/messages\/reports$/);
         await expect(admin.page.getByRole("link", { name: /Spam/ })).toHaveCount(0);
     } finally {

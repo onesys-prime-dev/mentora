@@ -91,7 +91,7 @@ test("TC-GG-02 The instructor grades the group once, adjusts one member with a r
     await expect(detail.getByRole("button", { name: "Reopen grading" })).toBeVisible();
 });
 
-test("TC-GG-03 A teammate never receives another member's reason or note; the member sees their own", async ({ page }) => {
+test("TC-GG-03 A teammate never receives another member's reason or note; the member sees their own", async ({ page, browser }) => {
     const bodies = [];
     page.on("response", async (response) => {
         if (response.url().includes("/student/")) {
@@ -108,12 +108,20 @@ test("TC-GG-03 A teammate never receives another member's reason or note; the me
     expect(bodies.length).toBeGreaterThan(0);
     expect(bodies.filter((b) => b.includes(REASON) || b.includes(NOTE))).toEqual([]);
 
-    await page.context().clearCookies();
-    await signInAs(page, accounts.student3, "student");
-    await openCourse(page, "student", "IT101", "A");
-    await openTab(page, "Assessments");
-    await page.locator("[data-assessment]").filter({ hasText: LAB }).first().click();
-    await expect(page.locator("[data-group-result]")).toContainText(REASON);
+    // A browser of their own: clearing cookies races the first student's requests still in flight, whose replies
+    // set their session cookie again.
+    const context = await browser.newContext();
+    const member = await context.newPage();
+
+    try {
+        await signInAs(member, accounts.student3, "student");
+        await openCourse(member, "student", "IT101", "A");
+        await openTab(member, "Assessments");
+        await member.locator("[data-assessment]").filter({ hasText: LAB }).first().click();
+        await expect(member.locator("[data-group-result]")).toContainText(REASON);
+    } finally {
+        await context.close();
+    }
 });
 
 test("TC-GG-04 The group view fits a 360 px phone and axe finds nothing serious", async ({ page }) => {
