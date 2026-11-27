@@ -19,7 +19,7 @@ use CodeIgniter\View\View;
 final class StaffModalsResponsiveTest extends CIUnitTestCase
 {
     /** Dialogs with one short field (or a script-filled sheet with no form), which keep the bottom dialog on a phone. */
-    private const BOTTOM = ['follow-up-pick', 'messages-new', 'messages-report', 'messages-prefs', 'messages-group', 'messages-group-settings', 'messages-forward', 'messages-who'];
+    private const BOTTOM = ['follow-up-pick', 'messages-new', 'messages-report', 'messages-prefs', 'messages-group-settings', 'messages-forward', 'messages-who'];
 
     /** The confirms (components/confirm, and the password step): small centred alerts at every size. */
     private const ALERTS = ['signoff-2', 'signoff-program-1', 'end-4', 'reauth-dialog'];
@@ -155,7 +155,7 @@ final class StaffModalsResponsiveTest extends CIUnitTestCase
             'dean announcements: announcement-new', 'dean announcements: edit-4', 'dean announcements: end-4',
             'chairperson override requests: endorse-8', 'chairperson override requests: send-back-8',
             'grades: nudge-dialog', 'layout: reauth-dialog',
-            'messages: messages-new', 'messages: messages-report', 'messages: messages-prefs', 'messages: messages-group', 'messages: messages-forward', 'messages: messages-who',
+            'messages: messages-new', 'messages: messages-report', 'messages: messages-prefs', 'messages: messages-forward', 'messages: messages-who',
         ] as $key) {
             $this->assertContains($key, $keys);
         }
@@ -275,10 +275,10 @@ final class StaffModalsResponsiveTest extends CIUnitTestCase
             $this->assertStringContainsString('text-base sm:text-sm pointer-coarse:min-h-11', $field);
         }
 
-        // Messages' script-drawn rows in its dialogs: group results and chips, forward choices, Unblock.
+        // Messages' script-drawn rows in its dialogs: the picker's results and chips, forward choices, Unblock.
         $messages = (string) file_get_contents(ROOTPATH . 'resources/js/pages/messages/messages.js');
-        // The group result row is a flex row since its avatar was added (F1); what is pinned is its touch height.
-        $this->assertMatchesRegularExpression('/button\.className = "[^"]*w-full items-center gap-2 rounded-lg px-3 py-2 [^"]*pointer-coarse:min-h-11/', $messages);
+        // The picker's result row (it also picks group members since "+ New group" went): its touch height is pinned.
+        $this->assertMatchesRegularExpression('/button\.className = "[^"]*w-full items-center gap-3 rounded-lg px-3 py-2 [^"]*pointer-coarse:min-h-11/', $messages);
         $this->assertMatchesRegularExpression('/remove\.className = "[^"]*pointer-coarse:min-h-11 pointer-coarse:min-w-11/', $messages);
         $this->assertMatchesRegularExpression('/label\.className = "[^"]*pointer-coarse:min-h-11/', $messages);
         $this->assertMatchesRegularExpression('/"rounded-full [^"]*pointer-coarse:min-h-11[^"]*", "Unblock"/', (string) file_get_contents(ROOTPATH . 'resources/js/pages/messages/settings.js'));

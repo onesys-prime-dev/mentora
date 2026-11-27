@@ -1257,7 +1257,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             const words = document.createElement("span");
 
             button.type = "button";
-            button.className = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            button.className = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
             name.className = "text-sm font-semibold text-gray-900";
             name.textContent = entry.name;
             meta.className = "text-xs text-[#646464]";

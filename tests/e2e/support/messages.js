@@ -121,15 +121,26 @@ export async function sendMessage(page, text) {
     await expect(thread(page).locator("[data-id]", { hasText: text }).last()).toHaveAttribute("data-id", /^\d+$/);
 }
 
-/** "+ New", search by name, pick the person whose result mentions `role`; leaves their thread open. */
+/**
+ * "+ New", search by name, pick the person whose result mentions `role`; leaves their thread open. A pick is a chip
+ * and Message opens the thread; someone who cannot start groups (a parent) goes to the thread on the pick itself.
+ */
 export async function startThreadWith(page, search, name, role = null) {
     await page.locator("[data-role=new]").click();
     await page.locator("#messages-picker").fill(search);
 
     const results = page.locator("[data-role=picker-results] button", { hasText: name });
     const result = role ? results.filter({ hasText: role }).first() : results.first();
+    const start = page.locator("[data-role=picker-start]");
+    const head = page.locator("[data-role=head-name]", { hasText: name });
 
     await result.click();
+    await expect(start.or(head).first()).toBeVisible();
+
+    if (await start.isVisible()) {
+        await start.click();
+    }
+
     await expect(page.locator("[data-role=head-name]")).toContainText(name);
 }
 
