@@ -19,7 +19,8 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
      data-user-id="<?= esc((string) auth()->id()) ?>"
      data-tz-offset="<?= (int) (date('Z') / 60) ?>"
      data-open="<?= esc($openId) ?>"
-     data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>">
+     data-can-group="<?= ($canStartGroups ?? false) ? '1' : '0' ?>"
+     data-no-child="<?= ($noLinkedChild ?? false) ? '1' : '0' ?>">
 
     <?php // The page itself never scrolls: the header, main's padding (pt-4 pb-10, pt-2 pb-6 once locked) and mt-5 come off. ?>
     <div class="mt-5 grid h-[calc(100dvh-var(--app-header-h,4.5rem)-4.75rem)] lock:h-[calc(100dvh-var(--app-header-h,4.5rem)-3.25rem)] min-h-[440px] gap-3 max-md:relative max-md:overflow-hidden md:grid-cols-[380px_1fr]">
@@ -32,9 +33,9 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <?php if ($canReview ?? false): ?>
                         <a href="<?= esc(site_url('messages/reports')) ?>" class="inline-flex items-center rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
                     <?php endif; ?>
-                    <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
+                    <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand-tint aria-disabled:cursor-not-allowed aria-disabled:border-gray-300 aria-disabled:text-gray-400 aria-disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
                     <button type="button" data-role="prefs-open" data-dialog-open="messages-prefs" aria-label="Settings" class="rounded-full border border-gray-300 px-2.5 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Settings</button>
-                    <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
+                    <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark aria-disabled:cursor-not-allowed aria-disabled:bg-gray-300 aria-disabled:hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
                 </span>
             </div>
 
@@ -63,6 +64,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <p>Messages could not load.</p>
                     <button type="button" data-role="retry-list" class="mt-2 rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand/10">Try again</button>
                 </div>
+                <div data-role="restriction" role="status" hidden class="mx-3 mb-2 mt-1 rounded-xl border border-[#F5D78E] bg-[#FFF8E6] px-3 py-2 text-[13px] text-gray-900"></div>
                 <p data-role="list-note" role="status" aria-live="polite" hidden class="border-b border-gray-100 bg-brand-tint px-4 py-1.5 text-center text-[13px] text-[#646464]"></p>
                 <button type="button" data-role="archived-open" hidden class="flex w-full items-center justify-between border-b border-gray-100 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span>Archived chats (<span data-role="archived-count">0</span>)</span><span aria-hidden="true">&rsaquo;</span></button>
                 <button type="button" data-role="archived-back" hidden class="flex w-full items-center gap-1 border-b border-gray-100 px-4 py-2.5 pointer-coarse:min-h-11 text-left text-[13px] font-semibold text-brand hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"><span aria-hidden="true">&lsaquo;</span> Back to chats</button>
@@ -86,6 +88,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                         <h2 data-role="head-name" class="truncate text-[15px] font-bold text-brand"></h2>
                         <p data-role="head-sub" class="truncate text-[13px] text-[#646464]"></p>
                     </div>
+                    <button type="button" data-role="group-settings-open" data-dialog-open="messages-group-settings" hidden class="ml-auto flex-none rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Group settings</button>
                     <button type="button" data-role="block" hidden class="ml-auto flex-none rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></button>
                     <button type="button" data-role="lock" hidden aria-pressed="false" class="ml-auto flex-none rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Lock chat</button>
                 </div>
@@ -133,7 +136,7 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<label for="messages-picker" class="mb-1 block text-xs font-medium text-gray-600">Find a person by name</label>'
             . '<input id="messages-picker" data-role="picker-input" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<ul data-role="picker-results" class="mt-3 flex max-h-64 flex-col overflow-y-auto" aria-live="polite"></ul>'
-            . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">Type at least two letters of a name.</p>'
+            . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">' . (($noLinkedChild ?? false) ? 'Your account is not linked to a child yet, so you cannot start a conversation.' : 'Type at least two letters of a name.') . '</p>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -181,6 +184,42 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<ul data-role="group-chips" class="flex flex-wrap gap-1.5" aria-label="People in the group"></ul>'
             . '<p data-role="group-note" role="status" class="text-xs text-[#646464]"></p>'
             . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:sticky sm:bottom-0"><button type="button" data-role="group-create" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button></div>'
+            . '</div>',
+    ], ['saveData' => false]) ?>
+
+    <?= view('components/dialog', [
+        'id'    => 'messages-group-settings',
+        'title' => 'Group settings',
+        'size'  => 'sm',
+        'body'  => '<div class="flex flex-col gap-3">'
+            . '<div role="tablist" aria-label="Group settings" class="flex gap-4 border-b border-gray-200">'
+            . '<button type="button" role="tab" id="gs-tab-members" data-tab="members" aria-controls="gs-panel-members" aria-selected="true" class="-mb-px border-b-2 px-1 pb-2 text-sm font-semibold pointer-coarse:min-h-11 aria-selected:border-brand aria-selected:text-brand border-transparent text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Members (<span data-role="gs-count">0</span>)</button>'
+            . '<button type="button" role="tab" id="gs-tab-details" data-tab="details" aria-controls="gs-panel-details" aria-selected="false" tabindex="-1" class="-mb-px border-b-2 px-1 pb-2 text-sm font-semibold pointer-coarse:min-h-11 aria-selected:border-brand aria-selected:text-brand border-transparent text-[#646464] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Details</button>'
+            . '</div>'
+            . '<div role="tabpanel" id="gs-panel-members" aria-labelledby="gs-tab-members" data-panel="members" class="flex flex-col gap-3">'
+            . '<ul data-role="gs-members" class="flex max-h-64 flex-col overflow-y-auto"></ul>'
+            . '<div><button type="button" data-role="gs-add-toggle" hidden aria-expanded="false" class="rounded-full border px-3 py-1 text-xs font-semibold pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 border-brand bg-brand text-white hover:bg-brand-dark">+ Add people</button></div>'
+            . '<div data-role="gs-add" hidden class="flex flex-col gap-2">'
+            . '<label for="messages-gs-search" class="block text-xs font-medium text-gray-600">Add people by name</label>'
+            . '<input id="messages-gs-search" data-role="gs-search" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
+            . '<ul data-role="gs-results" class="flex max-h-40 flex-col overflow-y-auto" aria-live="polite"></ul>'
+            . '<ul data-role="gs-chips" class="flex flex-wrap gap-1.5" aria-label="People to add"></ul>'
+            . '<div class="flex justify-end"><button type="button" data-role="gs-add-send" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Add</button></div>'
+            . '</div>'
+            . '</div>'
+            . '<div role="tabpanel" id="gs-panel-details" aria-labelledby="gs-tab-details" data-panel="details" hidden class="flex flex-col gap-3">'
+            . '<div data-role="gs-rename" hidden class="flex flex-col gap-1">'
+            . '<label for="messages-gs-title" class="block text-xs font-medium text-gray-600">Group name</label>'
+            . '<div class="flex gap-2"><input id="messages-gs-title" data-role="gs-title" type="text" maxlength="80" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
+            . '<button type="button" data-role="gs-save" class="rounded-full border px-3 py-1 text-xs font-semibold pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 flex-none border-brand text-brand hover:bg-brand-tint">Save</button></div>'
+            . '</div>'
+            . '<p data-role="gs-closed" hidden class="text-sm text-[#646464]">This group is closed. It stays here to read, and nobody can post or change it.</p>'
+            . '<div class="flex flex-wrap gap-2">'
+            . '<button type="button" data-role="gs-leave" hidden class="rounded-full border px-3 py-1 text-xs font-semibold pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 border-gray-300 text-gray-700 hover:bg-gray-50">Leave group</button>'
+            . '<button type="button" data-role="gs-close" hidden class="rounded-full border px-3 py-1 text-xs font-semibold pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 border-red-300 text-red-700 hover:bg-red-50">Close group</button>'
+            . '</div>'
+            . '</div>'
+            . '<p data-role="gs-note" role="status" class="text-xs text-[#646464]"></p>'
             . '</div>',
     ], ['saveData' => false]) ?>
 

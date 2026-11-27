@@ -215,7 +215,7 @@ final class SisCsvParserTest extends CIUnitTestCase
         $batch = SisCsvParser::parse('students', "student_number,email,first_name,middle_name,last_name,suffix\n2026-001,ann@example.com,Ann,Cruz,Lee,Jr.\n,ben@example.com,Ben,,Ng,\n", SisCsvParser::KEYS_UPLOAD);
 
         $this->assertSame([], $batch->rejected);
-        $this->assertSame(['student_number' => '2026-001', 'email' => 'ann@example.com', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.'], $batch->records[0]);
+        $this->assertSame(['student_number' => '2026-001', 'email' => 'ann@example.com', 'first_name' => 'Ann', 'middle_name' => 'Cruz', 'last_name' => 'Lee', 'suffix' => 'Jr.', 'minor' => ''], $batch->records[0]);
         $this->assertSame('', $batch->records[1]['middle_name']);
     }
 

@@ -67,7 +67,11 @@ final class ConversationServiceTest extends DatabaseTestCase
             'removed_at' => $removedAt, 'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        return (int) $db->insertID();
+        $id = (int) $db->insertID();
+        // A conversation with a message has a last message (an empty direct thread is hidden from lists).
+        $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $id]);
+
+        return $id;
     }
 
     public function testAnAllowedStartCreatesOneConversationWithTwoParticipants(): void
@@ -109,7 +113,7 @@ final class ConversationServiceTest extends DatabaseTestCase
     public function testRefusedStartsAnswerNullWithoutRevealingWhy(): void
     {
         [$student, $instructor] = $this->pair();
-        $chair   = DeanFactory::chair($this->department);
+        $parent  = $this->person('parent');
         $admin   = CourseFactory::user('admin');
         $far     = $this->person('instructor', true, PeopleFactory::institution('FAR'));
         $off     = $this->person('instructor', false);
@@ -117,7 +121,7 @@ final class ConversationServiceTest extends DatabaseTestCase
         CourseFactory::enroll((int) db_connect()->table('enrollments')->select('offering_id')->where('student_user_id', $student->id)->get()->getRow('offering_id'), $blocker);
         db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $blocker->id, 'blocked_id' => $student->id, 'created_at' => date('Y-m-d H:i:s')]);
 
-        foreach ([999999, (int) $student->id, (int) $chair->id, (int) $admin->id, (int) $far->id, (int) $off->id, (int) $blocker->id] as $recipientId) {
+        foreach ([999999, (int) $student->id, (int) $parent->id, (int) $admin->id, (int) $far->id, (int) $off->id, (int) $blocker->id] as $recipientId) {
             $this->assertNull($this->service->startDirect($student, $recipientId), "recipient {$recipientId}");
         }
 
@@ -264,6 +268,7 @@ final class ConversationServiceTest extends DatabaseTestCase
         $db->table('conversations')->insert(['institution_id' => $this->institution, 'type' => 'course', 'offering_id' => $offering, 'created_at' => date('Y-m-d H:i:s')]);
         $course = (int) $db->insertID();
         $db->table('conversation_participants')->insert(['conversation_id' => $course, 'user_id' => $student->id, 'joined_at' => date('Y-m-d H:i:s')]);
+        $this->post($direct, (int) $student->id);
 
         return [$student, $instructor, $direct, $course];
     }

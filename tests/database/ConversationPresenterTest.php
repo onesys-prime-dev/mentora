@@ -46,6 +46,11 @@ final class ConversationPresenterTest extends DatabaseTestCase
     /** @return array<string, mixed> the student's only list row, presented */
     private function row(): array
     {
+        // An empty direct thread is hidden from lists (FR3), so a row without a message gets a first one.
+        if (db_connect()->table('conversations')->where('id', $this->conversation)->get()->getRow('last_message_id') === null) {
+            \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
+        }
+
         $rows = (new ConversationPresenter())->present($this->student, (new ConversationService())->listFor($this->student));
         $this->assertCount(1, $rows);
 
@@ -91,11 +96,6 @@ final class ConversationPresenterTest extends DatabaseTestCase
         $this->assertSame('Message unavailable', $this->row()['preview']);
     }
 
-    public function testAConversationWithNoMessagesHasNoPreview(): void
-    {
-        $this->assertNull($this->row()['preview']);
-    }
-
     public function testCanPostIsFalseInAReadOnlyInstitution(): void
     {
         $this->assertTrue($this->row()['can_post']);
@@ -111,6 +111,7 @@ final class ConversationPresenterTest extends DatabaseTestCase
         db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
         $started = (new ConversationService())->startDirect($parent, (int) $this->instructor->id, (int) $this->student->id);
         $this->assertNotNull($started);
+        \Tests\Support\Threads::withMessage((int) $started['id'], (int) $this->instructor->id);
 
         $rows = (new ConversationPresenter())->present($parent, (new ConversationService())->listFor($parent));
 

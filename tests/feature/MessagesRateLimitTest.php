@@ -116,14 +116,17 @@ final class MessagesRateLimitTest extends RouteTestCase
         $this->signIn($this->student);
 
         // The test client reuses one response object, so each answer is read before the next request.
-        $new = $this->api('POST', 'conversations', ['recipient_id' => (int) $other->id])->response();
+        $new = $this->api('POST', 'conversations/first', ['recipient_id' => (int) $other->id, 'body' => 'hello', 'client_uuid' => $this->uuid()])->response();
         [$newStatus, $newError] = [$new->getStatusCode(), json_decode($new->getBody(), true)['error'] ?? null];
 
-        $existing = $this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id])->response();
+        $existing = $this->api('POST', 'conversations/first', ['recipient_id' => (int) $this->instructor->id, 'body' => 'hi again', 'client_uuid' => $this->uuid()])->response();
+        [$existingStatus, $existingId] = [$existing->getStatusCode(), json_decode($existing->getBody(), true)['conversation']['id'] ?? null];
+        $draft = $this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id])->response();
 
         $this->assertSame(429, $newStatus);
         $this->assertSame('rate_limited', $newError);
-        $this->assertSame(200, $existing->getStatusCode());
-        $this->assertSame($this->conversation, (int) json_decode($existing->getBody(), true)['conversation']['id']);
+        $this->assertSame(201, $existingStatus);
+        $this->assertSame($this->conversation, (int) $existingId);
+        $this->assertSame($this->conversation, json_decode($draft->getBody(), true)['draft']['conversation_id']);
     }
 }

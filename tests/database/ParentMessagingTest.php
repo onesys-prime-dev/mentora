@@ -14,7 +14,7 @@ use Tests\Support\ParentScenario;
 use Tests\Support\PeopleFactory;
 
 /**
- * The parent rules of spec 3.1 and 3.3, end to end through the services: who
+ * The parent rules (D2), end to end through the services: who
  * may start with a parent, what a parent thread is about, and that the child
  * it is about never sees it.
  *
@@ -64,7 +64,7 @@ final class ParentMessagingTest extends DatabaseTestCase
 
     public function testBothSidesSeeTheChildsNameOnTheThread(): void
     {
-        $this->conversations()->startDirect($this->parent, (int) $this->instructor->id);
+        \Tests\Support\Threads::withMessage((int) $this->conversations()->startDirect($this->parent, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
 
         foreach ([$this->parent, $this->instructor] as $viewer) {
             $row = (new ConversationPresenter($this->parentCipher()))->present($viewer, $this->conversations()->listFor($viewer))[0];
@@ -88,11 +88,12 @@ final class ParentMessagingTest extends DatabaseTestCase
         $this->assertSame($second['id'], $service->startDirect($this->parent, (int) $this->instructor->id, (int) $sibling->id)['id']);
     }
 
-    public function testTheChairpersonCannotStartWithAParentButCanReply(): void
+    public function testTheChairpersonStartsWithAParentAboutTheChildAndBothReply(): void
     {
         $service = $this->conversations();
 
-        $this->assertNull($service->startDirect($this->chair, (int) $this->parent->id));
+        // D2: any staff member may start with a parent; the thread is about the parent's one child.
+        $this->assertSame((int) $this->child->id, (int) $service->startDirect($this->chair, (int) $this->parent->id)['subject_student_id']);
 
         $thread = $service->startDirect($this->parent, (int) $this->chair->id);
 
@@ -109,26 +110,82 @@ final class ParentMessagingTest extends DatabaseTestCase
         $this->assertNull($service->startDirect($this->instructor, (int) $stranger->id));
     }
 
-    /** The institutional administrator is the exception: they may write to anyone (spec 3.1), see AdminMessagingTest. */
-    public function testOthersCannotStartWithAParent(): void
+    /** D2: parents talk with staff only; a student never starts with a parent, any staff member may. */
+    public function testStudentsCannotStartWithAParentButADeanCan(): void
     {
         $dean  = DeanFactory::dean($this->institution, $this->college);
         $other = PeopleFactory::person('student', 'Cla', 'Ssmate', null, $this->institution);
         CourseFactory::enroll($this->offering, $other);
 
-        foreach ([$dean, $this->child, $other] as $sender) {
+        foreach ([$this->child, $other] as $sender) {
             $this->assertNull($this->conversations()->startDirect($sender, (int) $this->parent->id), $sender->first_name ?? '');
         }
+        $this->assertSame((int) $this->child->id, (int) $this->conversations()->startDirect($dean, (int) $this->parent->id)['subject_student_id']);
     }
 
-    public function testAParentCannotStartWithAStudentAnotherParentADeanOrAnAdmin(): void
+    private function alsoParent(User $user): User
+    {
+        db_connect()->table('auth_groups_users')->insert(['user_id' => $user->id, 'group' => 'parent', 'created_at' => date('Y-m-d H:i:s')]);
+
+        return model(\CodeIgniter\Shield\Models\UserModel::class)->findById($user->id);
+    }
+
+    public function testAnInstructorWhoIsAlsoAParentStillReachesAStaffColleague(): void
+    {
+        $both = $this->alsoParent($this->instructor);
+
+        $thread = $this->conversations()->startDirect($both, (int) $this->chair->id);
+        $this->assertNotNull($thread);
+        $this->assertNull($thread['subject_student_id']);
+        $this->assertContains((int) $this->chair->id, array_column((new RecipientSearch())->search($both, 'Chair'), 'id'));
+    }
+
+    public function testAThreadAboutAChildNeedsTheChildLinkedToOneSide(): void
+    {
+        // S = chair + parent (of nobody here); R = instructor + parent of the child.
+        $chair      = $this->alsoParent($this->chair);
+        $instructor = $this->alsoParent($this->instructor);
+        $this->linkParent($instructor, $this->child);
+        $stranger = PeopleFactory::person('student', 'Str', 'Anger', null, $this->institution);
+
+        // Either side may start it: R is the child's parent, S is staff (D2). One thread whichever side starts.
+        $one = $this->conversations()->startDirect($chair, (int) $instructor->id, (int) $this->child->id);
+        $this->assertNotNull($one);
+        $this->assertSame($one['id'], $this->conversations()->startDirect($instructor, (int) $chair->id, (int) $this->child->id)['id']);
+        $this->assertContains((int) $this->child->id, array_column((new RecipientSearch())->search($chair, 'Tructor'), 'subject_student_id'));
+        // A child linked to neither of them is no subject.
+        $this->assertNull($this->conversations()->startDirect($chair, (int) $instructor->id, (int) $stranger->id));
+    }
+
+    public function testAPureInstructorStillGetsTheChildThreadWithAParentOnly(): void
+    {
+        $thread = $this->conversations()->startDirect($this->instructor, (int) $this->parent->id);
+
+        $this->assertSame((int) $this->child->id, (int) $thread['subject_student_id']);
+    }
+
+    public function testAnInstructorWhoIsAlsoAParentStillGetsTheChildThreadWithAParentOnly(): void
+    {
+        $both = $this->alsoParent($this->instructor);
+
+        $thread = $this->conversations()->startDirect($both, (int) $this->parent->id);
+
+        $this->assertNotNull($thread);
+        $this->assertSame((int) $this->child->id, (int) $thread['subject_student_id']);
+    }
+
+    public function testAParentCannotStartWithAStudentOrAnotherParentButReachesAnyStaff(): void
     {
         $dean   = DeanFactory::dean($this->institution, $this->college);
         $admin  = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $parent = PeopleFactory::person('parent', 'Oth', 'Parent', null, $this->institution);
 
-        foreach ([$this->child, $parent, $dean, $admin] as $recipient) {
+        foreach ([$this->child, $parent] as $recipient) {
             $this->assertNull($this->conversations()->startDirect($this->parent, (int) $recipient->id), $recipient->first_name ?? '');
+        }
+
+        foreach ([$dean, $admin] as $recipient) {
+            $this->assertSame((int) $this->child->id, (int) $this->conversations()->startDirect($this->parent, (int) $recipient->id)['subject_student_id'], $recipient->first_name ?? '');
         }
     }
 

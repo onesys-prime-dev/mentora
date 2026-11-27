@@ -74,9 +74,11 @@ abstract class DatabaseTestCase extends CIUnitTestCase
         helper('navigation');
         current_user_profile(null, true);
 
+        // A failed query (even a deliberate one in an earlier test) must not mark this test's transactions failed.
+        self::forgetEarlierQueryFailure();
+
         if ($this->isolateTests) {
             $this->emptyTablesOnce();
-            self::forgetEarlierQueryFailure();
             db_connect()->transBegin();
         }
     }
@@ -101,9 +103,7 @@ abstract class DatabaseTestCase extends CIUnitTestCase
      */
     private static function forgetEarlierQueryFailure(): void
     {
-        $db = db_connect();
-
-        (new \ReflectionProperty($db, 'transStatus'))->setValue($db, true);
+        db_connect()->resetTransStatus();
     }
 
     /**

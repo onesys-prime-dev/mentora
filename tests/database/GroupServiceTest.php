@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\GroupService;
+use App\Services\Messaging\MessageActions;
 use App\Services\Messaging\MessageCipher;
 use App\Services\Messaging\MessageService;
 use CodeIgniter\Config\Services;
@@ -36,6 +38,8 @@ final class GroupServiceTest extends DatabaseTestCase
     private int $departmentA;
 
     private int $departmentB;
+
+    private int $offeringA;
 
     private User $chairA;
 
@@ -71,6 +75,8 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->teacherA1 = PeopleFactory::person('instructor', 'Ivy', 'Alpha', null, $this->institution);
         $this->teacherA2 = PeopleFactory::person('instructor', 'Ian', 'Alpha', null, $this->institution);
         $this->teacherB  = PeopleFactory::person('instructor', 'Ira', 'Bravo', null, $this->institution);
+
+        $this->offeringA = $offeringA;
 
         CourseFactory::assignInstructor($offeringA, $this->teacherA1);
         CourseFactory::assignInstructor($offeringA, $this->teacherA2);
@@ -126,21 +132,16 @@ final class GroupServiceTest extends DatabaseTestCase
 
     public function testEveryMemberTheCreatorMayNotAddRefusesTheWholeGroup(): void
     {
-        $student   = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
         $parent    = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
-        $admin     = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $outsider  = PeopleFactory::person('instructor', 'Out', 'Sider', null, DeanFactory::college('GR2')['institution']);
         $inactive  = PeopleFactory::person('instructor', 'Ina', 'Ctive', null, $this->institution, false);
         $before    = $this->counts();
 
-        // A chairperson: another department's instructor, a chairperson, the dean, and every kind of non-instructor.
-        foreach ([$this->teacherB, $this->chairB, $this->dean, $student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groupService()->create($this->chairA, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
-        }
-
-        // A dean: students, parents, admins, deans and outsiders stay out.
-        foreach ([$student, $parent, $admin, $outsider, $inactive] as $bad) {
-            $this->assertNull($this->groupService()->create($this->dean, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+        // D1 opens the institution; a parent (no group capacity), outsiders and the inactive stay out.
+        foreach ([$this->chairA, $this->dean] as $creator) {
+            foreach ([$parent, $outsider, $inactive] as $bad) {
+                $this->assertNull($this->groupService()->create($creator, 'Group', [$this->teacherA1->id, $bad->id]), (string) $bad->first_name);
+            }
         }
 
         $this->assertSame($before, $this->counts(), 'nothing was created');
@@ -168,16 +169,12 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertSame([$before[0] + 1, $before[1] + 2], $this->counts());
     }
 
-    public function testNobodyElseStartsGroupsOrSearchesForMembers(): void
+    public function testAParentNeverStartsGroupsOrSearchesForMembers(): void
     {
-        $student = PeopleFactory::person('student', 'Stu', 'Dent', null, $this->institution);
-        $parent  = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
-        $admin   = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $parent = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
 
-        foreach ([$this->teacherA1, $student, $parent, $admin] as $user) {
-            $this->assertNull($this->groupService()->create($user, 'Group', [$this->teacherA2->id]), (string) $user->first_name);
-            $this->assertSame([], $this->groupService()->candidates($user, 'Alpha'), (string) $user->first_name);
-        }
+        $this->assertNull($this->groupService()->create($parent, 'Group', [$this->teacherA2->id]));
+        $this->assertSame([], $this->groupService()->candidates($parent, 'Alpha'));
     }
 
     public function testCandidatesFollowTheScopeAndTheMinimumQuery(): void
@@ -186,7 +183,7 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertEqualsCanonicalizing([(int) $this->teacherA1->id, (int) $this->teacherA2->id], array_column($chair, 'id'));
         $this->assertSame(['instructor', 'instructor'], array_column($chair, 'role'));
 
-        $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Bravo'), 'another department');
+        $this->assertSame([(int) $this->teacherB->id], array_column($this->groupService()->candidates($this->chairA, 'Bravo'), 'id'), 'another department (D1)');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'A'), 'too short');
         $this->assertSame([], $this->groupService()->candidates($this->chairA, 'Cara'), 'never the creator');
 
@@ -247,5 +244,354 @@ final class GroupServiceTest extends DatabaseTestCase
 
         $this->assertCount(2, $found);
         $this->assertSame(1, $n);
+    }
+
+    /** @return list<User> students enrolled in offering A (they share a course with each other and the instructors) */
+    private function students(int $n): array
+    {
+        $out = [];
+
+        for ($i = 1; $i <= $n; $i++) {
+            $out[] = $s = PeopleFactory::person('student', 'Stu' . $i, 'Pupil', null, $this->institution);
+            CourseFactory::enroll($this->offeringA, $s);
+        }
+
+        return $out;
+    }
+
+    /** @return list<string> */
+    private function audited(): array
+    {
+        return array_column(db_connect()->table('audit_logs')->select('action')->like('action', 'messages.', 'after')->orderBy('id')->get()->getResultArray(), 'action');
+    }
+
+    /** @return array<string, mixed> */
+    private function row(int $id): array
+    {
+        return db_connect()->table('conversations')->where('id', $id)->get()->getRowArray();
+    }
+
+    private function active(int $id, User $u): bool
+    {
+        return db_connect()->table('conversation_participants')->where(['conversation_id' => $id, 'user_id' => $u->id, 'left_at' => null])->countAllResults() > 0;
+    }
+
+    public function testStudentCanCreateGroup(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+
+        $group = $this->groupService()->create($a, 'Study group', [$b->id, $c->id]);
+
+        $this->assertNotNull($group);
+        $this->assertSame((int) $a->id, (int) $group['owner_id']);
+        $this->assertSame((int) $a->id, (int) $group['created_by']);
+        $this->assertSame(3, db_connect()->table('conversation_participants')->where('conversation_id', $group['id'])->countAllResults());
+        // Being added is told at once (S2-g): the two others, never the creator.
+        $this->assertSame(2, db_connect()->table('notifications')->where('type', 'message')->like('dedupe_key', 'group-add:' . $group['id'] . ':', 'after')->countAllResults());
+    }
+
+    public function testParentCannotCreateOrBeAdded(): void
+    {
+        [$a, $b] = $this->students(2);
+        $parent  = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
+        $group   = $this->groupService()->create($a, 'G', [$b->id]);
+
+        $this->assertNull($this->groupService()->create($parent, 'G', [$a->id]));
+        $this->assertNull($this->groupService()->create($a, 'G2', [$parent->id]));
+        $this->assertSame(['added' => [], 'refused' => [(int) $parent->id]], $this->groupService()->add($a, (int) $group['id'], [$parent->id]));
+
+        // An administrator may not slip a parent in either.
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $this->assertSame([(int) $parent->id], $this->groupService()->add($admin, (int) $group['id'], [$parent->id])['refused']);
+    }
+
+    public function testMemberMustBeReachableByActor(): void
+    {
+        [$a, $b] = $this->students(2);
+        $stranger = PeopleFactory::person('student', 'Far', 'Away', null, $this->institution);
+        (new \App\Services\Messaging\StudentMessaging())->setScope($this->institution, 'course');
+        $group    = $this->groupService()->create($a, 'G', [$b->id]);
+
+        $this->assertNull($this->groupService()->create($a, 'G2', [$b->id, $stranger->id]));
+        $this->assertSame(['added' => [], 'refused' => [(int) $stranger->id]], $this->groupService()->add($a, (int) $group['id'], [$stranger->id]));
+        $this->assertFalse($this->active((int) $group['id'], $stranger));
+    }
+
+    public function testBlockedActorCannotAddBlocker(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        db_connect()->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $b->id, 'blocked_id' => $a->id, 'created_at' => date('Y-m-d H:i:s')]);
+        $group = $this->groupService()->create($a, 'G', [$c->id]);
+
+        $this->assertNull($this->groupService()->create($a, 'G2', [$b->id]));
+        $this->assertSame([(int) $b->id], $this->groupService()->add($a, (int) $group['id'], [$b->id])['refused']);
+    }
+
+    public function testFiftyMemberLimit(): void
+    {
+        $this->assertSame(50, GroupService::MAX_MEMBERS);
+
+        [$a, $extra] = $this->students(2);
+        $group       = (int) $this->groupService()->create($a, 'G', [$extra->id])['id'];
+
+        // Fill the group to the limit directly: 48 more people besides the two.
+        for ($i = 0; $i < 48; $i++) {
+            $p = PeopleFactory::person('student', 'Fill' . $i, 'Er', null, $this->institution);
+            db_connect()->table('conversation_participants')->insert(['conversation_id' => $group, 'user_id' => $p->id, 'joined_at' => date('Y-m-d H:i:s'), 'first_visible_message_id' => 0]);
+        }
+
+        [$late] = $this->students(1);
+        $this->assertSame(['added' => [], 'refused' => [(int) $late->id]], $this->groupService()->add($a, $group, [$late->id]));
+
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $group, 'user_id' => $extra->id])->update(['left_at' => date('Y-m-d H:i:s')]);
+        $this->assertSame([(int) $late->id], $this->groupService()->add($a, $group, [$late->id])['added']);
+        $this->assertNull($this->groupService()->create($a, 'Too big', range(5001, 5050)));
+    }
+
+    public function testOwnerRemovesAndRenames(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $id          = (int) $this->groupService()->create($a, 'Old', [$b->id, $c->id])['id'];
+
+        $this->assertFalse($this->groupService()->remove($b, $id, (int) $c->id), 'a member cannot remove');
+        $this->assertFalse($this->groupService()->rename($b, $id, 'Mine'));
+        $this->assertTrue($this->groupService()->remove($a, $id, (int) $c->id));
+        $this->assertTrue($this->groupService()->rename($a, $id, '  New name '));
+        $this->assertFalse($this->groupService()->rename($a, $id, ''));
+        $this->assertFalse($this->groupService()->remove($a, $id, 999999));
+
+        $this->assertSame('New name', $this->row($id)['title']);
+        $this->assertFalse($this->active($id, $c));
+        $this->assertTrue($this->active($id, $b));
+        $this->assertSame(['group_created', 'member_removed', 'renamed'], array_column(db_connect()->table('conversation_events')->where('conversation_id', $id)->orderBy('id')->get()->getResultArray(), 'event'));
+    }
+
+    public function testMemberLeavesLosesAccess(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $id          = (int) $this->groupService()->create($a, 'G', [$b->id, $c->id])['id'];
+
+        $this->assertTrue($this->groupService()->leave($b, $id));
+        $this->assertFalse($this->groupService()->leave($b, $id), 'already out');
+        $this->assertNull((new ConversationService())->find($b, $id));
+        $this->assertSame('not_found', $this->messages()->send($b, $id, 'hi', 'uuid-left-b-1')['reason']);
+        $this->assertSame((int) $a->id, (int) $this->row($id)['owner_id'], 'the owner is unchanged');
+    }
+
+    public function testHandoverPrefersStaff(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id, $this->teacherA1->id, $this->teacherA2->id])['id'];
+        // The student has been there longest; of the two staff members, teacher A2.
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $id, 'user_id' => $b->id])->update(['joined_at' => date('Y-m-d H:i:s', strtotime('-5 days'))]);
+        db_connect()->table('conversation_participants')->where(['conversation_id' => $id, 'user_id' => $this->teacherA2->id])->update(['joined_at' => date('Y-m-d H:i:s', strtotime('-3 days'))]);
+
+        $this->assertTrue($this->groupService()->leave($a, $id));
+        $this->assertSame((int) $this->teacherA2->id, (int) $this->row($id)['owner_id']);
+
+        // With no staff left, the longest-standing member.
+        $this->groupService()->leave($this->teacherA2, $id);
+        $this->groupService()->leave($this->teacherA1, $id);
+        $this->assertSame((int) $b->id, (int) $this->row($id)['owner_id']);
+    }
+
+    public function testDeactivatedOwnerHandsOver(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id, $this->teacherA1->id])['id'];
+
+        $this->groupService()->handOverFor((int) $a->id);
+
+        $this->assertSame((int) $this->teacherA1->id, (int) $this->row($id)['owner_id']);
+        $this->assertContains('messages.owner_changed', $this->audited());
+    }
+
+    public function testLastMemberClosesGroup(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+
+        $this->assertTrue($this->groupService()->leave($b, $id));
+
+        $this->assertNotNull($this->row($id)['closed_at']);
+        $this->assertContains('messages.closed', $this->audited());
+    }
+
+    public function testClosedGroupIsReadOnlyNotDeleted(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $id          = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $this->assertTrue($this->messages()->send($a, $id, 'before', 'uuid-closed-1')['ok']);
+
+        $this->assertTrue($this->groupService()->close($a, $id));
+        $this->assertFalse($this->groupService()->close($a, $id), 'closing twice');
+
+        $this->assertFalse($this->messages()->send($b, $id, 'after', 'uuid-closed-2')['ok']);
+        $this->assertSame(1, db_connect()->table('messages')->where('conversation_id', $id)->countAllResults());
+        $this->assertSame(['added' => [], 'refused' => [(int) $c->id]], $this->groupService()->add($a, $id, [$c->id]));
+        $this->assertFalse($this->groupService()->rename($a, $id, 'x'));
+        $this->assertFalse($this->groupService()->leave($b, $id));
+        $this->assertNotNull((new ConversationService())->find($b, $id), 'still readable');
+
+        // The list must not offer a composer that the send then refuses (FR7).
+        $rows = array_values(array_filter(
+            (new ConversationPresenter($this->cipher()))->present($b, array_merge((new ConversationService())->listFor($b, 'group'), (new ConversationService())->listFor($b, 'group', false, true))),
+            static fn (array $r): bool => (int) $r['id'] === $id,
+        ));
+        $this->assertCount(1, $rows);
+        $this->assertFalse($rows[0]['can_post']);
+    }
+
+    public function testAnInstitutionAdminManagesAnyGroup(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $admin       = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $id          = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+
+        $this->assertSame([(int) $c->id], $this->groupService()->add($admin, $id, [$c->id])['added']);
+        $this->assertTrue($this->groupService()->rename($admin, $id, 'Admin name'));
+        $this->assertTrue($this->groupService()->remove($admin, $id, (int) $b->id));
+        $this->assertTrue($this->groupService()->close($admin, $id));
+    }
+
+    public function testEveryEventAudited(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        db_connect()->table('audit_logs')->emptyTable();
+
+        $id = (int) $this->groupService()->create($a, 'GroupTitleOne', [$b->id])['id'];
+        $this->groupService()->add($a, $id, [$c->id]);
+        $this->groupService()->remove($a, $id, (int) $c->id);
+        $this->groupService()->rename($a, $id, 'GroupTitleTwo');
+        $this->groupService()->leave($a, $id); // the owner leaves: ownership passes, then the group is down to one and closes
+        $this->assertTrue($this->active($id, $b));
+
+        $actions = $this->audited();
+        foreach (['group_created', 'member_added', 'member_removed', 'renamed', 'member_left', 'owner_changed', 'closed'] as $name) {
+            $this->assertContains('messages.' . $name, $actions);
+        }
+
+        // Ids and outcomes only: no title in any entry.
+        $details = implode(' ', array_column(db_connect()->table('audit_logs')->select('new_values')->like('action', 'messages.', 'after')->get()->getResultArray(), 'new_values'));
+        $this->assertStringNotContainsString('GroupTitle', $details);
+    }
+
+    public function testReadOnlyInstitutionRefusesGroupChanges(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $id          = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $refused     = function () use ($a, $b, $c, $id): void {
+            $this->assertNull($this->groupService()->create($a, 'G2', [$b->id]));
+            $this->assertSame([(int) $c->id], $this->groupService()->add($a, $id, [$c->id])['refused']);
+            $this->assertFalse($this->groupService()->rename($a, $id, 'x'));
+            $this->assertFalse($this->groupService()->remove($a, $id, (int) $b->id));
+            $this->assertFalse($this->groupService()->leave($b, $id));
+            $this->assertFalse($this->groupService()->close($a, $id));
+        };
+
+        // The read-only state (subscription ended, still inside the grace window), then the past state (deleted).
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+        $this->assertSame('read_only', (new InstitutionAccess())->stateFor((int) $a->id));
+        $refused();
+
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['deleted_at' => date('Y-m-d H:i:s')]);
+        $refused();
+    }
+
+    public function testEventsKeepTheNewestTwoHundred(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $rows    = [];
+
+        for ($i = 0; $i < 205; $i++) {
+            $rows[] = ['conversation_id' => $id, 'event' => 'renamed', 'actor_id' => $a->id, 'target_id' => null, 'created_at' => date('Y-m-d H:i:s')];
+        }
+
+        db_connect()->table('conversation_events')->insertBatch($rows);
+        $newest = (int) db_connect()->table('conversation_events')->selectMax('id', 'm')->where('conversation_id', $id)->get()->getRow('m');
+
+        $events = $this->groupService()->events($b, $id);
+        $this->assertCount(200, $events);
+        $this->assertSame($newest, $events[199]['id'], 'the newest line is kept');
+        $this->assertSame($newest - 199, $events[0]['id'], 'oldest first');
+    }
+
+    public function testEventsAfterAnIdSendOnlyTheNewerOnes(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $this->groupService()->rename($a, $id, 'Two');
+        $all = $this->groupService()->events($b, $id);
+
+        $this->assertCount(2, $all);
+        $this->assertSame([$all[1]['id']], array_column($this->groupService()->events($b, $id, null, null, $all[0]['id']), 'id'));
+        $this->assertSame([], $this->groupService()->events($b, $id, null, null, $all[1]['id']));
+    }
+
+    public function testAutomaticCloseHasNoActorAndAHandoverNamesTheDeactivator(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $this->groupService()->leave($b, $id);
+
+        $closed = db_connect()->table('conversation_events')->where(['conversation_id' => $id, 'event' => 'closed'])->get()->getRowArray();
+        $this->assertNull($closed['actor_id']);
+        $this->assertNull(db_connect()->table('audit_logs')->where('action', 'messages.closed')->get()->getRow('actor_user_id'));
+
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $id2   = (int) $this->groupService()->create($a, 'G2', [$this->teacherA1->id, $this->teacherA2->id])['id'];
+        $this->groupService()->handOverFor((int) $a->id, $admin);
+
+        $this->assertSame((int) $admin->id, (int) db_connect()->table('audit_logs')->where('action', 'messages.owner_changed')->orderBy('id', 'DESC')->get()->getRow('actor_user_id'));
+        $this->assertSame((int) $a->id, (int) db_connect()->table('conversation_events')->where(['conversation_id' => $id2, 'event' => 'owner_changed'])->get()->getRow('actor_id'));
+    }
+
+    public function testABulkAddThatCrossesTheCapAddsOnlyWhatFits(): void
+    {
+        [$a, $extra] = $this->students(2);
+        $group       = (int) $this->groupService()->create($a, 'G', [$extra->id])['id'];
+        $now         = date('Y-m-d H:i:s');
+
+        for ($i = 0; $i < 46; $i++) {
+            $p = PeopleFactory::person('student', 'Cap' . $i, 'Er', null, $this->institution);
+            db_connect()->table('conversation_participants')->insert(['conversation_id' => $group, 'user_id' => $p->id, 'joined_at' => $now, 'first_visible_message_id' => 0]);
+        }
+
+        $late = $this->students(3);
+        $res  = $this->groupService()->add($a, $group, array_map(static fn (User $u): int => (int) $u->id, $late));
+
+        $this->assertCount(2, $res['added']);
+        $this->assertCount(1, $res['refused']);
+        $this->assertSame(50, count(db_connect()->table('conversation_participants')->where(['conversation_id' => $group, 'left_at' => null])->get()->getResultArray()));
+    }
+
+    public function testAnyRestrictionStopsCreatingAndAdding(): void
+    {
+        [$a, $b, $c] = $this->students(3);
+        $id          = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        db_connect()->table('message_restrictions')->insert(['institution_id' => $this->institution, 'user_id' => $a->id, 'kind' => 'no_new', 'source' => 'admin', 'starts_at' => date('Y-m-d H:i:s', strtotime('-1 hour')), 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->assertNull($this->groupService()->create($a, 'G2', [$c->id]));
+        $this->assertSame([(int) $c->id], $this->groupService()->add($a, $id, [$c->id])['refused']);
+    }
+
+    public function testAClosedGroupAllowsNeitherPinningNorDeleteForEveryone(): void
+    {
+        [$a, $b] = $this->students(2);
+        $id      = (int) $this->groupService()->create($a, 'G', [$b->id])['id'];
+        $sent    = $this->messages()->send($a, $id, 'hello', 'uuid-closed-pin-1');
+        $this->assertTrue($sent['ok']);
+        $mid     = (int) $sent['message']['id'];
+        $actions = new MessageActions($this->messages(), null, null, null, $this->cipher());
+
+        $this->assertTrue($actions->pinMessage($b, $id, $mid, true)['ok'], 'open: anyone pins');
+        $this->assertTrue($this->groupService()->close($a, $id));
+
+        $this->assertSame('not_allowed', $actions->pinMessage($b, $id, $mid, false)['reason']);
+        $this->assertFalse($actions->deleteForEveryone($a, $id, $mid)['ok']);
+        $page = $this->messages()->page($a, $id);
+        $this->assertFalse($page['messages'][0]['can_delete_everyone']);
+        $this->assertFalse($page['messages'][0]['can_pin']);
     }
 }

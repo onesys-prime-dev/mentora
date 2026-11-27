@@ -11,7 +11,8 @@
 
 const MIN = 2;
 
-export const MAX_MEMBERS = 30;
+/** Members including the person who starts the group; the server's GroupService::MAX_MEMBERS. */
+export const MAX_MEMBERS = 50;
 
 export function createGroupPicker({ search, onChange = () => {}, debounce = 250 }) {
     let timer = null;

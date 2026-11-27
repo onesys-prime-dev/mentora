@@ -193,9 +193,10 @@ class MessageActions
      *
      * @param array<string, mixed> $row a `messages` row
      */
-    public static function canDeleteEveryone(array $row, int $viewerId, bool $switchOn): bool
+    public static function canDeleteEveryone(array $row, int $viewerId, bool $switchOn, bool $closed = false): bool
     {
         return $switchOn
+            && ! $closed
             && (int) $row['sender_id'] === $viewerId
             && ($row['deleted_everyone_at'] ?? null) === null
             && ($row['removed_at'] ?? null) === null
@@ -233,6 +234,10 @@ class MessageActions
 
         if ($message['deleted_everyone_at'] !== null) {
             return ['ok' => true];
+        }
+
+        if (($conversation['closed_at'] ?? null) !== null) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
         }
 
         if (! ChatControls::allows($conversation, 'delete_everyone')) {
@@ -454,7 +459,7 @@ class MessageActions
             return ['ok' => false, 'reason' => 'not_found'];
         }
 
-        if (! $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation))) {
+        if (! $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation), ($conversation['closed_at'] ?? null) !== null)) {
             return ['ok' => false, 'reason' => 'not_allowed'];
         }
 

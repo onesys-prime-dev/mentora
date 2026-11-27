@@ -49,16 +49,19 @@ class ChatControls
         return $out;
     }
 
-    /** @param array<string, mixed> $conversation a `conversations` row */
-    public function canManage(User $user, array $conversation): bool
+    /**
+     * @param array<string, mixed> $conversation a `conversations` row
+     * @param Party|null           $viewer       the user's Party when the caller already has it (the inbox list)
+     */
+    public function canManage(User $user, array $conversation, ?Party $viewer = null): bool
     {
         return $this->policy->canManageControls(
-            $this->resolver->activeRole($user),
+            in_array('institutional_admin', $viewer->roles ?? $this->resolver->roles($user), true) ? 'institutional_admin' : '',
             (string) $conversation['type'],
             false,
             false,
             false,
-            $this->resolver->institutionOf($user) === (int) $conversation['institution_id'],
+            ($viewer === null ? $this->resolver->institutionOf($user) : $viewer->institutionId) === (int) $conversation['institution_id'],
         );
     }
 
@@ -72,7 +75,7 @@ class ChatControls
     {
         $institution = $this->resolver->institutionOf($user);
 
-        if ($institution === null || $this->resolver->activeRole($user) !== 'institutional_admin') {
+        if ($institution === null || ! in_array('institutional_admin', $this->resolver->roles($user), true)) {
             return [];
         }
 
@@ -98,7 +101,7 @@ class ChatControls
     {
         $institution = $this->resolver->institutionOf($user);
 
-        if ($institution === null || $this->resolver->activeRole($user) !== 'institutional_admin') {
+        if ($institution === null || ! in_array('institutional_admin', $this->resolver->roles($user), true)) {
             return null;
         }
 

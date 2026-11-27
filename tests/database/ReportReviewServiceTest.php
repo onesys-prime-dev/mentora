@@ -157,7 +157,7 @@ final class ReportReviewServiceTest extends DatabaseTestCase
         $this->assertStringNotContainsString(self::SECRET, json_encode(db_connect()->table('audit_logs')->get()->getResultArray()));
     }
 
-    public function testAReportedDirectMessageCanBeDismissedOrActionedButNeverRemoved(): void
+    public function testAReportedDirectMessageCanBeRemovedByTheAdministrator(): void
     {
         $direct = (int) (new ConversationService())->startDirect($this->child, (int) $this->instructor->id)['id'];
         $id     = $this->say($this->instructor, self::SECRET, $direct);
@@ -165,11 +165,11 @@ final class ReportReviewServiceTest extends DatabaseTestCase
 
         $view = $this->review()->view($this->admin, $report);
         $this->assertSame([self::SECRET], array_column($view['snapshot'], 'body'), 'the reported message is shown to the administrator');
-        $this->assertFalse($view['can_remove']);
+        $this->assertTrue($view['can_remove']);
 
         $this->assertTrue($this->review()->review($this->admin, $report, 'actioned', true));
-        $this->assertNull(db_connect()->table('messages')->where('id', $id)->get()->getRowArray()['removed_at']);
-        $this->assertSame(0, db_connect()->table('audit_logs')->where('action', 'messages.message_removed')->countAllResults());
+        $this->assertNotNull(db_connect()->table('messages')->where('id', $id)->get()->getRowArray()['removed_at']);
+        $this->assertSame(1, db_connect()->table('audit_logs')->where('action', 'messages.message_removed')->countAllResults());
     }
 
     public function testAReportIsReviewedOnceAndOnlyWithADecision(): void

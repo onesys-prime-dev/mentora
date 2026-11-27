@@ -63,7 +63,7 @@ final class SisCsvParser
      * @var array<string, array{required: list<string>, optional: list<string>, unique: list<string>, template: list<string>, one_of?: list<string>}>
      */
     private const UPLOAD_SPECS = [
-        'students'    => ['required' => ['email', 'first_name', 'last_name'], 'optional' => ['student_number', 'middle_name', 'suffix'], 'unique' => ['email'], 'template' => ['student_number', 'email', 'first_name', 'middle_name', 'last_name', 'suffix']],
+        'students'    => ['required' => ['email', 'first_name', 'last_name'], 'optional' => ['student_number', 'middle_name', 'suffix', 'minor'], 'unique' => ['email'], 'template' => ['student_number', 'email', 'first_name', 'middle_name', 'last_name', 'suffix', 'minor']],
         'instructors' => ['required' => ['email', 'first_name', 'last_name'], 'optional' => ['middle_name', 'suffix'], 'unique' => ['email'], 'template' => ['email', 'first_name', 'middle_name', 'last_name', 'suffix']],
         'courses'     => ['required' => ['program_code', 'course_code', 'course_title'], 'optional' => ['units'], 'unique' => ['program_code', 'course_code'], 'template' => ['program_code', 'course_code', 'course_title', 'units']],
 
@@ -230,6 +230,10 @@ final class SisCsvParser
 
         if (($values['units'] ?? '') !== '' && (! is_numeric($values['units']) || (float) $values['units'] < 0 || (float) $values['units'] > 99.99)) {
             return 'units must be a number from 0 to 99.99.';
+        }
+
+        if (($values['minor'] ?? '') !== '' && ! in_array(strtolower($values['minor']), ['yes', 'no', '1', '0'], true)) {
+            return 'minor must be yes, no, 1 or 0 (or empty).';
         }
 
         if (($values['status'] ?? '') !== '' && ! in_array(strtolower($values['status']), self::ENROLLMENT_STATUSES, true)) {

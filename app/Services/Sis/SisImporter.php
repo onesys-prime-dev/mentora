@@ -11,6 +11,7 @@ use App\Services\Institutions\ChairAssignmentService;
 use App\Services\Institutions\ClassSectionService;
 use App\Services\Institutions\ClassScheduleService;
 use App\Services\Institutions\DeanAssignmentService;
+use App\Services\Institutions\MinorFlag;
 use App\Services\Institutions\OfferingService;
 use App\Services\Institutions\StructureException;
 use App\Services\Flags\FeatureFlags;
@@ -381,9 +382,8 @@ class SisImporter
         $profile = $db->table('user_profiles')->where('user_id', $userId)->get()->getRowArray() ?? [];
         $current = $profile + ['email' => (string) ($db->table('auth_identities')->select('secret')->where('user_id', $userId)->where('type', 'email_password')->get()->getRowArray()['secret'] ?? '')];
         $changes = SisMapper::changes($current, $m, ['first_name', 'middle_name', 'last_name', 'suffix', 'email', 'student_number', 'home_department_id']);
-
         if ($changes === []) {
-            $this->counts[$dataset]['skipped']++;
+            $this->counts[$dataset][$this->applyMinor($userId, $m['minor'] ?? null, $role) ? 'updated' : 'skipped']++;
 
             return;
         }
@@ -394,13 +394,16 @@ class SisImporter
             return;
         }
 
+        if (isset($changes['email']) && $owner !== null && (int) $owner['user_id'] !== $userId) {
+            $this->fail($dataset, $item, "The email {$m['email']} belongs to another account.");
+
+            return;
+        }
+
+        // Only a row that passed its checks may change the flag.
+        $this->applyMinor($userId, $m['minor'] ?? null, $role);
+
         if (isset($changes['email'])) {
-            if ($owner !== null && (int) $owner['user_id'] !== $userId) {
-                $this->fail($dataset, $item, "The email {$m['email']} belongs to another account.");
-
-                return;
-            }
-
             $db->table('auth_identities')->where('user_id', $userId)->where('type', 'email_password')->update(['secret' => $changes['email'], 'updated_at' => $this->stamp()]);
             (new EmailChangeService())->cancelOpen($userId);
             service('auditLogger')->log('profile.email_changed_by_import', $this->actor, ['target_type' => 'user', 'target_id' => $userId, 'institution_id' => $this->institutionId, 'new' => ['changed' => true]]);
@@ -478,6 +481,8 @@ class SisImporter
             throw new RuntimeException('The account could not be linked to the institution.');
         }
 
+        $this->applyMinor((int) $user->id, $m['minor'] ?? null, $role);
+
         if (! $this->upload) {
             $this->link('person', $m['external_id'], (int) $user->id);
         }
@@ -486,6 +491,21 @@ class SisImporter
 
         // A new account has no password yet: it is emailed a link to choose one.
         (new MailOutbox())->tell($this->institutionId, (int) $user->id, MailOutbox::WELCOME, $role, $this->now);
+    }
+
+    /** An upload's minor column on a student (null leaves the flag alone); true when the flag changed. */
+    private function applyMinor(int $userId, ?bool $minor, string $role): bool
+    {
+        if ($minor === null || $role !== 'student' || $this->actor === null || $this->isMinorNow($userId) === $minor) {
+            return false;
+        }
+
+        return (new MinorFlag())->set($this->actor, $this->institutionId, $userId, $minor);
+    }
+
+    private function isMinorNow(int $userId): bool
+    {
+        return (new MinorFlag())->isMinor($this->institutionId, $userId);
     }
 
     /** The same entry People writes when an administrator sets it; a preview's is rolled back with the run. */

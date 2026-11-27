@@ -42,18 +42,26 @@ export function disableMessages() {
         "DELETE FROM conversations",
         "DELETE FROM user_blocks",
         "DELETE FROM message_preferences",
-        // The institution's "students messaging each other" switch, if a case left it off.
-        "DELETE FROM settings WHERE `key` LIKE '%studentDmEnabled%'",
+        "DELETE FROM message_restrictions",
+        "UPDATE institution_users SET is_minor = 0 WHERE is_minor = 1",
+        // The institution's "students messaging each other" scope and default quiet hours, if a case left them set.
+        "DELETE FROM settings WHERE `key` LIKE '%studentDmEnabled%' OR `key` LIKE '%studentMessagingScope%' OR `key` LIKE '%defaultQuietStart%' OR `key` LIKE '%defaultQuietEnd%'",
         "DELETE FROM feature_flag_overrides WHERE flag_key = 'messages'",
     ]) {
         runSql(statement);
     }
 }
 
-/** Switches students messaging each other on or off as the institution's administrator does, and waits for the server. */
+/**
+ * Sets who students may message as the institution's administrator does, and waits for the server: true = whole
+ * institution, false = off, or a scope value ("off", "course", "institution").
+ */
 export async function setStudentMessages(page, on) {
+    const scope = typeof on === "string" ? on : on ? "institution" : "off";
+
     await page.goto("/institution/settings/messages");
-    await page.locator(`input[name=enabled][value='${on ? 1 : 0}']`).check();
+    // The radio is sr-only under its label (a segmented switch), so the label is what takes the click.
+    await page.locator(`label:has(input[name=scope][value='${scope}'])`).check();
 
     const saved = page.waitForResponse((response) => response.url().includes("/institution/settings/messages") && response.request().method() === "POST");
 
@@ -132,6 +140,40 @@ export async function searchFindsNobody(page, search) {
     await expect(page.locator("[data-role=picker-state]")).toHaveText("No one found.");
     await expect(page.locator("[data-role=picker-results] button")).toHaveCount(0);
     await page.locator("#messages-new [data-dialog-close]").first().click();
+}
+
+/** "+ New", search, and expect a result for `name` (optionally mentioning `text`); closes the picker again. */
+export async function searchFinds(page, search, name, text = null) {
+    await page.locator("[data-role=new]").click();
+    await page.locator("#messages-picker").fill(search);
+
+    const results = page.locator("[data-role=picker-results] button", { hasText: name });
+    await expect((text ? results.filter({ hasText: text }) : results).first()).toBeVisible();
+    await page.locator("#messages-new [data-dialog-close]").first().click();
+}
+
+/** Marks a demo student as a minor (true) or not (false), as the People screen's action does. */
+export function setMinor(who, minor) {
+    runSql(
+        "UPDATE institution_users iu JOIN auth_identities ai ON ai.user_id = iu.user_id " +
+            `SET iu.is_minor = ${minor ? 1 : 0} WHERE ai.secret = '${who.email}'`,
+    );
+}
+
+/** An administrator's restriction on a demo person for a day ("no_new" or "no_send"); restrict(who, null) lifts it. */
+export function restrict(who, kind) {
+    const user = `(SELECT user_id FROM auth_identities WHERE secret = '${who.email}' LIMIT 1)`;
+
+    if (kind === null) {
+        runSql(`DELETE FROM message_restrictions WHERE user_id = ${user}`);
+
+        return;
+    }
+
+    runSql(
+        "INSERT INTO message_restrictions (institution_id, user_id, kind, source, starts_at, ends_at, created_at) " +
+            `SELECT iu.institution_id, iu.user_id, '${kind}', 'admin', NOW(), NOW() + INTERVAL 1 DAY, NOW() FROM institution_users iu WHERE iu.user_id = ${user} LIMIT 1`,
+    );
 }
 
 /** The open context menu (chat or message). */

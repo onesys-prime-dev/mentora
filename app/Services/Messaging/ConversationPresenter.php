@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Messaging;
 
 use App\Services\Profiles\AvatarData;
+use App\Services\Profiles\RoleRank;
+use App\Services\Subscriptions\PlanLimits;
 use CodeIgniter\Shield\Entities\User;
+use CodeIgniter\Shield\Models\UserModel;
 
 /**
  * Turns the rows ConversationService::listFor returns into what the Messages
@@ -43,12 +46,19 @@ class ConversationPresenter
         $institution = $this->resolver->institutionOf($viewer);
         $people      = self::names(array_values(array_filter(array_map('intval', [...array_column($rows, 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
         $courses     = $this->courses(array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
-        $role        = $this->resolver->activeRole($viewer);
+        $viewerParty = $this->resolver->party($viewer);
         $teaching    = $this->teaching((int) $viewer->id, array_values(array_filter(array_map('intval', array_column($rows, 'offering_id')))));
         $blocked     = $this->blockedIds((int) $viewer->id);
+        $blockable   = $this->blockTargets($viewer, $institution, $rows, $blocked);
         // One lookup for the list: the other person of each direct chat and each subject student, as this viewer
         // may see them (FR2); their gated names replace the legal ones (FR5).
         $avatars     = (new AvatarData())->forViewerJson($viewer, array_values(array_filter(array_map('intval', [...array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id'), ...array_column($rows, 'subject_student_id')]))));
+        $starters    = $this->starterRoles($viewer, $viewerParty, $rows);
+        // The other person of each direct chat and their party, loaded once for the list instead of once per row.
+        $otherIds    = array_values(array_unique(array_filter(array_map('intval', array_column(array_filter($rows, static fn (array $r): bool => $r['type'] === 'direct'), 'other_user_id')))));
+        $others      = $otherIds === [] ? [] : model(UserModel::class)->whereIn('id', $otherIds)->findAll();
+        $otherById   = array_combine(array_map(static fn (User $u): int => (int) $u->id, $others), $others);
+        $otherParty  = $this->resolver->parties($others);
         $out         = [];
 
         foreach ($rows as $row) {
@@ -80,10 +90,14 @@ class ConversationPresenter
             $row['avatar']   = $row['type'] === 'direct' && $other !== null ? ($avatars[$other] ?? null) : null;
             $row['subtitle'] = $subject === null ? null : ($avatars[$subject]['name'] ?? $people[$subject] ?? null);
             $row['preview']  = $this->preview((int) $row['id'], (int) $viewer->id);
-            $row['can_post'] = $this->policy->canPost($this->resolver->forPost($viewer, [
-                'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution,
+            $post            = $this->resolver->forPost($viewer, [
+                'id' => $row['id'], 'type' => $row['type'], 'institution_id' => $institution, 'created_by' => $row['created_by'] ?? null,
                 'offering_id' => $row['offering_id'], 'is_locked' => $row['is_locked'], 'subject_student_id' => $row['subject_student_id'],
-            ]));
+                'closed_at' => $row['closed_at'] ?? null,
+            ], $viewerParty, $other !== null && isset($otherById[$other]) ? [$otherById[$other], $otherParty[$other]] : null);
+            $row['can_post'] = $this->policy->canPost($post);
+            // Only the deactivated account is named (D11); a block, scope or minor flag stays the generic line.
+            $row['composer_note'] = $post->type === 'direct' && $post->deactivatedOther ? 'This account is deactivated' : null;
 
             $row['pinned']        = ($row['pinned_at'] ?? null) !== null;
             $row['archived']      = ($row['archived_at'] ?? null) !== null;
@@ -91,17 +105,67 @@ class ConversationPresenter
             $row['marked_unread'] = (int) ($row['marked_unread'] ?? 0) === 1;
             $row['can_pin_chat']  = $row['type'] !== 'course';
             $row['can_delete']    = in_array($row['type'], ['direct', 'group'], true);
+            // Every member of a group may open its settings (the server decides what the dialog lets them do).
+            $row['group_settings'] = $row['type'] === 'group';
 
             $row['blocked_by_me'] = $row['type'] === 'direct' && $other !== null && isset($blocked[$other]);
-            $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && $this->canBlock($other);
+            $row['can_block']     = $row['type'] === 'direct' && $other !== null && ! $row['blocked_by_me'] && isset($blockable[$other]);
             $teaches             = $row['offering_id'] !== null && isset($teaching[(int) $row['offering_id']]);
-            $created             = $row['type'] === 'group' && (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
-            $row['can_moderate'] = $this->policy->canModerate($role === 'institutional_admin' ? $role : ($teaches ? 'instructor' : $role), (string) $row['type'], $teaches || $created);
+            $created             = $row['type'] === 'group' && (int) ($row['owner_id'] ?? 0) === (int) $viewer->id;
+            $row['can_moderate'] = $this->policy->canModerate($teaches ? $viewerParty->withRole('instructor') : $viewerParty, (string) $row['type'], $teaches || $created);
+            // A closed group, or a course chat already closed with its course above.
+            $row['closed']       = $row['closed'] || ($row['closed_at'] ?? null) !== null;
+
+            // The line is the recipient's: a stored first contact, or a minor viewer until they reply (FR5). The sender
+            // sees only the stored fact, so a recipient's minor flag never shows on their side.
+            $direct                      = $row['type'] === 'direct' && ($row['first_contact_cleared_at'] ?? null) === null;
+            $mine                        = (int) ($row['created_by'] ?? 0) === (int) $viewer->id;
+            $starterRoles                = $starters[(int) ($row['created_by'] ?? 0)] ?? null;
+            $row['first_contact_line']   = $direct && ! $mine && $starterRoles !== null && ((int) ($row['first_contact'] ?? 0) === 1 || $viewerParty->minor);
+            $row['first_contact_role']   = $row['first_contact_line'] ? (RoleRank::highest($starterRoles) ?? '') : null;
+            $row['first_contact_sender'] = $direct && $mine && (int) ($row['first_contact'] ?? 0) === 1;
 
             $row['controls']            = ChatControls::forConversation($row);
-            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row);
+            $row['can_manage_controls'] = $this->controls->canManage($viewer, $row, $viewerParty);
 
             $out[] = $row;
+        }
+
+        return $out;
+    }
+
+    /**
+     * The roles of the people who started the open first-contact threads the viewer received, in one query for the
+     * whole list (a person who no longer exists is left out, so their thread shows no line).
+     *
+     * @param list<array<string, mixed>> $rows
+     *
+     * @return array<int, list<string>> user id => roles
+     */
+    private function starterRoles(User $viewer, Party $viewerParty, array $rows): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if ($row['type'] === 'direct' && ($row['first_contact_cleared_at'] ?? null) === null && (int) $row['created_by'] !== (int) $viewer->id
+                && ((int) ($row['first_contact'] ?? 0) === 1 || $viewerParty->minor)) {
+                $ids[(int) $row['created_by']] = (int) $row['created_by'];
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach (db_connect()->table('users u')->select('u.id, g.group')->join('auth_groups_users g', 'g.user_id = u.id', 'left')
+            ->where('u.deleted_at', null)->whereIn('u.id', array_values($ids))->get()->getResultArray() as $r) {
+            $out[(int) $r['id']] ??= [];
+
+            if ($r['group'] !== null) {
+                $out[(int) $r['id']][] = (string) $r['group'];
+            }
         }
 
         return $out;
@@ -119,12 +183,44 @@ class ConversationPresenter
         return $out;
     }
 
-    /** Whether the other person in a direct thread is someone a block can shut out (not an instructor or administrator). */
-    private function canBlock(int $otherUserId): bool
+    /**
+     * The other people of this list's direct threads the Block control is offered for (BlockService::allows
+     * with the protected link ignored: when only that refuses, the click gets the explaining 422, FR4).
+     * One batched institution lookup and one user fetch for the whole list.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @param array<int, true>           $blocked
+     *
+     * @return array<int, true>
+     */
+    private function blockTargets(User $viewer, ?int $institution, array $rows, array $blocked): array
     {
-        $other = model(\CodeIgniter\Shield\Models\UserModel::class)->findById($otherUserId);
+        $ids = [];
 
-        return $other !== null && BlockService::blockableRole($this->resolver->activeRole($other));
+        foreach ($rows as $row) {
+            if ($row['type'] === 'direct' && $row['other_user_id'] !== null && ! isset($blocked[(int) $row['other_user_id']])) {
+                $ids[(int) $row['other_user_id']] = (int) $row['other_user_id'];
+            }
+        }
+
+        if ($institution === null || $ids === []) {
+            return [];
+        }
+
+        $institutions = (new PlanLimits())->institutionsOf(array_values($ids));
+        $service      = new BlockService($this->resolver);
+        $out          = [];
+
+        /** @var list<User> $targets */
+        $targets = model(UserModel::class)->whereIn('id', array_values($ids))->findAll();
+
+        foreach ($targets as $target) {
+            if ($service->allows($viewer, $institution, $target, $institutions[(int) $target->id] ?? null, false)) {
+                $out[(int) $target->id] = true;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -219,7 +315,9 @@ class ConversationPresenter
         }
 
         if ($row['removed_at'] !== null) {
-            return 'Message removed';
+            $direct = $row['removed_by'] !== null && db_connect()->table('conversations')->where(['id' => $conversationId, 'type' => 'direct'])->countAllResults() > 0;
+
+            return $direct ? 'Message removed by an administrator' : 'Message removed';
         }
 
         $body = $this->cipher->decrypt((string) $row['body_enc'], (int) $row['conversation_id'], (int) $row['sender_id']);

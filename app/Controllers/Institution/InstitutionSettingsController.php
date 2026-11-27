@@ -6,6 +6,7 @@ namespace App\Controllers\Institution;
 
 use App\Controllers\BaseController;
 use App\Controllers\Institution\Concerns\AnswersDialogForms;
+use App\Services\Admin\PlatformSettings;
 use App\Services\Institutions\AcademicDefaults;
 use App\Services\Institutions\BrandColours;
 use App\Services\Institutions\InstitutionAccess;
@@ -17,6 +18,7 @@ use App\Services\Institutions\StructureException;
 use App\Services\Messaging\StudentMessaging;
 use App\Services\Parents\ParentPortal;
 use CodeIgniter\HTTP\RedirectResponse;
+use InvalidArgumentException;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
@@ -129,17 +131,44 @@ class InstitutionSettingsController extends BaseController
 
     public function saveMessages(): ResponseInterface|RedirectResponse
     {
-        $choice = $this->input()['enabled'] ?? null;
+        $input = $this->input();
 
-        return $this->run(function (int $inst) use ($choice): void {
-            if (! in_array($choice, ['0', '1'], true)) {
-                throw StructureException::field('enabled', 'Choose on or off.');
+        return $this->run(function (int $inst) use ($input): void {
+            $scope = $input['scope'] ?? null;
+            $start = trim((string) ($input['quietStart'] ?? ''));
+            $end   = trim((string) ($input['quietEnd'] ?? ''));
+
+            if (! in_array($scope, StudentMessaging::SCOPES, true)) {
+                throw StructureException::field('scope', 'Choose who students can message.');
             }
 
-            (new StudentMessaging())->set($inst, $choice === '1');
-        }, $choice === '1'
-            ? 'Students can message each other.'
-            : 'Students can no longer start messages with each other. Existing conversations stay readable.', self::MESSAGES);
+            // Both times or neither (neither = no default quiet hours); everything is checked before anything is saved.
+            if (($start === '') !== ($end === '')) {
+                throw StructureException::field('quietStart', 'Enter both times, or leave both empty for none.');
+            }
+
+            if ($start !== '' && $start === $end) {
+                throw StructureException::field('quietStart', 'Start and end must differ.');
+            }
+
+            $platform = new PlatformSettings();
+
+            foreach (['quietStart' => $start, 'quietEnd' => $end] as $field => $time) {
+                if ($time !== '') {
+                    try {
+                        PlatformSettings::coerce($platform->definitions()['default' . ucfirst($field)], $time);
+                    } catch (InvalidArgumentException) {
+                        throw StructureException::field('quietStart', 'Use a time such as 21:00.');
+                    }
+                }
+            }
+
+            (new StudentMessaging())->setScope($inst, $scope);
+
+            foreach (['defaultQuietStart' => $start, 'defaultQuietEnd' => $end] as $name => $time) {
+                $time === '' ? $platform->forget($name, $inst) : $platform->set($name, $time, $inst);
+            }
+        }, 'The messages settings were saved.', self::MESSAGES);
     }
 
     public function security(): string
@@ -203,7 +232,7 @@ class InstitutionSettingsController extends BaseController
             'settingsAnnouncement' => $tab === 'announcement' ? (new InstitutionAnnouncement())->get($institutionId) : null,
             'settingsSecurity' => $tab === 'security' ? (new InstitutionSecurity())->forInstitution($institutionId) : null,
             'settingsParents' => $tab === 'parents' ? ['own' => ! (new ParentPortal())->institutionSwitchedOff($institutionId), 'platform' => (new ParentPortal())->platformOn($institutionId)] : null,
-            'settingsMessages' => $tab === 'messages' ? ['studentsOn' => (new StudentMessaging())->enabled($institutionId)] : null,
+            'settingsMessages' => $tab === 'messages' ? ['scope' => (new StudentMessaging())->scope($institutionId), 'quietStart' => (new PlatformSettings())->get('defaultQuietStart', $institutionId), 'quietEnd' => (new PlatformSettings())->get('defaultQuietEnd', $institutionId)] : null,
             'settingsAcademic' => $tab === 'academic' ? (new AcademicDefaults())->forInstitution($institutionId) : null,
             'settingsCanEdit' => (new InstitutionAccess())->canWrite((int) auth()->id()),
             'settingsDefaults' => ['primary' => BrandColours::DEFAULT_PRIMARY, 'accent' => BrandColours::DEFAULT_ACCENT],

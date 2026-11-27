@@ -295,6 +295,25 @@ final class UserAdminServiceTest extends DatabaseTestCase
         $this->assertSame((int) $this->admin->id, (int) $entry['actor_user_id']);
     }
 
+    public function testDeactivatingAnOwnerHandsTheirGroupsOver(): void
+    {
+        $owner = PeopleFactory::person('instructor', 'Olga', 'Owner', null, $this->acme);
+        $other = PeopleFactory::person('instructor', 'Omar', 'Other', null, $this->acme);
+        $db    = db_connect();
+        $now   = date('Y-m-d H:i:s');
+
+        $db->table('conversations')->insert(['institution_id' => $this->acme, 'type' => 'group', 'title' => 'G', 'created_by' => $owner->id, 'owner_id' => $owner->id, 'is_locked' => 0, 'created_at' => $now, 'updated_at' => $now]);
+        $group = (int) $db->insertID();
+
+        foreach ([$owner, $other] as $member) {
+            $db->table('conversation_participants')->insert(['conversation_id' => $group, 'user_id' => $member->id, 'joined_at' => $now, 'first_visible_message_id' => 0]);
+        }
+
+        $this->service->deactivate((int) $owner->id, $this->admin, $this->now);
+
+        $this->assertSame((int) $other->id, (int) $db->table('conversations')->where('id', $group)->get()->getRow('owner_id'));
+    }
+
     public function testYouCannotDeactivateYourself(): void
     {
         PeopleFactory::person('admin', 'Other', 'Admin');

@@ -225,20 +225,34 @@ $field = static fn (array $spec): string => view('components/form-field', $spec 
             <?= csrf_field() ?>
 
             <div class="<?= $sections ?>" data-panel-scroll>
-                <fieldset class="<?= $section ?>" <?= $disabled ?>>
+                <fieldset class="<?= $section ?>" <?= $disabled ?> data-field="scope">
                     <legend class="<?= $heading ?> w-full">Students messaging each other</legend>
-                    <p class="text-sm text-[#3D3D3D]">Lets students who share a course start a message with each other. Switching it off stops new conversations between students; the ones that exist stay readable but nobody can add to them. Messages between students and their instructors are not affected.</p>
+                    <p class="text-sm text-[#3D3D3D]">Who a student can start a conversation with. Narrowing it keeps existing conversations readable but stops new posts in the ones that no longer qualify. Students marked as minors are always protected. Messages between students and their instructors are not affected.</p>
 
-                    <div class="flex flex-wrap gap-4">
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
-                            <input type="radio" name="enabled" value="1" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? 'checked' : '' ?> <?= $disabled ?>>
-                            On
-                        </label>
-                        <label class="flex items-center gap-2 text-sm text-[#1A1C1E] pointer-coarse:min-h-11 pointer-coarse:min-w-11">
-                            <input type="radio" name="enabled" value="0" class="h-4 w-4 pointer-coarse:h-6 pointer-coarse:w-6 border-gray-300 text-brand focus:ring-brand/40" <?= $mm['studentsOn'] ? '' : 'checked' ?> <?= $disabled ?>>
-                            Off
-                        </label>
+                    <div class="inline-flex w-full flex-wrap gap-1 rounded-2xl border border-gray-200 bg-gray-50 p-1 sm:w-auto sm:self-start" data-scope-switch>
+                        <?php foreach (['off' => 'Off', 'course' => 'Classmates only', 'institution' => 'Whole institution'] as $value => $label): ?>
+                            <label class="relative flex flex-1 cursor-pointer items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold text-[#3D3D3D] pointer-coarse:min-h-11 has-[:checked]:bg-brand has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/50 has-[:disabled]:cursor-default has-[:disabled]:opacity-60">
+                                <input type="radio" name="scope" value="<?= esc($value, 'attr') ?>" class="sr-only" <?= $mm['scope'] === $value ? 'checked' : '' ?> <?= $disabled ?>>
+                                <?= esc($label) ?>
+                            </label>
+                        <?php endforeach; ?>
                     </div>
+                    <p class="text-xs font-medium text-[#C33939]" data-field-error data-for="scope" hidden></p>
+                </fieldset>
+
+                <fieldset class="<?= $section ?>" <?= $disabled ?> data-field="quietStart">
+                    <legend class="<?= $heading ?> w-full">Default quiet hours</legend>
+                    <p class="text-sm text-[#3D3D3D]">For anyone who has not set their own. Notifications and emails wait until the end; messages still arrive. Leave both empty for none. Times follow the platform timezone.</p>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <label for="msg-quiet-start" class="sr-only">Quiet hours start</label>
+                        <input id="msg-quiet-start" type="time" name="quietStart" value="<?= esc((string) ($mm['quietStart'] ?? ''), 'attr') ?>" class="<?= $input ?> max-w-[9rem]" <?= $disabled ?>>
+                        <span class="text-sm text-[#646464]">to</span>
+                        <label for="msg-quiet-end" class="sr-only">Quiet hours end</label>
+                        <input id="msg-quiet-end" type="time" name="quietEnd" value="<?= esc((string) ($mm['quietEnd'] ?? ''), 'attr') ?>" class="<?= $input ?> max-w-[9rem]" <?= $disabled ?>>
+                        <span class="text-sm text-[#646464]">&middot; None when both are empty</span>
+                    </div>
+                    <p class="text-xs font-medium text-[#C33939]" data-field-error hidden></p>
                 </fieldset>
 
                 <?php if ($settingsCanEdit): ?>

@@ -602,6 +602,7 @@ $routes->group('parent', ['filter' => ['role:parent', 'readonly', 'permission:ch
 $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission:messages.use']], function ($routes) {
     $routes->get('conversations', 'Messaging\ConversationController::index');
     $routes->post('conversations', 'Messaging\ConversationController::start');
+    $routes->post('conversations/first', 'Messaging\ConversationController::sendFirst');
     $routes->post('conversations/(:num)/lock', 'Messaging\ConversationController::lock/$1');
     $routes->post('conversations/(:num)/unlock', 'Messaging\ConversationController::unlock/$1');
     $routes->post('conversations/(:num)/controls', 'Messaging\ChatControlsController::update/$1');
@@ -624,6 +625,12 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
     $routes->post('blocks', 'Messaging\BlockController::create');
     $routes->post('blocks/(:num)/remove', 'Messaging\BlockController::remove/$1');
     $routes->post('groups', 'Messaging\GroupController::create');
+    $routes->get('groups/(:num)/members', 'Messaging\GroupController::members/$1');
+    $routes->post('groups/(:num)/members', 'Messaging\GroupController::add/$1');
+    $routes->post('groups/(:num)/members/(:num)/remove', 'Messaging\GroupController::removeMember/$1/$2');
+    $routes->post('groups/(:num)/leave', 'Messaging\GroupController::leave/$1');
+    $routes->post('groups/(:num)/rename', 'Messaging\GroupController::rename/$1');
+    $routes->post('groups/(:num)/close', 'Messaging\GroupController::close/$1');
     $routes->get('conversations/(:num)/messages', 'Messaging\MessageController::page/$1');
     $routes->get('conversations/(:num)/changes', 'Messaging\MessageController::changes/$1');
     $routes->post('conversations/(:num)/messages', 'Messaging\MessageController::send/$1');
@@ -651,6 +658,9 @@ $routes->group('messages/api', ['filter' => ['messages', 'readonly', 'permission
 $routes->get('messages/reports', 'Messaging\ReportsPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->get('messages/reports/(:num)', 'Messaging\ReportsPageController::show/$1', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->post('messages/reports/(:num)/review', 'Messaging\ReportsPageController::review/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/review', 'Messaging\ReportsPageController::reviewPerson/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/restrict', 'Messaging\ReportsPageController::restrict/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
+$routes->post('messages/reports/person/(:num)/lift', 'Messaging\ReportsPageController::lift/$1', ['filter' => ['messages', 'readonly', 'permission:messages.use']]);
 $routes->get('messages', 'Messaging\MessagesPageController::index', ['filter' => ['messages', 'permission:messages.use']]);
 $routes->get('messages/(:num)', 'Messaging\MessagesPageController::index/$1', ['filter' => ['messages', 'permission:messages.use']]);
 
@@ -1201,6 +1211,8 @@ $routes->group('institution', ['filter' => 'role:institutional_admin'], function
             $routes->post('(:num)/deactivate', 'Institution\PeopleController::deactivate/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('(:num)/reactivate', 'Institution\PeopleController::reactivate/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/sign-out', 'Institution\PeopleController::signOut/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/minor', 'Institution\PeopleController::minor/$1', ['filter' => 'permission:people.manage']);
+            $routes->post('(:num)/minor/remove', 'Institution\PeopleController::unmark/$1', ['filter' => 'permission:people.manage']);
             $routes->post('(:num)/reset-password', 'Institution\PeopleController::resetPassword/$1', ['filter' => ['permission:people.manage', 'reauth']]);
             $routes->post('(:num)/roles', 'Institution\PeopleController::roles/$1', ['filter' => ['permission:people.manage', 'reauth']]);
         });

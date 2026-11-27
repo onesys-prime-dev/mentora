@@ -1,0 +1,74 @@
+<style>
+  .m{font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#1f2937}
+  .thread{background:#fff;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;flex-direction:column;height:420px;overflow:hidden;border:1px solid #eef0f3}
+  .th-head{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #f0f0f0}
+  .av{width:34px;height:34px;border-radius:50%;background:#dbe7ff;color:#0040A6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
+  .name{font-weight:700;color:#0040A6;font-family:Parkinsans,system-ui}
+  .sub{color:#646464;font-size:12px}
+  .body{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:#fafbfc;overflow:hidden}
+  .bubble{max-width:75%;background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:8px 10px}
+  .comp{border-top:1px solid #f0f0f0;padding:10px 12px;display:flex;gap:8px;align-items:center}
+  .inp{flex:1;border:1px solid #d1d5db;border-radius:10px;padding:7px 10px;color:#9ca3af}
+  .send{background:#0040A6;color:#fff;border-radius:999px;padding:6px 14px;font-weight:600}
+  .pill{border:1px solid #d1d5db;border-radius:999px;padding:3px 10px;font-weight:600;color:#374151;background:#fff;font-size:12px}
+  .pill.red{border-color:#fca5a5;color:#b91c1c}
+  .note{font-size:12px;color:#646464}
+</style>
+
+<h2>Screen 1 of 8: the first-message banner (recipient) and the draft notice (sender)</h2>
+<p class="subtitle">A student, Ana Reyes, writes to Prof. Cruz for the first time. Left: what Prof. Cruz sees. The strip under each one is the sender's draft notice. Pick the one that feels right.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="thread">
+        <div class="th-head"><div class="av">AR</div><div><div class="name">Ana Reyes</div><div class="sub">Student · BS Biology, 2nd year</div></div></div>
+        <div style="margin:10px 12px 0;background:#FFF8E6;border:1px solid #F5D78E;border-radius:12px;padding:10px 12px">
+          <div style="font-weight:600">First message from Ana Reyes, Student</div>
+          <div class="note" style="margin:2px 0 8px">You haven't talked before. If this is unwanted, you can block or report.</div>
+          <span class="pill">Block</span> <span class="pill red">Report</span>
+        </div>
+        <div class="body"><div class="bubble">Good morning Prof. Cruz, may I ask about the research assistant opening?</div></div>
+        <div class="comp"><div class="inp">Write a reply…</div><span class="send">Send</span></div>
+      </div>
+      <div class="note" style="margin-top:8px;padding:8px 10px;background:#F2F7FF;border-radius:10px">Sender's draft: <b>“This is your first message to Prof. Cruz.”</b> shown above the composer</div>
+    </div>
+    <div class="card-body"><h3>A · Banner card at the top</h3><p>A tinted card pinned above the messages until Prof. Cruz replies or blocks. Hard to miss, clearly separate from the conversation.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="thread">
+        <div class="th-head"><div class="av">AR</div><div><div class="name">Ana Reyes</div><div class="sub">Student · BS Biology, 2nd year</div></div></div>
+        <div class="body">
+          <div style="align-self:center;text-align:center;max-width:90%;padding:6px 0">
+            <div class="note"><b style="color:#374151">First message from Ana Reyes</b> · Student · you haven't talked before</div>
+            <div style="margin-top:6px"><span class="pill">Block</span> <span class="pill red">Report</span></div>
+          </div>
+          <div class="bubble">Good morning Prof. Cruz, may I ask about the research assistant opening?</div>
+        </div>
+        <div class="comp"><div class="inp">Write a reply…</div><span class="send">Send</span></div>
+      </div>
+      <div class="note" style="margin-top:8px;padding:8px 10px;background:#F2F7FF;border-radius:10px">Sender's draft: a centred grey line <b>“First message to Prof. Cruz”</b> where the conversation starts</div>
+    </div>
+    <div class="card-body"><h3>B · Quiet system line in the conversation</h3><p>Looks like the existing “Message removed” lines: centred, grey, part of the history. Calmer, but easier to overlook.</p></div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="thread">
+        <div class="th-head"><div class="av">AR</div><div><div class="name">Ana Reyes</div><div class="sub">Student · BS Biology, 2nd year</div></div></div>
+        <div class="body"><div class="bubble">Good morning Prof. Cruz, may I ask about the research assistant opening?</div></div>
+        <div style="border-top:1px solid #F5D78E;background:#FFF8E6;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:150px"><b>First message from Ana Reyes</b><div class="note">You haven't talked before.</div></div>
+          <span class="pill">Block</span> <span class="pill red">Report</span>
+        </div>
+        <div class="comp"><div class="inp">Write a reply…</div><span class="send">Send</span></div>
+      </div>
+      <div class="note" style="margin-top:8px;padding:8px 10px;background:#F2F7FF;border-radius:10px">Sender's draft: the same tinted bar above the composer: <b>“This is your first message to Prof. Cruz.”</b></div>
+    </div>
+    <div class="card-body"><h3>C · Bar above the reply box</h3><p>The choice sits right where you'd reply, so the decision (reply, block, report) is in one place. On phones it stays in view while scrolling.</p></div>
+  </div>
+
+</div>

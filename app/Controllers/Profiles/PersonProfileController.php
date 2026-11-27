@@ -9,7 +9,6 @@ use App\Filters\MessagesFilter;
 use App\Services\Auth\RolePermissions;
 use App\Services\Institutions\InstitutionAccess;
 use App\Services\Messaging\ConversationService;
-use App\Services\Messaging\RateLimitedException;
 use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\ProfileModeration;
 use App\Services\Profiles\ProfilePhotoService;
@@ -55,18 +54,19 @@ class PersonProfileController extends BaseController
             throw PageNotFoundException::forPageNotFound();
         }
 
-        try {
-            $conversation = (new ConversationService())->startDirect($viewer, $id);
-        } catch (RateLimitedException $e) {
-            return redirect()->to(site_url('people/' . $id))->with('error', $e->getMessage());
-        }
-
+        // Opening a person stores nothing: an existing thread opens, otherwise the page opens the draft.
         // Refused as the Messages API refuses: a 404, never a reason.
-        if ($conversation === null) {
+        $draft = (new ConversationService())->draftFor($viewer, $id, null);
+
+        if ($draft === null) {
             throw PageNotFoundException::forPageNotFound();
         }
 
-        return redirect()->to(site_url('messages/' . $conversation['id']));
+        if ($draft['conversation_id'] !== null) {
+            return redirect()->to(site_url('messages/' . $draft['conversation_id']));
+        }
+
+        return redirect()->to(site_url('messages?to=' . $id));
     }
 
     /** Per-viewer HTML, never kept by a shared cache. */
@@ -121,14 +121,14 @@ class PersonProfileController extends BaseController
     /** @param array<string, mixed> $p */
     private function canMessage(User $viewer, int $id, array $p): bool
     {
-        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || (new InstitutionAccess())->stateFor((int) $viewer->id) !== InstitutionAccess::WRITABLE || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
+        if ($id === (int) $viewer->id || array_key_exists('deactivated_badge', $p) || MessagesFilter::closed() || (new InstitutionAccess())->stateFor((int) $viewer->id) === InstitutionAccess::PAST || ! (new RolePermissions())->allows($viewer, 'messages.use')) {
             return false;
         }
         $subject = model(UserModel::class)->findById($id);
         if ($subject === null) {
             return false;
         }
-        // D32: the one accepted active_role read in the profile; the same check that starting the conversation makes.
-        return (new ConversationService())->resolveDirectStart($viewer, $subject) !== null;
+        // D32: the active-role exception is gone (decisions are on parties now); the same check that starting the conversation makes.
+        return (new ConversationService())->draftFor($viewer, $id, null) !== null; // opening, so a restricted person or a read-only institution still reaches an existing thread
     }
 }

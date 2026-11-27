@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services\Messaging;
 
+use App\Services\Institutions\InstitutionAccess;
 use CodeIgniter\Shield\Entities\User;
 
 /**
  * The person's own state on a chat: pinned, muted, archived, marked unread and
  * deleted for them. Every change touches only the caller's own participant row,
  * and a chat that is not theirs is "not found", exactly like one that does not exist.
+ * A past institution changes nothing, not even these (FR11); a read-only one keeps them.
  */
 class ChatStateService
 {
@@ -25,6 +27,10 @@ class ChatStateService
     /** @return array{ok: bool, reason?: 'limit'|'not_allowed'|'not_found'} */
     public function pin(User $user, int $conversationId): array
     {
+        if (self::past($user)) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
         $chat = $this->conversations->find($user, $conversationId);
 
         if ($chat === null) {
@@ -43,8 +49,10 @@ class ChatStateService
             return ['ok' => true];
         }
 
-        $pinned = $db->table('conversation_participants')->where('user_id', (int) $user->id)->where('left_at IS NULL', null, false)
-            ->where('pinned_at IS NOT NULL', null, false)->countAllResults();
+        // Only the pins the person can see: an empty direct thread is hidden from the list (FR3).
+        $pinned = $db->table('conversation_participants p')->join('conversations c', 'c.id = p.conversation_id')
+            ->where('p.user_id', (int) $user->id)->where('p.left_at IS NULL', null, false)->where('p.pinned_at IS NOT NULL', null, false)
+            ->where("NOT (c.type = 'direct' AND c.last_message_id IS NULL)", null, false)->countAllResults();
 
         if ($pinned >= self::MAX_PINNED) {
             return ['ok' => false, 'reason' => 'limit'];
@@ -59,19 +67,19 @@ class ChatStateService
         return $this->personal($user, $conversationId, ['pinned_at' => null], true);
     }
 
-    /** @return array{ok: bool, reason?: 'not_found'} */
+    /** @return array{ok: bool, reason?: 'not_allowed'|'not_found'} */
     public function setMuted(User $user, int $conversationId, bool $muted): array
     {
         return $this->personal($user, $conversationId, ['is_muted' => $muted ? 1 : 0]);
     }
 
-    /** @return array{ok: bool, reason?: 'not_found'} */
+    /** @return array{ok: bool, reason?: 'not_allowed'|'not_found'} */
     public function setArchived(User $user, int $conversationId, bool $archived): array
     {
         return $this->personal($user, $conversationId, ['archived_at' => $archived ? date('Y-m-d H:i:s') : null]);
     }
 
-    /** @return array{ok: bool, reason?: 'not_found'} */
+    /** @return array{ok: bool, reason?: 'not_allowed'|'not_found'} */
     public function markUnread(User $user, int $conversationId): array
     {
         return $this->personal($user, $conversationId, ['marked_unread' => 1]);
@@ -80,10 +88,14 @@ class ChatStateService
     /**
      * Clears the "marked unread" flag and reads everything up to the newest message.
      *
-     * @return array{ok: bool, reason?: 'not_found'}
+     * @return array{ok: bool, reason?: 'not_allowed'|'not_found'}
      */
     public function markRead(User $user, int $conversationId): array
     {
+        if (self::past($user)) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
         $chat = $this->conversations->find($user, $conversationId);
 
         if ($chat === null) {
@@ -101,6 +113,10 @@ class ChatStateService
     /** @return array{ok: bool, reason?: 'not_allowed'|'not_found'} */
     public function deleteForMe(User $user, int $conversationId): array
     {
+        if (self::past($user)) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
         $chat = $this->conversations->find($user, $conversationId);
 
         if ($chat === null) {
@@ -125,6 +141,10 @@ class ChatStateService
      */
     private function personal(User $user, int $conversationId, array $set, bool $notForCourse = false): array
     {
+        if (self::past($user)) {
+            return ['ok' => false, 'reason' => 'not_allowed'];
+        }
+
         $chat = $this->conversations->find($user, $conversationId);
 
         if ($chat === null) {
@@ -136,6 +156,12 @@ class ChatStateService
         }
 
         return $this->update($user, $conversationId, $set);
+    }
+
+    /** The person's institution is past: even safety and personal actions stop (FR11). */
+    public static function past(User $user): bool
+    {
+        return (new InstitutionAccess())->stateFor((int) $user->id) === InstitutionAccess::PAST;
     }
 
     /**

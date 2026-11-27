@@ -81,6 +81,7 @@ final class MessagesAvatarsTest extends RouteTestCase
 
     public function testTheListGivesTheOtherPersonsInteractiveAvatar(): void
     {
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
         db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Zed']);
 
         $avatar = $this->directRow($this->getJson($this->student, 'conversations'))['avatar'];
@@ -92,6 +93,7 @@ final class MessagesAvatarsTest extends RouteTestCase
 
     public function testAHiddenPersonsAvatarIsInertWithTheLegalNameAndNoPhoto(): void
     {
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
         db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['preferred_first_name' => 'Zedekiah']);
         $this->say($this->conversation, (int) $this->instructor->id);
         $this->hideInstructor();
@@ -121,6 +123,7 @@ final class MessagesAvatarsTest extends RouteTestCase
 
     public function testAVisiblePersonsPreferredNameTitlesTheChatAndTheirMessages(): void
     {
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
         db_connect()->table('user_profiles')->where('user_id', $this->instructor->id)->update(['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'preferred_first_name' => 'Jun']);
         $this->say($this->conversation, (int) $this->instructor->id);
 
@@ -210,6 +213,7 @@ final class MessagesAvatarsTest extends RouteTestCase
             return $n;
         };
 
+        \Tests\Support\Threads::withMessage($this->conversation, (int) $this->instructor->id);
         $this->say($course, (int) $this->instructor->id);
         $fewList = $lookups(fn () => $this->getJson($this->student, 'conversations'));
         $fewPage = $lookups(fn () => $this->getJson($this->student, "conversations/{$course}/messages"));
@@ -221,7 +225,7 @@ final class MessagesAvatarsTest extends RouteTestCase
             $this->say($course, (int) $peer->id);
             $other = PeopleFactory::person('instructor', 'Other' . $i, 'Teacher', null, $this->institution);
             CourseFactory::assignInstructor($offering, $other);
-            (new ConversationService())->startDirect($this->student, (int) $other->id);
+            \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->student, (int) $other->id)['id'], (int) $other->id);
         }
 
         $this->assertSame($fewList, $lookups(fn () => $this->getJson($this->student, 'conversations')), 'the list looks avatars up once');

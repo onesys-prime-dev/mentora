@@ -10,92 +10,60 @@ namespace App\Services\Messaging;
  */
 final class MessagingPolicy
 {
-    private const NOTHING = 'nothing';
-
     /**
-     * Spec 3.1: sender => recipient => the context fact that unlocks the
-     * cell. A pair that is absent is refused (this includes every use of the
-     * system `admin` role). Student -> student also needs the institution's
-     * studentDmEnabled switch, checked in canStart().
+     * Requirements FR1, in order; the first refusal wins. The resolver gives no context for a bare system `admin`
+     * or someone with no institution; the system admin is refused here too.
      */
-    private const START = [
-        'student' => [
-            'student'    => 'sharedCourse',
-            'instructor' => 'sharedCourse',
-        ],
-        'instructor' => [
-            'student'     => 'sharedCourse',
-            'instructor'  => 'sameCollege',
-            'chairperson' => 'sameCollege',
-            'dean'        => 'sameCollege',
-            'parent'      => 'linkedChild',
-        ],
-        'chairperson' => [
-            'student'     => 'inScope',
-            'instructor'  => 'inScope',
-            'chairperson' => 'sameCollege',
-            'dean'        => 'sameCollege',
-        ],
-        'dean' => [
-            'student'     => 'inScope',
-            'instructor'  => 'inScope',
-            'chairperson' => 'inScope',
-            'dean'        => self::NOTHING,
-        ],
-        'parent' => [
-            'instructor'  => 'linkedChild',
-            'chairperson' => 'linkedChild',
-        ],
-        'institutional_admin' => [
-            'student'             => self::NOTHING,
-            'instructor'          => self::NOTHING,
-            'chairperson'         => self::NOTHING,
-            'dean'                => self::NOTHING,
-            'parent'              => self::NOTHING,
-            'institutional_admin' => self::NOTHING,
-        ],
-    ];
-
-    /** Recipients a block cannot shut out (spec 3.3 rule 6). */
-    private const UNBLOCKABLE = ['instructor', 'institutional_admin'];
-
-    /**
-     * The resolver must pass each account's *active role* (not every role it
-     * holds), must never call this with an `admin` sender or recipient except
-     * to have it refused, and sets StartContext::$isSelf.
-     */
-    public function canStart(string $senderRole, string $recipientRole, StartContext $c): bool
+    public function canStart(Party $sender, Party $recipient, ?int $subjectStudentId, StartContext $c): bool
     {
-        $requirement = self::START[$senderRole][$recipientRole] ?? null;
-
-        if ($requirement === null) {
+        // 1. Hard refusals.
+        if ($c->isSelf || ! $c->sameInstitution || ! $c->senderActive || ! $c->recipientActive
+            || $sender->isSystemAdmin() || $recipient->isSystemAdmin() || $c->impersonating
+            || ! $c->senderInstitutionWritable || $c->senderRestriction !== 'none') {
             return false;
         }
 
-        if ($c->isSelf) {
+        // 2. Capacity (D4). A thread naming a child is a parent thread: one side a parent linked to that child, the
+        // other staff. Otherwise both act as staff or student; a parent-only person has no such capacity.
+        if ($subjectStudentId !== null) {
+            $capacityOk = ($sender->isParent() && $c->linkedChildAsSenderParent && $recipient->isStaff())
+                || ($recipient->isParent() && $c->linkedChildAsRecipientParent && $sender->isStaff());
+        } else {
+            $capacityOk = $sender->capacity(false) !== null && $recipient->capacity(false) !== null;
+        }
+
+        if (! $capacityOk) {
             return false;
         }
 
-        if (! $c->sameInstitution || ! $c->senderActive || ! $c->recipientActive) {
+        // 3. Pair rules. Parent <-> student and parent <-> parent cannot pass step 2 (D2).
+        if ($subjectStudentId === null && $sender->capacity(false) === 'student' && $recipient->capacity(false) === 'student') {
+            $inScope = match ($c->studentScope) {
+                'institution' => true,
+                'course'      => $c->sharedCourse,
+                default       => false,
+            };
+
+            if (! $inScope) {
+                return false;
+            }
+        }
+
+        // A minor recipient, even one holding a staff role (S2-f): own instructor, chair or dean, classmate, or the institution's admin (D9).
+        if ($c->recipientMinor && ! $this->reachesMinor($sender, $c)) {
             return false;
         }
 
-        if ($c->blockedByRecipient && ! in_array($recipientRole, self::UNBLOCKABLE, true)) {
-            return false;
-        }
+        // 4. Blocks (D5): only a binding one; the resolver already leaves out paused blocks and institutional admins' blocks.
+        return ! $c->blockedByRecipient;
+    }
 
-        if ($senderRole === 'student' && $recipientRole === 'student' && ! $c->studentDmEnabled) {
-            return false;
-        }
-
-        $facts = [
-            'sharedCourse'   => $c->sharedCourse,
-            'sameCollege' => $c->sameCollege,
-            'inScope'        => $c->inScope,
-            'linkedChild'    => $c->linkedChild,
-        ];
-
-        return $requirement === self::NOTHING || $facts[$requirement];
+    /** D9: the sender teaches the minor, chairs or deans them, is a classmate, or is the institution's admin. */
+    public function reachesMinor(Party $sender, StartContext $c): bool
+    {
+        return $c->senderTeachesRecipient || $c->senderLeadsRecipient
+            || (in_array('student', $sender->roles, true) && $c->sharedCourse)
+            || in_array('institutional_admin', $sender->roles, true);
     }
 
     /**
@@ -104,7 +72,7 @@ final class MessagingPolicy
      */
     public function canPost(PostContext $c): bool
     {
-        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost || $c->closed) {
             return false;
         }
 
@@ -112,7 +80,11 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($c->type === 'direct' && (($c->blocked && ! $c->blockerIsExempt) || $c->studentDmBlocked)) {
+        if ($c->restriction === 'no_send' && ! ($c->type === 'course' && $c->isCourseInstructor)) {
+            return false;
+        }
+
+        if ($c->type === 'direct' && ($c->blocked || $c->scopeLost || $c->minorLost || $c->deactivatedOther)) {
             return false;
         }
 
@@ -129,14 +101,14 @@ final class MessagingPolicy
     }
 
     /**
-     * $inScope is "instructor of that course" for a course chat, "created or
-     * leads that staff group" for a group. Direct threads are never moderated.
-     * For a `course` chat $role is the person's role in that course (from
-     * CourseMembership::roleIn), not their account role.
+     * $inScope is "instructor of that course" for a course chat, "owns that group"
+     * for a group (an institutional admin moderates every group and course chat). Direct threads are never moderated.
+     * Any held role counts (the caller adds `instructor` for someone who teaches the course); the
+     * system admin never moderates.
      */
-    public function canModerate(string $role, string $conversationType, bool $inScope, bool $sameInstitution = true): bool
+    public function canModerate(Party $actor, string $conversationType, bool $inScope, bool $sameInstitution = true): bool
     {
-        if (! $sameInstitution) {
+        if (! $sameInstitution || $actor->isSystemAdmin()) {
             return false;
         }
 
@@ -144,13 +116,13 @@ final class MessagingPolicy
             return false;
         }
 
-        if ($role === 'institutional_admin') {
+        if (in_array('institutional_admin', $actor->roles, true)) {
             return true;
         }
 
         return match ($conversationType) {
-            'course' => $role === 'instructor' && $inScope,
-            'group'  => in_array($role, ['chairperson', 'dean'], true) && $inScope,
+            'course' => in_array('instructor', $actor->roles, true) && $inScope,
+            'group'  => $inScope,
         };
     }
 
@@ -174,24 +146,24 @@ final class MessagingPolicy
         return $role === 'institutional_admin';
     }
 
-    /** A course chat pins by moderators only; direct and group chats by anyone in them. */
-    public function canPinMessage(string $type, bool $isModerator): bool
+    /** A course chat pins by moderators only; direct and group chats by anyone in them; a closed group by nobody. */
+    public function canPinMessage(string $type, bool $isModerator, bool $closed = false): bool
     {
-        return $type === 'course' ? $isModerator : true;
+        return ! $closed && ($type === 'course' ? $isModerator : true);
     }
 
     /** Like canPost, but a lock does not stop a reaction (it is not a post). */
     public function canReact(PostContext $c): bool
     {
-        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost) {
+        if (! $c->activeParticipant || ! $c->accountActive || $c->institutionReadOnly || $c->offeringClosed || $c->subjectLinkLost || $c->closed) {
             return false;
         }
 
-        if ($c->type === 'direct' && (($c->blocked && ! $c->blockerIsExempt) || $c->studentDmBlocked)) {
+        if ($c->type === 'direct' && ($c->blocked || $c->scopeLost || $c->minorLost || $c->deactivatedOther)) {
             return false;
         }
 
-        return true;
+        return $c->restriction !== 'no_send' || ($c->type === 'course' && $c->isCourseInstructor);
     }
 
     public function canSeeParentFeed(bool $linked, bool $childEnrolled, string $senderRole): bool

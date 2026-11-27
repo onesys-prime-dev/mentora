@@ -412,6 +412,10 @@ class PeopleService
         if (in_array('chairperson', $person['roles'], true) && ! in_array('chairperson', $roles, true)) {
             $this->endChairAssignments($institutionId, $userId, $actor);
         }
+        // The minor flag belongs to students: it goes, audited, with the role.
+        if (! in_array('student', $roles, true) && $actor !== null && (new MinorFlag())->isMinor($institutionId, $userId)) {
+            (new MinorFlag())->set($actor, $institutionId, $userId, false);
+        }
     }
 
     /**
@@ -568,6 +572,8 @@ class PeopleService
         $photosOn  = (int) db_connect()->table('institutions')->select('profile_photos_enabled')->where('id', $institutionId)->get()->getRow('profile_photos_enabled') === 1;
         $homes     = $rows === [] ? [] : array_column(db_connect()->table('user_profiles')->select('user_id, home_department_id')
             ->whereIn('user_id', array_map(static fn (array $r): int => (int) $r['id'], $rows))->where('home_department_id IS NOT NULL', null, false)->get()->getResultArray(), 'home_department_id', 'user_id');
+        $minors    = $rows === [] ? [] : array_map('intval', array_column(db_connect()->table('institution_users')->select('user_id')->where('institution_id', $institutionId)->where('is_minor', 1)
+            ->whereIn('user_id', array_map(static fn (array $r): int => (int) $r['id'], $rows))->get()->getResultArray(), 'user_id'));
         $shaped    = [];
 
         foreach ($rows as $r) {
@@ -589,6 +595,8 @@ class PeopleService
                 // What view-as accepts: a live account of this institution alone that is not an administrator's.
                 'viewable'       => $active && $id !== $actorId && ! $isAdmin,
                 'last_admin'     => $isAdmin && $active && $admins <= 1,
+                'student'        => in_array('student', $r['roles'], true),
+                'minor'          => in_array($id, $minors, true),
                 'has_photo'      => $photosOn && in_array($id, $withPhoto, true),
                 'staff'          => array_intersect(self::HOME_DEPARTMENT_ROLES, $r['roles']) !== [],
                 'home_department_id' => $homes[$id] ?? '',

@@ -34,7 +34,7 @@ async function load(responses = {}) {
 
     const fetch = vi.spyOn(window, "fetch").mockImplementation(async (url) => {
         if (String(url).includes("/messages/api/conversations")) {
-            return responses.start ?? ok({ conversation: { id: 9 } });
+            return responses.start ?? ok({ draft: { recipient_id: 8, subject_student_id: 2, first_contact: false, conversation_id: 9 } });
         }
 
         return responses.tab ?? ok({ html: fragment });
@@ -83,7 +83,7 @@ describe("the parent's instructor tab", { timeout: 30000 }, () => {
         expect(document.querySelector("#course-content").textContent).toContain("We couldn't load");
     });
 
-    it("starts the thread about the child with that instructor, then opens it in Messages", async () => {
+    it("asks for the thread about the child with that instructor, then opens the existing one in Messages", async () => {
         const fetch = await load();
 
         buttons()[1].click();
@@ -95,6 +95,15 @@ describe("the parent's instructor tab", { timeout: 30000 }, () => {
         expect(init.method).toBe("POST");
         expect(JSON.parse(init.body)).toEqual({ recipient_id: 8, subject_student_id: 2 });
         expect(go).toHaveBeenCalledWith("/messages/9");
+    });
+
+    it("opens the draft about the child in Messages when there is no thread yet", async () => {
+        await load({ start: ok({ draft: { recipient_id: 8, subject_student_id: 2, first_contact: false, conversation_id: null } }) });
+
+        buttons()[1].click();
+        await tick();
+
+        expect(go).toHaveBeenCalledWith("/messages?to=8&child=2");
     });
 
     it("says so and stays put when the server refuses", async () => {
@@ -114,7 +123,7 @@ describe("the parent's instructor tab", { timeout: 30000 }, () => {
         const fetch = await load();
 
         fetch.mockImplementation((url) => (String(url).includes("/messages/api/conversations")
-            ? new Promise((resolve) => { release = () => resolve(ok({ conversation: { id: 9 } })); })
+            ? new Promise((resolve) => { release = () => resolve(ok({ draft: { recipient_id: 7, subject_student_id: 2, first_contact: false, conversation_id: 9 } })); })
             : Promise.resolve(ok({ html: fragment }))));
 
         buttons()[0].click();

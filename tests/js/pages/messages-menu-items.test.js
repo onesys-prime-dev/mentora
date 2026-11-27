@@ -53,6 +53,14 @@ describe("chatMenuItems", () => {
         expect(items.at(-1).danger).toBe(true);
     });
 
+    it("offers Group settings first in a group that has them, and nowhere else", () => {
+        const items = chatMenuItems(chat({ type: "group", can_block: false, group_settings: true }), {});
+
+        expect(ids(items)).toEqual(["group-settings", "pin", "unread", "mute", "archive", "delete"]);
+        expect(labels(items)[0]).toBe("Group settings");
+        expect(ids(chatMenuItems(chat(), {}))).not.toContain("group-settings");
+    });
+
     it("calls the matching handler and ignores missing ones", () => {
         const pin = vi.fn();
         const items = chatMenuItems(chat(), { pin });

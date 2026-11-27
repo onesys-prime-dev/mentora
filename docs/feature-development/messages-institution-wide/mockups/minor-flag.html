@@ -1,0 +1,54 @@
+<style>
+  .m{font-family:Poppins,system-ui,sans-serif;font-size:13px;color:#1f2937}
+  .dlg{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+  .t{font-weight:700;font-size:14px;margin-bottom:8px}
+  .lbl{font-size:11px;color:#4b5563;margin-top:6px}
+  .inp{border:1px solid #d1d5db;border-radius:8px;padding:5px 8px;color:#374151}
+  .note{font-size:12px;color:#646464}
+  .pill{display:inline-block;border:1px solid #d1d5db;border-radius:999px;padding:3px 10px;font-weight:600;font-size:12px;background:#fff}
+  .brand{background:#0040A6;color:#fff;border-color:#0040A6}
+  .tbl{background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden}
+  .tr{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid #f3f4f6}
+  .av{width:24px;height:24px;border-radius:50%;background:#dbe7ff;flex:none}
+  .badge{font-size:10px;font-weight:700;border-radius:999px;padding:1px 7px}
+  .minor{background:#EEF2FF;color:#3730A3}
+  .ok{background:#E8F3EC;color:#2E7D4F}
+  .menu{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:6px 10px;box-shadow:0 6px 20px rgba(0,0,0,.1);width:180px;margin-left:auto}
+</style>
+
+<h2>Screen 7 of 7: marking a student as a minor (People screen, institutional admin)</h2>
+<p class="subtitle">Today each person's Actions menu has Edit details (name, email), Change roles, password link, sign out, deactivate. The flag is visible to admins and staff only. CSV import gets a matching column.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image m"><div class="dlg">
+      <div class="t">Edit Ana Reyes</div>
+      <div class="lbl">First name</div><div class="inp">Ana</div>
+      <div class="lbl">Last name</div><div class="inp">Reyes</div>
+      <div class="lbl">Email</div><div class="inp">ana.reyes@school.edu</div>
+      <label style="display:flex;gap:8px;margin-top:10px;align-items:flex-start"><input type="checkbox" checked style="margin-top:3px"> <span><b>Minor</b><div class="note">Only her instructors, department and college leads, classmates and admins can message her.</div></span></label>
+      <div style="text-align:right;margin-top:10px"><span class="pill">Cancel</span> <span class="pill brand">Save</span></div>
+    </div></div>
+    <div class="card-body"><h3>A · A checkbox in Edit details</h3><p>Sits with the other details (students only). UP's home department field joins this same dialog later. No change to the list.</p></div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image m">
+      <div class="tbl">
+        <div class="tr"><span class="av"></span><span style="flex:1">Ana Reyes <span class="badge minor">Minor</span></span><span class="badge ok">Active</span><span class="note">Actions ▾</span></div>
+        <div class="tr"><span class="av"></span><span style="flex:1">Ben Santos</span><span class="badge ok">Active</span><span class="note">Actions ▾</span></div>
+      </div>
+      <div class="menu" style="margin-top:6px">
+        <div>Edit details</div><div>Change roles</div><div style="color:#0040A6;font-weight:600">Remove minor mark</div><div>Send password link</div>
+      </div>
+      <div class="dlg" style="margin-top:6px;padding:10px">
+        <b>Mark Ben Santos as a minor?</b>
+        <div class="note" style="margin:4px 0 8px">Only his instructors, department and college leads, classmates and admins will be able to message him. Conversations that no longer qualify become read-only.</div>
+        <span class="pill">Cancel</span> <span class="pill brand">Mark as minor</span>
+      </div>
+    </div>
+    <div class="card-body"><h3>B · Its own action, a badge in the list</h3><p>“Mark as minor / Remove minor mark” in the Actions menu with a confirm that explains the effect; a “Minor” badge in the People list so admins can see who is covered.</p></div>
+  </div>
+
+</div>

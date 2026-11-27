@@ -90,4 +90,12 @@ class Platform extends BaseConfig
 
     /** Whether students of an institution may start messages with each other (only ever switched off per institution). */
     public bool $studentDmEnabled = true;
+
+    /** Who a student can start a message with: off, course (classmates only) or institution (D3). */
+    public string $studentMessagingScope = 'institution';
+
+    /** Default quiet hours (HH:MM, platform timezone) for anyone who never set their own; null = none (D14). */
+    public ?string $defaultQuietStart = null;
+
+    public ?string $defaultQuietEnd = null;
 }

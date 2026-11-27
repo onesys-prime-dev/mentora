@@ -57,6 +57,10 @@ export function chatMenuItems(conversation, handlers = {}) {
     const actions = [];
     const destructive = [];
 
+    if (c.type === "group" && c.group_settings) {
+        actions.push(item(handlers, "group-settings", "Group settings"));
+    }
+
     if (c.can_pin_chat) {
         actions.push(c.pinned ? item(handlers, "unpin", "Unpin") : item(handlers, "pin", "Pin to top"));
     }

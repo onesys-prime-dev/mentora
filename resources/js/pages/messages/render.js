@@ -225,6 +225,35 @@ export function minutesBetween(earlier, later) {
     return a === null || b === null ? 0 : Math.max(0, Math.floor((b - a) / 60000));
 }
 
+/** A centred grey line in the history (first contact); `actions` are { label, onClick, danger } pills beside it. */
+export function systemLine(text, actions = []) {
+    const line = el("div", "flex flex-col items-center gap-1.5 px-4 py-2 text-center text-xs text-[#646464]");
+
+    line.dataset.role = "system-line";
+    line.append(el("span", "", text));
+
+    if (actions.length > 0) {
+        const pills = el("div", "flex gap-2");
+
+        for (const { label, onClick, danger, action } of actions) {
+            const pill = el("button", `min-h-6 rounded-full border bg-white px-2.5 py-0.5 text-xs font-semibold pointer-coarse:min-h-11 pointer-coarse:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 ${danger ? "border-red-300 text-red-700" : "border-gray-300 text-gray-700"}`, label);
+
+            pill.type = "button";
+
+            if (action) {
+                pill.dataset.action = action;
+            }
+
+            pill.addEventListener("click", onClick);
+            pills.append(pill);
+        }
+
+        line.append(pills);
+    }
+
+    return line;
+}
+
 export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     const node = el("div", `max-w-[70%] min-w-[4.5rem] break-words rounded-2xl border px-4 py-2.5 text-base leading-snug ${mine ? "self-end border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-800"}`);
 
@@ -247,7 +276,7 @@ export function messageNode(message, { mine, onToggle, onShowWho } = {}) {
     }
 
     if (message.removed || message.deleted_everyone) {
-        node.append(el("span", "italic text-gray-500", message.removed ? "Message removed" : mine ? "You deleted a message" : `${message.sender_name ?? "Someone"} deleted a message`));
+        node.append(el("span", "italic text-gray-500", message.removed ? (message.removed_text ?? "Message removed") : mine ? "You deleted a message" : `${message.sender_name ?? "Someone"} deleted a message`));
 
         return node;
     }
@@ -351,4 +380,25 @@ export function conversationRow(conversation, { selected }) {
     row.append(avatar, text, meta);
 
     return row;
+}
+
+/**
+ * The words of a group's membership line (group.js events from the server), for the person looking: "You added Ben",
+ * "Ana added you". Empty for an event this page does not know, so the caller draws nothing.
+ */
+export function groupEventText(event, meId) {
+    const mine = (id) => id !== null && id !== undefined && Number(id) === Number(meId);
+    const actor = mine(event.actor_id) ? "You" : (event.actor_name ?? "Someone");
+    const target = mine(event.target_id) ? "you" : (event.target_name ?? "someone");
+
+    switch (event.event) {
+        case "group_created": return `${actor} created the group`;
+        case "member_added": return `${actor} added ${target}`;
+        case "member_removed": return `${actor} removed ${target}`;
+        case "member_left": return `${actor} left`;
+        case "renamed": return `${actor} renamed the group`;
+        case "closed": return event.actor_id === null || event.actor_id === undefined ? "The group closed" : `${actor} closed the group`;
+        case "owner_changed": return mine(event.target_id) ? "You are now the owner" : `${event.target_name ?? "Someone"} is now the owner`;
+        default: return "";
+    }
 }

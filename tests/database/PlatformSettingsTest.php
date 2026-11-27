@@ -48,6 +48,10 @@ final class PlatformSettingsTest extends DatabaseTestCase
         foreach ($this->settings->definitions() as $name => $definition) {
             $value = $this->settings->get($name);
 
+            if ($value === null && isset($definition['pattern'])) {
+                continue; // an optional setting: "none" is its default
+            }
+
             $this->assertSame($definition['type'], match (true) {
                 is_int($value)    => 'int',
                 is_bool($value)   => 'bool',

@@ -33,6 +33,19 @@ class ReadOnlyFilter implements FilterInterface
         '#^parent/profile/(notifications|password-link)$#',
     ];
 
+    /**
+     * Messages safety and personal actions stay open in a read-only institution, never in a past one (FR11):
+     * mute, archive, mark read or unread, report, block and unblock. Opening a person (the draft, and the profile's
+     * Message button) stores nothing and reaches only a thread that exists there, since reading stays open.
+     */
+    public const READ_ONLY_MESSAGES = [
+        '#^messages/api/conversations$#',
+        '#^people/\d+/message$#',
+        '#^messages/api/conversations/\d+/(mute|unmute|archive|unarchive|unread|read)$#',
+        '#^messages/api/conversations/\d+/messages/\d+/report$#',
+        '#^messages/api/blocks(/\d+/remove)?$#',
+    ];
+
     public function before(RequestInterface $request, $arguments = null)
     {
         if (in_array(strtoupper($request->getMethod()), self::SAFE, true)) {
@@ -58,6 +71,14 @@ class ReadOnlyFilter implements FilterInterface
 
         if ($state === InstitutionAccess::WRITABLE) {
             return null;
+        }
+
+        if ($state === InstitutionAccess::READ_ONLY) {
+            foreach (self::READ_ONLY_MESSAGES as $pattern) {
+                if (preg_match($pattern, $path) === 1) {
+                    return null;
+                }
+            }
         }
 
         $message = $state === InstitutionAccess::READ_ONLY

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Controllers\Messaging;
 
 use App\Controllers\BaseController;
-use App\Services\Auth\ActiveRoleService;
+use App\Services\Messaging\MessagingContextResolver;
+use App\Services\Messaging\RecipientSearch;
 
 /**
  * The Messages page: an empty shell that resources/js/pages/messages fills from
@@ -16,6 +17,9 @@ class MessagesPageController extends BaseController
 {
     public function index(?string $conversationId = null): string
     {
+        $resolver = new MessagingContextResolver();
+        $roles    = $resolver->roles(auth()->user());
+
         return view('pages/messages/index', [
             'title'  => 'Messages',
             'page'   => 'messages',
@@ -24,8 +28,11 @@ class MessagesPageController extends BaseController
             'user'   => auth()->user(),
             'openId' => $conversationId !== null && ctype_digit($conversationId) ? $conversationId : '',
             // Only the button: GroupService is what decides who may start a group.
-            'canReview' => (new ActiveRoleService())->resolve(auth()->user()) === 'institutional_admin',
-            'canStartGroups' => in_array((new ActiveRoleService())->resolve(auth()->user()), ['chairperson', 'dean'], true),
+            'canReview' => in_array('institutional_admin', $roles, true),
+            // Staff and students (FR7); a parent-only person gets no button.
+            'canStartGroups' => $resolver->party(auth()->user())->capacity(false) !== null,
+            // S2-i: the picker explains, as soon as it opens, why a parent with no linked child finds nobody (about them only).
+            'noLinkedChild' => (new RecipientSearch($resolver))->noLinkedChild(auth()->user()),
         ]);
     }
 }

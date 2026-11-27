@@ -174,7 +174,7 @@ final class InstitutionCsvUploadTest extends RouteTestCase
 
         $this->assertStringContainsString('text/csv', $response->getHeaderLine('Content-Type'));
         $this->assertStringContainsString('students.csv', $response->getHeaderLine('Content-Disposition'));
-        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix\r\n", $response->getBody());
+        $this->assertSame("student_number,email,first_name,middle_name,last_name,suffix,minor\r\n", $response->getBody());
     }
 
     public function testAnUnknownTemplateIsNotFound(): void

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Filters;
 
 use App\Services\Admin\Impersonation;
-use App\Services\Auth\ActiveRoleService;
+use App\Services\Messaging\MessagingContextResolver;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -41,7 +41,7 @@ class MessagesFilter implements FilterInterface
     {
         helper('feature');
 
-        return ! feature_enabled('messages') || Impersonation::active() || (new ActiveRoleService())->resolve(auth()->user()) === 'admin';
+        return ! feature_enabled('messages') || Impersonation::active() || (new MessagingContextResolver())->roles(auth()->user()) === ['admin'];
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)

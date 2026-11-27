@@ -22,12 +22,15 @@ use InvalidArgumentException;
  */
 class PlatformSettings
 {
+    /** HH:MM, 24-hour. */
+    private const TIME = '/^([01]\d|2[0-3]):[0-5]\d$/';
+
     /**
      * Known settings. `type` is int, bool or string; `min`/`max` bound an int,
      * `maxLength` bounds a string; `institution` says whether one institution
      * may hold its own value.
      *
-     * @var array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int}>
+     * @var array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int, values?: list<string>, pattern?: string}>
      */
     private const DEFINITIONS = [
         'auditRetentionDays'   => ['type' => 'int', 'label' => 'Audit log retention (days)', 'institution' => false, 'min' => 30, 'max' => 3650],
@@ -55,10 +58,13 @@ class PlatformSettings
         'institutionAnnouncementUntil' => ['type' => 'string', 'label' => 'Institution announcement ends', 'institution' => true, 'maxLength' => 10],
         'parentPortalEnabled'  => ['type' => 'bool', 'label' => 'Parent portal on', 'institution' => true],
         'studentDmEnabled'     => ['type' => 'bool', 'label' => 'Students can message each other', 'institution' => true],
+        'studentMessagingScope' => ['type' => 'string', 'label' => 'Who students can message', 'institution' => true, 'maxLength' => 11, 'values' => ['off', 'course', 'institution']],
+        'defaultQuietStart'    => ['type' => 'string', 'label' => 'Default quiet hours start', 'institution' => true, 'maxLength' => 5, 'pattern' => self::TIME],
+        'defaultQuietEnd'      => ['type' => 'string', 'label' => 'Default quiet hours end', 'institution' => true, 'maxLength' => 5, 'pattern' => self::TIME],
         'passwordResetValidityHours' => ['type' => 'int', 'label' => 'Hours a password reset link works', 'institution' => false, 'min' => 1, 'max' => 168],
     ];
 
-    /** @return array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int}> */
+    /** @return array<string, array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int, values?: list<string>, pattern?: string}> */
     public function definitions(): array
     {
         return self::DEFINITIONS;
@@ -149,7 +155,7 @@ class PlatformSettings
     /**
      * Checks a value against a definition and returns it in the right type.
      *
-     * @param array{type: string, label?: string, institution?: bool, min?: int, max?: int, maxLength?: int} $definition
+     * @param array{type: string, label?: string, institution?: bool, min?: int, max?: int, maxLength?: int, values?: list<string>, pattern?: string} $definition
      * @param mixed                                                                                        $value
      *
      * @return bool|int|string
@@ -206,6 +212,14 @@ class PlatformSettings
                     throw new InvalidArgumentException("The text must be at most {$definition['maxLength']} characters.");
                 }
 
+                if (isset($definition['values']) && ! in_array($value, $definition['values'], true)) {
+                    throw new InvalidArgumentException('Choose one of: ' . implode(', ', $definition['values']) . '.');
+                }
+
+                if (isset($definition['pattern']) && preg_match($definition['pattern'], $value) !== 1) {
+                    throw new InvalidArgumentException('Use the form HH:MM.');
+                }
+
                 return $value;
         }
 
@@ -213,7 +227,7 @@ class PlatformSettings
     }
 
     /**
-     * @return array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int}
+     * @return array{type: string, label: string, institution: bool, min?: int, max?: int, maxLength?: int, values?: list<string>, pattern?: string}
      *
      * @throws InvalidArgumentException
      */

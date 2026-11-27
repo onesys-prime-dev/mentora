@@ -133,7 +133,7 @@ describe("blocking", () => {
         await flush();
 
         expect(api.block).not.toHaveBeenCalled();
-        expect(q("[data-role=block]").textContent).toBe("Click again to block Ben Ng");
+        expect(q("[data-role=block]").textContent).toBe("Press again to block Ben Ng");
 
         q("[data-role=block]").click();
         await flush();
@@ -158,6 +158,18 @@ describe("blocking", () => {
 
         expect(q("[data-role=safety-note]").textContent).toBe("That person can't be blocked.");
         expect(q("[data-role=block]").textContent).toBe("Block Ben Ng");
+    });
+
+    it("shows the server's sentence when a block is refused with a 422 message", async () => {
+        const message = "You can't block your instructor while you share a course.";
+
+        await mountOpen(makeApi(direct(), { block: vi.fn().mockResolvedValue(ok({ reason: "protected_link", message }, 422)) }));
+
+        q("[data-role=block]").click();
+        q("[data-role=block]").click();
+        await flush();
+
+        expect(q("[data-role=safety-note]").textContent).toBe(message);
     });
 });
 

@@ -7,7 +7,6 @@ use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Test\TestResponse;
 use Tests\Support\CourseFactory;
-use Tests\Support\DeanFactory;
 use Tests\Support\MessagingScenario;
 use Tests\Support\PeopleFactory;
 use Tests\Support\RouteTestCase;
@@ -65,6 +64,7 @@ final class MessagesRoutesTest extends RouteTestCase
         return [
             ['GET', 'conversations', []],
             ['POST', 'conversations', ['recipient_id' => 1]],
+            ['POST', 'conversations/first', ['recipient_id' => 1, 'body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['GET', "conversations/{$c}/messages", []],
             ['POST', "conversations/{$c}/messages", ['body' => 'hi', 'client_uuid' => 'abcdefgh1']],
             ['POST', "conversations/{$c}/read", ['message_id' => 1]],
@@ -147,6 +147,22 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->assertSame(200, $this->api('GET', "conversations/{$this->conversation}/messages")->response()->getStatusCode());
     }
 
+    /** FR11: reading stays open, so ?to= still opens a thread that exists; the draft for a new one is refused like any refusal. */
+    public function testAReadOnlyInstitutionReopensAnExistingThreadByPerson(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Oth', 'Er', null, $this->institution);
+        db_connect()->table('institutions')->where('id', $this->institution)->update(['status' => 'read_only']);
+        $this->signIn($this->student);
+
+        $open = $this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id]);
+        $open->assertStatus(200);
+        $this->assertSame($this->conversation, json_decode($open->getJSON(), true)['draft']['conversation_id']);
+
+        $this->assertSame(404, $this->api('POST', 'conversations', ['recipient_id' => (int) $other->id])->response()->getStatusCode());
+        $this->assertSame(403, $this->api('POST', 'conversations/first', ['recipient_id' => (int) $other->id, 'body' => 'hi', 'client_uuid' => $this->uuid()])->response()->getStatusCode());
+        $this->assertSame(1, db_connect()->table('conversations')->countAllResults());
+    }
+
     public function testAPostWithoutACsrfTokenIsRefused(): void
     {
         $this->signIn($this->student);
@@ -183,14 +199,20 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->signIn($this->student);
         $started = json_decode($this->api('POST', 'conversations', ['recipient_id' => $peer->id])->response()->getBody(), true);
-        $id      = (int) $started['conversation']['id'];
-        $uuid    = $this->uuid();
+        $this->assertSame((int) $peer->id, $started['draft']['recipient_id']);
+        $this->assertNull($started['draft']['conversation_id']);
+        $this->assertNotSame('', $started['draft']['name']);
+        $before = db_connect()->table('conversations')->where('type', 'direct')->countAllResults();
+        $uuid = $this->uuid();
 
-        $sent = $this->api('POST', "conversations/{$id}/messages", ['body' => 'hello there', 'client_uuid' => $uuid]);
-        $this->assertSame(201, $sent->response()->getStatusCode());
-        $messageId = (int) json_decode($sent->response()->getBody(), true)['message']['id'];
+        $first = $this->api('POST', 'conversations/first', ['recipient_id' => $peer->id, 'body' => 'hello there', 'client_uuid' => $uuid]);
+        $this->assertSame(201, $first->response()->getStatusCode());
+        $firstBody = json_decode($first->response()->getBody(), true);
+        $id        = (int) $firstBody['conversation']['id'];
+        $messageId = (int) $firstBody['message']['id'];
+        $this->assertSame($before + 1, db_connect()->table('conversations')->where('type', 'direct')->countAllResults());
 
-        $again = $this->api('POST', "conversations/{$id}/messages", ['body' => 'hello there', 'client_uuid' => $uuid]);
+        $again = $this->api('POST', 'conversations/first', ['recipient_id' => $peer->id, 'body' => 'hello there', 'client_uuid' => $uuid]);
         $this->assertSame($messageId, (int) json_decode($again->response()->getBody(), true)['message']['id']);
 
         $this->signIn($peer);
@@ -206,6 +228,17 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->assertSame(200, $this->api('POST', "conversations/{$id}/messages/{$messageId}/hide")->response()->getStatusCode());
         $this->assertSame([], json_decode($this->api('GET', "conversations/{$id}/messages")->response()->getBody(), true)['messages']);
+    }
+
+    /** The read route is registered twice (Routes.php); pins which controller answers: one that needs no message_id. */
+    public function testMarkReadRouteAnswers(): void
+    {
+        $this->signIn($this->student);
+
+        $response = $this->api('POST', "conversations/{$this->conversation}/read")->response();
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(['ok' => true], json_decode($response->getBody(), true));
     }
 
     public function testBadSendsAnswerTheirOwnStatus(): void
@@ -234,7 +267,7 @@ final class MessagesRoutesTest extends RouteTestCase
 
     public function testRecipientsThePickerWouldNeverListAnswerLikeAnUnknownId(): void
     {
-        $chair   = DeanFactory::chair((int) db_connect()->table('departments')->get()->getRow('id'));
+        $parent  = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
         $admin   = CourseFactory::user('admin');
         $far     = PeopleFactory::person('instructor', 'Far', 'Away', null, PeopleFactory::institution('FAR3'));
         $this->signIn($this->student);
@@ -244,7 +277,7 @@ final class MessagesRoutesTest extends RouteTestCase
 
         $this->assertSame(['error' => 'not_found'], json_decode($unknown, true));
 
-        foreach ([(int) $this->student->id, (int) $chair->id, (int) $admin->id, (int) $far->id, 0, -5] as $recipient) {
+        foreach ([(int) $this->student->id, (int) $parent->id, (int) $admin->id, (int) $far->id, 0, -5] as $recipient) {
             $response = $this->api('POST', 'conversations', ['recipient_id' => $recipient])->response();
 
             $this->assertSame(404, $response->getStatusCode(), "recipient {$recipient}");
@@ -252,5 +285,93 @@ final class MessagesRoutesTest extends RouteTestCase
         }
 
         $this->assertSame(404, $this->api('POST', 'conversations', [])->response()->getStatusCode());
+    }
+
+    public function testRefusedDraftIs404(): void
+    {
+        $this->signIn($this->student);
+
+        $this->assertSame(404, $this->api('POST', 'conversations', ['recipient_id' => (int) $this->student->id])->response()->getStatusCode());
+    }
+
+    public function testSendFirstRefusedIs404(): void
+    {
+        $this->signIn($this->student);
+
+        $response = $this->api('POST', 'conversations/first', ['recipient_id' => (int) $this->student->id, 'body' => 'hi', 'client_uuid' => $this->uuid()])->response();
+
+        $this->assertSame(404, $response->getStatusCode());
+        $this->assertSame(0, db_connect()->table('messages')->countAllResults());
+    }
+
+    public function testIndexIncludesOwnRestrictionOnly(): void
+    {
+        db_connect()->table('message_restrictions')->insert([
+            'institution_id' => $this->institution, 'user_id' => (int) $this->student->id, 'kind' => 'no_new', 'source' => 'pause',
+            'starts_at' => date('Y-m-d H:i:s'), 'ends_at' => date('Y-m-d H:i:s', strtotime('+2 days')), 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        $this->signIn($this->student);
+        $mine = json_decode($this->api('GET', 'conversations')->response()->getBody(), true);
+        $this->assertSame(['kind', 'ends_at', 'source'], array_keys($mine['restriction']));
+        $this->assertSame(['no_new', 'pause'], [$mine['restriction']['kind'], $mine['restriction']['source']]);
+        $this->assertNotNull($mine['restriction']['ends_at']);
+
+        $this->signIn($this->instructor);
+        $theirs = json_decode($this->api('GET', 'conversations')->response()->getBody(), true);
+        $this->assertArrayHasKey('restriction', $theirs);
+        $this->assertNull($theirs['restriction']);
+    }
+
+    /** S2-i: the explanation is on the page before anything is typed, for that parent only. */
+    public function testTheMessagesPageTellsAParentWithNoChildUpFront(): void
+    {
+        $lonely = PeopleFactory::person('parent', 'Lone', 'Parent', null, $this->institution);
+        $note   = 'Your account is not linked to a child yet';
+
+        $this->signIn($lonely);
+        $body = (string) $this->step('GET', 'messages')->response()->getBody();
+        $this->assertStringContainsString('data-no-child="1"', $body);
+        $this->assertStringContainsString($note, $body);
+
+        $this->signIn($this->student);
+        $body = (string) $this->step('GET', 'messages')->response()->getBody();
+        $this->assertStringContainsString('data-no-child="0"', $body);
+        $this->assertStringNotContainsString($note, $body);
+    }
+
+    public function testParentWithNoChildGetsExplanation(): void
+    {
+        $lonely = PeopleFactory::person('parent', 'Lone', 'Parent', null, $this->institution);
+        $linked = PeopleFactory::person('parent', 'Link', 'Parent', null, $this->institution);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $linked->id, 'student_user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->signIn($lonely);
+        $this->assertSame(['recipients' => [], 'next' => null, 'reason' => 'no_linked_child'], json_decode($this->api('GET', 'recipients?q=Ins')->response()->getBody(), true));
+
+        $this->signIn($linked);
+        $answer = json_decode($this->api('GET', 'recipients?q=Ins')->response()->getBody(), true);
+        $this->assertArrayNotHasKey('reason', $answer);
+        $this->assertNotSame([], $answer['recipients']);
+
+        $this->signIn($this->student);
+        $this->assertArrayNotHasKey('reason', json_decode($this->api('GET', 'recipients?q=zzzz')->response()->getBody(), true), 'only that parent is told');
+    }
+
+    /** The draft header says who a parent's thread is about before anything is sent, like the thread's own header. */
+    public function testAParentsDraftAboutTheirChildNamesTheChild(): void
+    {
+        $parent = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->signIn($parent);
+        $draft = json_decode($this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id, 'subject_student_id' => (int) $this->student->id])->response()->getBody(), true)['draft'];
+
+        $this->assertSame((int) $this->student->id, $draft['subject_student_id']);
+        $this->assertNotSame('', (string) ($draft['subject_name'] ?? ''));
+
+        $this->signIn($this->student);
+        $plain = json_decode($this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id])->response()->getBody(), true)['draft'];
+        $this->assertNull($plain['subject_name']);
     }
 }

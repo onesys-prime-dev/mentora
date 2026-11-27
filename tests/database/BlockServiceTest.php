@@ -7,6 +7,7 @@ use App\Services\Messaging\ConversationPresenter;
 use App\Services\Messaging\ConversationService;
 use App\Services\Messaging\CourseChatSync;
 use App\Services\Messaging\MessageService;
+use App\Services\Messaging\MessagingContextResolver;
 use CodeIgniter\Config\Services;
 use CodeIgniter\Shield\Entities\User;
 use Tests\Support\CourseFactory;
@@ -93,7 +94,7 @@ final class BlockServiceTest extends DatabaseTestCase
         $admin   = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
         $outside = PeopleFactory::person('student', 'Out', 'Side', null, DeanFactory::college('BK2')['institution']);
 
-        foreach ([$this->instructor, $admin, $this->ann, $outside, CourseFactory::user('admin')] as $target) {
+        foreach ([$admin, $this->ann, $outside, CourseFactory::user('admin')] as $target) {
             $this->assertFalse($this->blocks()->block($this->ann, (int) $target->id), (string) $target->first_name);
         }
 
@@ -155,19 +156,141 @@ final class BlockServiceTest extends DatabaseTestCase
     public function testTheListRowsSayWhetherABlockIsOfferedOrInForce(): void
     {
         $service = new ConversationService();
-        (new ConversationService())->startDirect($this->ann, (int) $this->ben->id);
-        (new ConversationService())->startDirect($this->ann, (int) $this->instructor->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $this->ben->id)['id'], (int) $this->ben->id);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
 
         $rows = fn (): array => array_column((new ConversationPresenter($this->parentCipher()))->present($this->ann, $service->listFor($this->ann, 'direct')), null, 'name');
 
         $this->assertTrue($rows()['Ben Ng']['can_block']);
         $this->assertFalse($rows()['Ben Ng']['blocked_by_me']);
-        $this->assertFalse($rows()['Ins Tructor']['can_block'], 'an instructor cannot be blocked');
+        $this->assertTrue($rows()['Ins Tructor']['can_block'], 'offered for an own instructor: the click answers with the protected-link sentence (FR4)');
+        $this->assertSame("You can't block your instructor while you share a course.", $this->blocks()->refusal($this->ann, (int) $this->instructor->id));
+        $this->assertFalse($this->blocks()->block($this->ann, (int) $this->instructor->id), 'and the server still refuses it');
 
         $this->blocks()->block($this->ann, (int) $this->ben->id);
 
         $this->assertFalse($rows()['Ben Ng']['can_block']);
         $this->assertTrue($rows()['Ben Ng']['blocked_by_me']);
-        $this->assertSame([['id' => (int) $this->ben->id, 'name' => 'Ben Ng']], $this->blocks()->blockedBy($this->ann));
+        $this->assertSame([['id' => (int) $this->ben->id, 'name' => 'Ben Ng', 'paused' => false]], $this->blocks()->blockedBy($this->ann));
+    }
+
+    public function testBlockIsOfferedForAnUnrelatedInstructorButNotAParentsChildInstructorOrAnAdmin(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Una', 'Related', null, $this->institution);
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $other);
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->ann, (int) $other->id)['id'], (int) $other->id);
+        db_connect()->table('instructor_assignments')->where('instructor_user_id', $other->id)->delete();
+        \Tests\Support\Threads::withMessage((int) (new ConversationService())->startDirect($this->parent, (int) $this->instructor->id)['id'], (int) $this->instructor->id);
+
+        $present = fn (User $viewer): array => array_column((new ConversationPresenter($this->parentCipher()))->present($viewer, (new ConversationService())->listFor($viewer, 'direct')), null, 'name');
+
+        $this->assertTrue($present($this->ann)['Una Related']['can_block']);
+        $this->assertFalse($present($this->parent)['Ins Tructor']['can_block'], 'a parent cannot block their child instructor');
+        $this->assertTrue((new BlockService())->allows($this->ann, $this->institution, $other, $this->institution, false));
+        $this->assertFalse((new BlockService())->allows($this->ann, $this->institution, $admin, $this->institution, false));
+    }
+
+    public function testAPausedBlockLetsAnExistingThreadPostUntilTheEnrolmentEnds(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Una', 'Related', null, $this->institution);
+        CourseFactory::assignInstructor($this->offering, $other);
+        $thread = (int) (new ConversationService())->startDirect($other, (int) $this->ann->id)['id'];
+        db_connect()->table('instructor_assignments')->where('instructor_user_id', $other->id)->delete();
+        $this->assertTrue($this->blocks()->block($this->ann, (int) $other->id));
+        $this->assertSame('not_allowed', $this->messages()->send($other, $thread, 'Hello?', 'uuid-post-1')['reason']);
+
+        CourseFactory::assignInstructor($this->offering, $other);
+        $this->assertTrue($this->messages()->send($other, $thread, 'About class', 'uuid-post-2')['ok'], 'the protected link pauses the block');
+
+        db_connect()->table('enrollments')->where('student_user_id', $this->ann->id)->update(['status' => 'dropped']);
+        $this->assertSame('not_allowed', $this->messages()->send($other, $thread, 'Again', 'uuid-post-3')['reason']);
+    }
+
+    private function resolver(): MessagingContextResolver
+    {
+        return new MessagingContextResolver();
+    }
+
+    private function insertBlock(User $blocker, User $blocked): void
+    {
+        db_connect()->table('user_blocks')->insert([
+            'institution_id' => $this->institution, 'blocker_id' => $blocker->id, 'blocked_id' => $blocked->id, 'created_at' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    public function testCannotBlockOwnInstructor(): void
+    {
+        $this->assertFalse($this->blocks()->block($this->ann, (int) $this->instructor->id));
+        $this->assertSame(0, $this->rows());
+    }
+
+    public function testCanBlockUnrelatedInstructor(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Una', 'Related', null, $this->institution);
+
+        $this->assertTrue($this->blocks()->block($this->ann, (int) $other->id));
+        $this->assertSame(1, $this->rows());
+    }
+
+    public function testInstructorBlockOnOwnStudentDoesNotBind(): void
+    {
+        $this->insertBlock($this->instructor, $this->ann);
+
+        $this->assertFalse($this->resolver()->blockBinds((int) $this->instructor->id, (int) $this->ann->id));
+        $this->assertFalse($this->resolver()->forStart($this->ann, $this->instructor, null)->blockedByRecipient);
+        $this->assertSame(1, $this->rows(), 'pausing never deletes the row');
+    }
+
+    public function testAdminBlockNeverBinds(): void
+    {
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+        $this->insertBlock($admin, $this->ann);
+
+        $this->assertFalse($this->resolver()->blockBinds((int) $admin->id, (int) $this->ann->id));
+        $this->assertFalse($this->resolver()->forStart($this->ann, $admin, null)->blockedByRecipient);
+    }
+
+    public function testCannotBlockInstitutionalAdmin(): void
+    {
+        $admin = PeopleFactory::person('institutional_admin', 'Ada', 'Admin', null, $this->institution);
+
+        $this->assertFalse($this->blocks()->block($this->ann, (int) $admin->id));
+    }
+
+    public function testParentCannotBlockChildsInstructor(): void
+    {
+        $this->assertFalse($this->blocks()->block($this->parent, (int) $this->instructor->id));
+        $this->assertSame(0, $this->rows());
+    }
+
+    public function testBlockResumesWhenCourseEnds(): void
+    {
+        $other = PeopleFactory::person('instructor', 'Una', 'Related', null, $this->institution);
+        $this->assertTrue($this->blocks()->block($this->ann, (int) $other->id));
+        $this->assertTrue($this->resolver()->forStart($other, $this->ann, null)->blockedByRecipient);
+
+        CourseFactory::assignInstructor($this->offering, $other);
+
+        $this->assertTrue($this->blocks()->blockedBy($this->ann)[0]['paused']);
+        $this->assertFalse($this->resolver()->forStart($other, $this->ann, null)->blockedByRecipient);
+        $this->assertNotNull((new ConversationService())->startDirect($other, (int) $this->ann->id));
+
+        db_connect()->table('enrollments')->where('student_user_id', $this->ann->id)->delete();
+
+        $this->assertFalse($this->blocks()->blockedBy($this->ann)[0]['paused']);
+        $this->assertTrue($this->resolver()->forStart($other, $this->ann, null)->blockedByRecipient);
+    }
+
+    public function testBlockedListShowsPaused(): void
+    {
+        $this->insertBlock($this->instructor, $this->ann);
+        $this->insertBlock($this->instructor, $this->ben);
+        db_connect()->table('enrollments')->where('student_user_id', $this->ben->id)->update(['status' => 'dropped']);
+
+        $list = array_column($this->blocks()->blockedBy($this->instructor), 'paused', 'id');
+
+        $this->assertTrue($list[(int) $this->ann->id]);
+        $this->assertFalse($list[(int) $this->ben->id], 'ben is not enrolled, so the block binds');
     }
 }

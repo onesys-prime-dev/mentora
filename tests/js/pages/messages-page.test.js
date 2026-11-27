@@ -7,12 +7,13 @@ const SHELL = `
 <div id="messages-app" data-view="list" data-api="/messages/api" data-user-id="1" data-open="">
   <section data-pane="list">
     <button data-role="new" data-dialog-open="messages-new"></button>
+    <button data-role="new-group" data-dialog-open="messages-group" hidden></button>
     <input data-role="search">
     <button data-chip="all" aria-pressed="true"></button><button data-chip="course" aria-pressed="false"></button>
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
     <button data-role="unread-toggle" aria-pressed="false"></button>
     <div data-role="list">
-      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p>
+      <div data-state="loading"></div><p data-state="empty" hidden></p><p data-state="no-match" hidden></p><p data-state="empty-archived" hidden>No archived chats</p><p data-role="list-note" role="status" hidden></p><div data-role="restriction" role="status" hidden></div>
       <div data-state="error" hidden><button data-role="retry-list"></button></div>
       <button data-role="archived-open" hidden><span data-role="archived-count"></span></button><button data-role="archived-back" hidden></button>
       <div data-role="rows"></div>
@@ -32,8 +33,13 @@ const SHELL = `
       </div>
       <form data-role="composer"><textarea data-role="body"></textarea><button type="submit" data-role="send" disabled></button></form>
       <p data-role="cannot-post" hidden></p>
+      <p data-role="safety-note" role="status" hidden></p>
     </div>
   </section>
+  <div id="messages-report" data-dialog hidden>
+    <button data-role="report-open"></button><button data-dialog-close></button>
+    <select data-role="report-reason"></select><textarea data-role="report-note"></textarea><p data-role="report-state"></p><button data-role="report-send"></button>
+  </div>
   <div id="messages-new" data-dialog hidden>
     <button data-dialog-close></button>
     <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
@@ -50,6 +56,8 @@ function makeApi(over = {}) {
     return {
         conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv()], unread: 0 })),
         start: vi.fn(),
+        sendFirst: vi.fn(),
+        report: vi.fn().mockResolvedValue(ok({ ok: true })),
         page: vi.fn().mockResolvedValue(ok({ messages: [msg(10), msg(11)], has_more: false })),
         send: vi.fn().mockResolvedValue(ok({ message: msg(12, { mine: true, body: "hello" }) }, 201)),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
@@ -183,7 +191,7 @@ describe("the conversation list", () => {
         await flush();
 
         expect(api.block).toBeUndefined();
-        expect(document.body.textContent).not.toContain("Click again to block");
+        expect(document.body.textContent).not.toContain("Press again to block");
 
     });
 
@@ -398,6 +406,15 @@ describe("opening a conversation", () => {
 
     });
 
+    it("shows the administrator's wording on a removed message", async () => {
+
+        await mount(makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { removed: true, body: null, removed_text: "Message removed by an administrator" })], has_more: false })) }));
+        await openFirst();
+
+        expect(q("[data-role=messages]").textContent).toContain("Message removed by an administrator");
+
+    });
+
     it("shows a tombstone for a removed message", async () => {
 
         await mount(makeApi({ page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { removed: true, body: null })], has_more: false })) }));
@@ -606,6 +623,15 @@ describe("sending", () => {
 
     });
 
+    it("shows the server's note for a deactivated account", async () => {
+
+        await mount(makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ can_post: false, composer_note: "This account is deactivated" })], unread: 0 })) }));
+        await openFirst();
+
+        expect(q("[data-role=cannot-post]").textContent).toBe("This account is deactivated");
+
+    });
+
 });
 
 describe("review fixes", () => {
@@ -743,12 +769,65 @@ describe("deleting for me", () => {
 
 describe("starting a conversation", () => {
 
+    it("offers the next page when the server has more, and says why a parent with no child sees nobody", async () => {
+
+        const ann = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: null, subject_name: null };
+        const bo = { ...ann, id: 9, name: "Bo Lee" };
+        const api = makeApi({
+            recipients: vi.fn()
+                .mockResolvedValueOnce(ok({ recipients: [ann], next: 4 }))
+                .mockResolvedValueOnce(ok({ recipients: [bo], next: null }))
+                .mockResolvedValueOnce(ok({ recipients: [], next: null, reason: "no_linked_child" })),
+        });
+
+        await mount(api);
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "lee";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+        q("#messages-new").hidden = false; // the dialog is open while someone picks
+        q("[data-action=picker-more]").focus();
+        q("[data-action=picker-more]").click();
+        await flush();
+
+        expect(api.recipients).toHaveBeenLastCalledWith("lee", 4);
+        expect([...document.querySelectorAll("[data-role=picker-results] li")].map((li) => li.textContent)).toEqual([expect.stringContaining("Ann Lee"), expect.stringContaining("Bo Lee")]);
+        // The button the keyboard was on is gone: focus moves to the first person added, not to the page.
+        expect(document.activeElement).toBe(document.querySelectorAll("[data-role=picker-results] li button")[1]);
+
+        input.value = "lees";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+
+        expect(q("[data-role=picker-state]").textContent).toContain("not linked to a child");
+
+    });
+
+    it("explains to a parent with no linked child before and after typing", async () => {
+
+        const api = makeApi();
+
+        document.body.innerHTML = SHELL;
+        q("#messages-app").dataset.noChild = "1";
+        await mountMessages(q("#messages-app"), { api }).ready;
+        await flush();
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "a";
+        input.dispatchEvent(new Event("input"));
+
+        expect(q("[data-role=picker-state]").textContent).toContain("not linked to a child");
+    });
+
     it("lists what the server finds and opens the conversation that is started", async () => {
 
         const person = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: 9, subject_name: "Stu Dent" };
         const api = makeApi({
             recipients: vi.fn().mockResolvedValue(ok({ recipients: [person] })),
-            start: vi.fn().mockResolvedValue(ok({ conversation: conv({ id: 7, name: "Ann Lee" }) })),
+            start: vi.fn().mockResolvedValue(ok({ draft: { recipient_id: 4, subject_student_id: 9, first_contact: false, conversation_id: 7, name: "Ann Lee" } })),
         });
 
         await mount(api);
@@ -856,6 +935,348 @@ describe("who reacted", () => {
         expect(items.map((li) => li.textContent)).toEqual(["👍 JDJun Dela Cruz", "👍 JSJuan Santos"]);
         expect(q("[data-role=who-list] [data-person-avatar]")).toBeNull();
         expect(items.map((li) => li.querySelector("[data-avatar]").getAttribute("aria-hidden"))).toEqual(["true", "true"]);
+
+    });
+
+});
+
+describe("the draft and the first-contact line", () => {
+
+    const draftOf = (over = {}) => ({ recipient_id: 4, subject_student_id: null, first_contact: false, conversation_id: null, name: "Ann Lee", ...over });
+    const person = { id: 4, name: "Ann Lee", role: "instructor", subject_student_id: null, subject_name: null };
+    const KEY = "messages:draft:1:4:0";
+
+    async function pick(api) {
+        await mount(api);
+
+        const input = q("[data-role=picker-input]");
+
+        input.value = "ann";
+        input.dispatchEvent(new Event("input"));
+        await vi.advanceTimersByTimeAsync(300);
+        q("[data-role=picker-results] button").click();
+        await flush();
+    }
+
+    const apiFor = (draft, over = {}) => makeApi({ recipients: vi.fn().mockResolvedValue(ok({ recipients: [person] })), start: vi.fn().mockResolvedValue(ok({ draft })), ...over });
+    const type = (text) => { q("[data-role=body]").value = text; q("[data-role=body]").dispatchEvent(new Event("input")); };
+    const submitForm = async () => { q("[data-role=composer]").dispatchEvent(new Event("submit", { cancelable: true })); await flush(); };
+    const created = (id) => ok({ message: msg(30, { mine: true, body: "hi" }), conversation: conv({ id, name: "Ann Lee" }) }, 201);
+
+    beforeEach(() => { localStorage.clear(); history.replaceState(null, "", "/"); });
+
+    it("opening a person shows a draft and sends nothing", async () => {
+        const api = apiFor(draftOf());
+
+        await pick(api);
+
+        expect(q("[data-role=thread]").hidden).toBe(false);
+        expect(q("[data-role=head-name]").textContent).toBe("Ann Lee");
+        expect(q("[data-role=composer]").hidden).toBe(false);
+        expect(texts()).toEqual([]);
+        expect(api.page).not.toHaveBeenCalled();
+        expect(api.send).not.toHaveBeenCalled();
+        expect(api.sendFirst).not.toHaveBeenCalled();
+    });
+
+    it("opening a person with an existing thread opens it", async () => {
+        const api = apiFor(draftOf({ conversation_id: 7 }));
+
+        await pick(api);
+
+        expect(api.page).toHaveBeenCalledWith(7, {});
+    });
+
+    it("first send calls sendFirst then switches to the new thread", async () => {
+        const api = apiFor(draftOf(), { conversations: vi.fn().mockResolvedValueOnce(ok({ conversations: [conv()], unread: 0 })).mockResolvedValue(ok({ conversations: [conv({ id: 9 }), conv()], unread: 0 })), sendFirst: vi.fn().mockResolvedValue(created(9)), page: vi.fn().mockResolvedValue(ok({ messages: [msg(30, { mine: true, body: "hi" })], has_more: false })) });
+
+        await pick(api);
+        type("hi");
+        await submitForm();
+
+        expect(api.sendFirst).toHaveBeenCalledWith(4, null, "hi", expect.any(String));
+        expect(api.send).not.toHaveBeenCalled();
+        expect(api.page).toHaveBeenCalledWith(9, {});
+        expect(all("[data-role=rows] button").some((b) => b.dataset.id === "9")).toBe(true);
+    });
+
+    it("draft text survives reload via localStorage and is cleared after send", async () => {
+        const api = apiFor(draftOf(), { sendFirst: vi.fn().mockResolvedValue(created(9)) });
+
+        await pick(api);
+        type("half a thought");
+        expect(localStorage.getItem(KEY)).toBe("half a thought");
+
+        await pick(api);
+        expect(q("[data-role=body]").value).toBe("half a thought");
+        expect(q("[data-role=send]").disabled).toBe(false);
+
+        await submitForm();
+        expect(localStorage.getItem(KEY)).toBeNull();
+    });
+
+    it("a late first-send answer does not cancel a send started in another thread", async () => {
+        let answerFirst;
+        let answerSend;
+        const api = apiFor(draftOf(), {
+            sendFirst: vi.fn().mockReturnValue(new Promise((resolve) => { answerFirst = resolve; })),
+            send: vi.fn().mockReturnValue(new Promise((resolve) => { answerSend = resolve; })),
+        });
+
+        await pick(api);
+        type("first");
+        await submitForm();
+        await openFirst();
+        type("other");
+        await submitForm();
+
+        answerFirst(created(9));
+        await flush();
+        answerSend(ok({ message: msg(12, { mine: true, body: "other" }) }, 201));
+        await flush();
+
+        expect(texts().filter((t) => t.includes("other"))).toHaveLength(1);
+    });
+
+    it("works when localStorage throws", async () => {
+        const spies = ["getItem", "setItem", "removeItem"].map((m) => vi.spyOn(Storage.prototype, m).mockImplementation(() => { throw new Error("denied"); }));
+        const api = apiFor(draftOf(), { sendFirst: vi.fn().mockResolvedValue(created(9)) });
+
+        await pick(api);
+        type("hello");
+        await submitForm();
+
+        expect(api.sendFirst).toHaveBeenCalled();
+        spies.forEach((s) => s.mockRestore());
+    });
+
+    it("?to= opens the draft and removes the params", async () => {
+        const api = makeApi({ start: vi.fn().mockResolvedValue(ok({ draft: draftOf() })) });
+
+        history.replaceState(null, "", "/messages?to=4&child=9");
+        await mount(api);
+
+        expect(api.start).toHaveBeenCalledWith(4, 9);
+        expect(q("[data-role=head-name]").textContent).toBe("Ann Lee");
+        expect(location.search).toBe("");
+    });
+
+    it("a draft about a child says who it is about", async () => {
+        const api = makeApi({ start: vi.fn().mockResolvedValue(ok({ draft: { ...draftOf(), subject_student_id: 9, subject_name: "Juan Dela Cruz" } })) });
+
+        history.replaceState(null, "", "/messages?to=4&child=9");
+        await mount(api);
+
+        expect(q("[data-role=head-sub]").textContent).toBe("About Juan Dela Cruz");
+    });
+
+    it("recipient sees the first-contact line with Block and Report", async () => {
+        const api = makeApi({
+            block: vi.fn().mockResolvedValue(ok({ ok: true })),
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false, other_user_id: 5, can_block: true })], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+
+        const line = q("[data-role=system-line]");
+
+        expect(line.textContent).toContain("First message from Ana Reyes · Student · you haven't talked before");
+
+        const [block, report] = [...line.querySelectorAll("button")];
+
+        expect(block.textContent).toBe("Block");
+        expect(report.textContent).toBe("Report");
+
+        report.click();
+        q("[data-role=report-reason]").value = "spam";
+        q("[data-role=report-reason]").dispatchEvent(new Event("change"));
+        q("[data-role=report-send]").click();
+        await flush();
+        expect(api.report).toHaveBeenCalledWith(1, 10, "spam", null);
+
+        q("[data-role=system-line] button").click();
+        await flush();
+        q("[data-role=system-line] button").click();
+        await flush();
+        expect(api.block).toHaveBeenCalledWith(5);
+        expect(q("[data-role=system-line]")).toBeNull();
+    });
+
+    it("the Block pill keeps focus and announces itself on the first press", async () => {
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false, other_user_id: 5, can_block: true })], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+        q("[data-role=system-line] button").click();
+        await flush();
+
+        const pill = q("[data-role=system-line] button");
+
+        expect(pill.textContent).toBe("Press again to block");
+        expect(document.activeElement).toBe(pill);
+        expect(q("[data-role=safety-note]").textContent).toContain("Press again to block Ana Reyes");
+    });
+
+    it("line disappears after reply", async () => {
+        const first = conv({ id: 1, name: "Ana Reyes", first_contact_line: true, first_contact_role: "student", first_contact_sender: false });
+        const api = makeApi({
+            conversations: vi.fn().mockResolvedValue(ok({ conversations: [first], unread: 0 })),
+            page: vi.fn().mockResolvedValue(ok({ messages: [msg(10, { sender_name: "Ana Reyes" })], has_more: false })),
+        });
+
+        await mount(api);
+        await openFirst();
+        expect(q("[data-role=system-line]")).not.toBeNull();
+
+        api.conversations.mockResolvedValue(ok({ conversations: [{ ...first, first_contact_line: false }], unread: 0 }));
+        type("hello");
+        await submitForm();
+        await vi.advanceTimersByTimeAsync(20000);
+
+        expect(q("[data-role=system-line]")).toBeNull();
+    });
+
+    it("sender draft shows \"First message to\"", async () => {
+        await pick(apiFor(draftOf({ first_contact: true })));
+
+        expect(q("[data-role=system-line]").textContent).toBe("First message to Ann Lee");
+        expect(q("[data-role=system-line] button")).toBeNull();
+    });
+});
+
+describe("restriction notice", () => {
+
+    const withRestriction = (restriction, conversations = [conv()]) => makeApi({ conversations: vi.fn().mockResolvedValue(ok({ conversations, unread: 0, restriction })) });
+
+    it("shows the restriction card and disables New", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30 17:00:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        const card = q("[data-role=restriction]");
+
+        expect(card.hidden).toBe(false);
+        expect(card.textContent).toContain("You can't start new conversations");
+        expect(card.textContent).toContain("Set by your school");
+        expect(q("[data-role=new]").getAttribute("aria-disabled")).toBe("true");
+
+        q("[data-role=new]").click();
+        expect(q("[data-role=list-note]").textContent).toContain("can't start new conversations");
+
+    });
+
+    it("pause wording says while some reports are reviewed", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30 17:00:00", source: "pause" }) });
+
+        await page.ready;
+        await flush();
+
+        const text = q("[data-role=restriction]").textContent;
+
+        expect(text).toContain("while some reports are reviewed");
+        expect(text).not.toMatch(/\d+ report|reported by/i);
+
+    });
+
+    it("no_send replaces reply boxes except course chats taught", async () => {
+
+        document.body.innerHTML = SHELL;
+        const rows = [conv({ id: 1, can_post: false }), conv({ id: 2, type: "course", name: "Maths", can_post: true })];
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_send", ends_at: null, source: "admin" }, rows) });
+
+        await page.ready;
+        await flush();
+        q("[data-role=rows] button[data-id='1']").click();
+        await flush();
+
+        expect(q("[data-role=composer]").hidden).toBe(true);
+        expect(q("[data-role=cannot-post]").textContent).toContain("can't send messages");
+
+        q("[data-role=rows] button[data-id='2']").click();
+        await flush();
+
+        expect(q("[data-role=composer]").hidden).toBe(false);
+
+    });
+
+    it("greys + New group the same way and repeats the reason on a click", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+00:00", source: "admin" }) });
+        const opened = vi.fn();
+
+        q("[data-role=new-group]").addEventListener("click", opened);
+        await page.ready;
+        await flush();
+
+        expect(q("[data-role=new-group]").getAttribute("aria-disabled")).toBe("true");
+
+        q("[data-role=new-group]").click();
+
+        expect(q("[data-role=list-note]").textContent).toContain("can't start new conversations");
+        expect(opened).not.toHaveBeenCalled();
+
+    });
+
+    it("reads an end time that carries its own offset", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+08:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        expect(q("[data-role=restriction]").textContent).toMatch(/until .*30/);
+
+    });
+
+    it("does not rewrite the status card when a poll brings the same restriction", async () => {
+
+        document.body.innerHTML = SHELL;
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+00:00", source: "admin" }) });
+
+        await page.ready;
+        await flush();
+
+        const first = q("[data-role=restriction]").firstChild;
+
+        await vi.advanceTimersByTimeAsync(15000);
+
+        expect(q("[data-role=restriction]").firstChild).toBe(first);
+
+    });
+
+    it("keeps the real reason a chat is closed, not the restriction text", async () => {
+
+        document.body.innerHTML = SHELL;
+        const rows = [conv({ id: 1, type: "course", name: "Maths", can_post: false, closed: true })];
+        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_send", ends_at: null, source: "admin" }, rows) });
+
+        await page.ready;
+        await flush();
+        q("[data-role=rows] button[data-id='1']").click();
+        await flush();
+
+        expect(q("[data-role=cannot-post]").textContent).toContain("This course has ended");
+
+    });
+
+    it("shows nothing without a restriction", async () => {
+
+        await mount(makeApi());
+
+        expect(q("[data-role=restriction]").hidden).toBe(true);
+        expect(q("[data-role=new]").hasAttribute("aria-disabled")).toBe(false);
 
     });
 

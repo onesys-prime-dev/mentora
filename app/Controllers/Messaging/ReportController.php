@@ -61,6 +61,6 @@ class ReportController extends MessagingController
 
     private function isAdmin(): bool
     {
-        return (new \App\Services\Messaging\MessagingContextResolver())->activeRole(auth()->user()) === 'institutional_admin';
+        return in_array('institutional_admin', (new \App\Services\Messaging\MessagingContextResolver())->roles(auth()->user()), true);
     }
 }

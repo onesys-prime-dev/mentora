@@ -153,12 +153,14 @@ test("TC-IAA-07 Dark mode is switched with the header button, is kept on the nex
     await signInAsInstitutionAdmin(page);
 
     const html = page.locator("html");
-    const toggle = page.getByRole("button", { name: /Dark mode is off/ });
+    // .first() is the header's button: the account menu has the same one for phones, which counts while the
+    // page is still loading its stylesheet.
+    const toggle = page.getByRole("button", { name: /Dark mode is off/ }).first();
 
     await expect(html).not.toHaveAttribute("data-theme", "dark");
     await toggle.click();
     await expect(html).toHaveAttribute("data-theme", "dark");
-    await expect(page.getByRole("button", { name: /Dark mode is on/ })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: /Dark mode is on/ }).first()).toHaveAttribute("aria-pressed", "true");
 
     // Kept for the next page and for a fresh load, before the page paints.
     await page.goto("/institution/people");
@@ -175,6 +177,6 @@ test("TC-IAA-07 Dark mode is switched with the header button, is kept on the nex
     }
 
     // And back.
-    await page.getByRole("button", { name: /Dark mode is on/ }).click();
+    await page.getByRole("button", { name: /Dark mode is on/ }).first().click();
     await expect(html).not.toHaveAttribute("data-theme", "dark");
 });

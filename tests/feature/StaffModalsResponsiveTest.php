@@ -19,7 +19,7 @@ use CodeIgniter\View\View;
 final class StaffModalsResponsiveTest extends CIUnitTestCase
 {
     /** Dialogs with one short field (or a script-filled sheet with no form), which keep the bottom dialog on a phone. */
-    private const BOTTOM = ['follow-up-pick', 'messages-new', 'messages-report', 'messages-prefs', 'messages-group', 'messages-forward', 'messages-who'];
+    private const BOTTOM = ['follow-up-pick', 'messages-new', 'messages-report', 'messages-prefs', 'messages-group', 'messages-group-settings', 'messages-forward', 'messages-who'];
 
     /** The confirms (components/confirm, and the password step): small centred alerts at every size. */
     private const ALERTS = ['signoff-2', 'signoff-program-1', 'end-4', 'reauth-dialog'];

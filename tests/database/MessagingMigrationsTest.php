@@ -280,6 +280,34 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         }
     }
 
+    public function testExistingGroupsBackfilledOwner(): void
+    {
+        $migration = $this->migration('2026-12-03-000008_AddGroupOwnership', 'AddGroupOwnership');
+        $inst      = $this->institution('GOWN');
+        $creator   = $this->user('owner');
+
+        try {
+            // An old group (no owner column yet), then the migration runs over it.
+            $migration->down();
+            db_connect()->resetDataCache();
+            $group  = $this->conversation($inst, 'group', ['title' => 'Old', 'created_by' => $creator]);
+            $direct = $this->conversation($inst, 'direct', ['created_by' => $creator, 'direct_key' => str_repeat('a', 64)]);
+            $migration->up();
+            db_connect()->resetDataCache();
+
+            $this->assertSame($creator, (int) db_connect()->table('conversations')->where('id', $group)->get()->getRow('owner_id'));
+            $this->assertNull(db_connect()->table('conversations')->where('id', $direct)->get()->getRow('owner_id'), 'only groups get an owner');
+            $this->assertNull(db_connect()->table('conversations')->where('id', $group)->get()->getRow('closed_at'));
+        } finally {
+            db_connect()->resetDataCache();
+
+            if (! db_connect()->fieldExists('owner_id', 'conversations')) {
+                $migration->up();
+                db_connect()->resetDataCache();
+            }
+        }
+    }
+
     public function testTheMigrationsCanBeUndoneAndRedone(): void
     {
         $migrations = [];
@@ -294,6 +322,8 @@ final class MessagingMigrationsTest extends DatabaseTestCase
         $messageActions = $this->migration('2026-11-22-000002_AddMessageActionColumns', 'AddMessageActionColumns');
 
         try {
+            // The group ownership migration sits on top of conversations: undone first, restored below.
+            $this->migration('2026-12-03-000008_AddGroupOwnership', 'AddGroupOwnership')->down();
             $messageActions->down();
             $columns->down();
 
@@ -338,6 +368,31 @@ final class MessagingMigrationsTest extends DatabaseTestCase
             // The message action migration goes last: its down() dropped the reactions table.
             if (! db_connect()->tableExists('message_reactions')) {
                 $messageActions->up();
+                db_connect()->resetDataCache();
+            }
+
+            // Later migrations add columns to the tables rebuilt above; put them back too.
+            if (! db_connect()->fieldExists('first_contact', 'conversations')) {
+                $this->migration('2026-12-03-000003_AddFirstContactAndEmailScope', 'AddFirstContactAndEmailScope')->up();
+                db_connect()->resetDataCache();
+            }
+
+            // conversations was rebuilt without owner_id, closed_at and the events table that hangs off it.
+            if (! db_connect()->fieldExists('owner_id', 'conversations')) {
+                db_connect()->query('DROP TABLE IF EXISTS conversation_events');
+                $this->migration('2026-12-03-000008_AddGroupOwnership', 'AddGroupOwnership')->up();
+                db_connect()->resetDataCache();
+            }
+
+            // message_preferences was rebuilt without its quiet_mode column.
+            if (! db_connect()->fieldExists('quiet_mode', 'message_preferences')) {
+                $this->migration('2026-12-03-000007_AddQuietMode', 'AddQuietMode')->up();
+                db_connect()->resetDataCache();
+            }
+
+            // message_reports was rebuilt without its pause_id column (the restrictions table itself survives).
+            if (! db_connect()->fieldExists('pause_id', 'message_reports')) {
+                db_connect()->query('ALTER TABLE message_reports ADD COLUMN pause_id INT UNSIGNED NULL');
                 db_connect()->resetDataCache();
             }
         }

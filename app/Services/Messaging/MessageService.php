@@ -31,6 +31,9 @@ class MessageService
     /** @var array<int, array{name: string, role: string}> */
     private array $senders = [];
 
+    /** @var list<int>|null conversations to notify once sendFirst has committed; null outside sendFirst */
+    private ?array $held = null;
+
     public function __construct(?MessageCipher $cipher = null, ?ConversationService $conversations = null, ?MessagingContextResolver $resolver = null, ?MessagingPolicy $policy = null)
     {
         $this->cipher        = $cipher ?? new MessageCipher();
@@ -100,6 +103,66 @@ class MessageService
     }
 
     /**
+     * The first message to someone: the conversation, its participants and the message are created together,
+     * or not at all. If the pair already has a thread (the other side may just have written first) it is used and
+     * not counted as a new one. Returns send's shape plus `conversation_id`.
+     *
+     * @return array{ok: bool, reason?: string, message?: array<string, mixed>, conversation_id?: int}
+     *
+     * @throws RateLimitedException
+     */
+    public function sendFirst(User $sender, int $recipientId, ?int $subjectStudentId, string $body, string $clientUuid): array
+    {
+        // Refused before anything is created, so a bad send leaves no empty thread behind.
+        if (preg_match('/^[A-Za-z0-9-]{8,36}$/', $clientUuid) !== 1 || MessageBody::clean($body) === null) {
+            return ['ok' => false, 'reason' => 'invalid_body'];
+        }
+
+        // Everything that only reads happens before the transaction opens (see ConversationService::planDirect).
+        $plan = $this->conversations->planDirect($sender, $recipientId, $subjectStudentId);
+
+        if ($plan === null) {
+            return ['ok' => false, 'reason' => 'not_found'];
+        }
+
+        $db         = db_connect();
+        $this->held = [];
+        $db->transStart();
+
+        try {
+            $conversation = $this->conversations->createDirect($sender, $recipientId, $plan);
+            $result       = $conversation === null
+                ? ['ok' => false, 'reason' => 'not_found']
+                : $this->send($sender, (int) $conversation['id'], $body, $clientUuid);
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            $this->held = null;
+
+            throw $e;
+        }
+
+        if (! $result['ok']) {
+            $db->transRollback();
+            $this->held = null;
+
+            return $result;
+        }
+
+        // A query that failed inside (and was caught) rolls the whole send back: that is not a success.
+        $held       = $this->held;
+        $this->held = null;
+
+        if (! $db->transComplete()) {
+            return ['ok' => false, 'reason' => 'unavailable'];
+        }
+
+        // Told only now that the thread and message are committed.
+        array_map($this->notify(...), $held);
+
+        return $result + ['conversation_id' => (int) $conversation['id']];
+    }
+
+    /**
      * Inserts the message, advances the sender's read mark, brings the chat back for the others and notifies.
      * The one insert path; `$extra` holds more `messages` columns (reply, forward, bump).
      *
@@ -125,8 +188,17 @@ class MessageService
         $row      = $this->byUuid($conversationId, $userId, $clientUuid);
 
         if ($inserted) {
+            $this->decideFirstContact($conversation, $userId);
             $db->table('conversations')->where('id', $conversationId)->update(['last_message_id' => $row['id'], 'last_message_at' => $now, 'updated_at' => $now]);
             $this->advanceRead($userId, $conversationId, (int) $row['id']);
+
+            // The recipient's first reply ends the first-contact line; the starter's own messages never do.
+            if (($conversation['type'] ?? '') === 'direct') {
+                $db->query(
+                    'UPDATE conversations SET first_contact_cleared_at = ? WHERE id = ? AND first_contact_cleared_at IS NULL AND created_by <> ?',
+                    [$now, $conversationId, $userId],
+                );
+            }
             // A new message brings an archived chat back for everyone who has not muted it.
             $db->query(
                 'UPDATE conversation_participants SET archived_at = NULL WHERE conversation_id = ? AND user_id <> ? AND is_muted = 0',
@@ -136,11 +208,40 @@ class MessageService
 
         $db->transComplete();
 
-        if ($inserted) {
+        if ($inserted && $this->held !== null) {
+            $this->held[] = $conversationId;
+        } elseif ($inserted) {
             $this->notify($conversationId);
         }
 
         return ['ok' => true, 'message' => $this->presentRows([$row], $user, $conversation)[0]];
+    }
+
+    /**
+     * The first message ever in a direct thread decides whether it is a first contact and who started it. A thread
+     * opened before Phase 3 stands empty with the default (not a first contact) until someone writes; the same
+     * rule applies to it as to a thread made by sendFirst.
+     *
+     * @param array<string, mixed> $conversation a `conversations` row
+     */
+    private function decideFirstContact(array $conversation, int $senderId): void
+    {
+        if (($conversation['type'] ?? '') !== 'direct' || $conversation['last_message_id'] !== null || (int) $conversation['first_contact'] === 1) {
+            return;
+        }
+
+        $db    = db_connect();
+        $other = $db->table('conversation_participants')->select('user_id')->where('conversation_id', (int) $conversation['id'])->where('user_id !=', $senderId)->get()->getRowArray();
+
+        if ($other === null) {
+            return;
+        }
+
+        $first = ! $this->resolver->talkedBefore($senderId, (int) $other['user_id']);
+        $db->query(
+            'UPDATE conversations SET first_contact = ?, created_by = ? WHERE id = ? AND last_message_id IS NULL',
+            [$first ? 1 : 0, $senderId, (int) $conversation['id']],
+        );
     }
 
     /**
@@ -165,7 +266,7 @@ class MessageService
      * before that message; `$afterId` what came after it (for polling).
      * Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
+     * @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>, has_more: bool, pinned: list<array{id: int, sender_name: string, text: string}>, my_last: array{id: int, seen: int, others: int}|null}|null
      */
     public function page(User $user, int $conversationId, ?int $beforeId = null, ?int $afterId = null, int $limit = self::PAGE): ?array
     {
@@ -202,11 +303,23 @@ class MessageService
         }
 
         $pins    = $this->pinnedRows($userId, $conversationId, $first);
+        // A group's membership lines belong to the window this page covers (callers merge them by id, so overlap is harmless).
+        $events = [];
+
+        // Only the first page and "Load older" carry a group's membership lines; a poll gets new ones from changedSince().
+        if (($conversation['type'] ?? '') === 'group' && $afterId === null) {
+            $stamp  = fn (int $id): ?string => ($t = db_connect()->table('messages')->select('created_at')->where(['id' => $id, 'conversation_id' => $conversationId])->get()->getRow('created_at')) === null ? null : (string) $t;
+            $from   = $more && $rows !== [] ? (string) $rows[0]['created_at'] : null;
+            $to     = $beforeId !== null ? $stamp($beforeId) : null;
+            $events = (new GroupService())->events($user, $conversationId, $from, $to);
+        }
+
         // One lookup for the page: the messages' senders, the quoted ones and the pinned ones (FR2, FR5).
         $avatars = $this->avatarsFor($user, [...$rows, ...$pins]);
 
         return [
             'messages' => $this->presentRows($rows, $user, $conversation, $avatars),
+            'events'   => $events,
             'has_more' => $more,
             'pinned'   => $this->pinnedPreviews($pins, $conversationId, $avatars),
             'my_last'  => $this->myLastSeen($userId, $conversationId),
@@ -243,11 +356,12 @@ class MessageService
      * the same second as that clock is delivered again rather than missed; the client merges changed messages by id
      * (replace in place), which makes the repeat harmless. When more than PAGE_MAX changed, the oldest PAGE_MAX come
      * back, `more` is true and `server_time` is the last returned change time, so the next call continues from there.
-     * An unreadable `$since` counts as now, so nothing comes back. Null when the conversation is not the user's.
+     * An unreadable `$since` counts as now, so nothing comes back. A group's membership lines come back from `$afterEvent`
+     * (the newest the client holds) on, or from `$since` when it is not given. Null when the conversation is not the user's.
      *
-     * @return array{messages: list<array<string, mixed>>, server_time: string, more: bool}|null
+     * @return array{messages: list<array<string, mixed>>, events: list<array<string, mixed>>, server_time: string, more: bool}|null
      */
-    public function changedSince(User $user, int $conversationId, string $since): ?array
+    public function changedSince(User $user, int $conversationId, string $since, ?int $afterEvent = null): ?array
     {
         $conversation = $this->conversations->find($user, $conversationId);
 
@@ -272,6 +386,7 @@ class MessageService
 
         return [
             'messages'    => $this->presentRows($rows, $user, $conversation),
+            'events'      => ($conversation['type'] ?? '') === 'group' ? (new GroupService())->events($user, $conversationId, $afterEvent === null ? $since : null, null, $afterEvent) : [],
             'server_time' => $more ? (string) $rows[array_key_last($rows)]['changed_at'] : (string) $clock['lagged'],
             'more'        => $more,
         ];
@@ -331,6 +446,12 @@ class MessageService
         return true;
     }
 
+    /** Only an administrator ever removes a direct message, so a removal there is theirs. */
+    private function isDirect(int $conversationId): bool
+    {
+        return db_connect()->table('conversations')->where(['id' => $conversationId, 'type' => 'direct'])->countAllResults() > 0;
+    }
+
     private function inConversation(int $conversationId, int $messageId): bool
     {
         return $messageId > 0 && db_connect()->table('messages')->where(['id' => $messageId, 'conversation_id' => $conversationId])->countAllResults() > 0;
@@ -374,7 +495,8 @@ class MessageService
         $userId  = (int) $user->id;
         $context = $this->resolver->forPost($user, $conversation);
         $view    = [
-            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation)),
+            'closed'    => ($conversation['closed_at'] ?? null) !== null,
+            'canPin'    => $this->policy->canPinMessage((string) $conversation['type'], $this->conversations->canModerate($user, $conversation), ($conversation['closed_at'] ?? null) !== null),
             'canReact'  => $this->policy->canReact($context) && ChatControls::allows($conversation, 'reactions'),
             'canReply'  => $this->policy->canPost($context) && ChatControls::allows($conversation, 'replies'),
             'reactions' => MessageActions::summary(array_map(static fn (array $r): int => (int) $r['id'], $rows), $userId),
@@ -414,6 +536,7 @@ class MessageService
             'sender_name' => $view['avatars'][(int) $row['sender_id']]['name'] ?? $sender['name'], 'sender_role' => $sender['role'],
             'avatar' => (int) $row['sender_id'] === $userId ? null : ($view['avatars'][(int) $row['sender_id']] ?? null),
             'body' => $body, 'removed' => $removed, 'created_at' => $row['created_at'],
+            'removed_text' => $removed && $row['removed_by'] !== null && $this->isDirect((int) $row['conversation_id']) ? 'Message removed by an administrator' : 'Message removed',
             'reply' => $this->quote($row['reply_to_message_id'] ?? null, $userId, $view['avatars'] ?? []),
             'forwarded' => (int) ($row['forwarded'] ?? 0) === 1,
             'bumped' => ($row['bumped_from_message_id'] ?? null) !== null,
@@ -425,7 +548,7 @@ class MessageService
             'pinned'              => ($row['pinned_at'] ?? null) !== null,
             'can_pin'             => $canPin && ! $removed && ! $erased,
             'deleted_everyone'    => $erased,
-            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone')),
+            'can_delete_everyone' => MessageActions::canDeleteEveryone($row, $userId, $this->switchOn((int) $row['conversation_id'], 'delete_everyone'), $view['closed'] ?? false),
         ];
     }
 
@@ -577,7 +700,7 @@ class MessageService
     }
 
     /**
-     * The sender's name and active role, for the label above their message.
+     * The sender's name and top role, for the label above their message.
      * Looked up once per sender per request.
      *
      * @return array{name: string, role: string}
@@ -589,7 +712,7 @@ class MessageService
 
             $this->senders[$senderId] = [
                 'name' => ConversationPresenter::names([$senderId])[$senderId] ?? 'Former member',
-                'role' => $user === null ? '' : $this->resolver->activeRole($user),
+                'role' => $user === null ? '' : (\App\Services\Profiles\RoleRank::highest($this->resolver->roles($user)) ?? ''),
             ];
         }
 

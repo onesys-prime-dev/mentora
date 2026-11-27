@@ -24,6 +24,10 @@ export function describeFailure(result, fallback) {
         return result.data?.message ?? "You're doing that too fast. Wait a moment and try again.";
     }
 
+    if (result.status === 422 && result.data?.message) {
+        return result.data.message;
+    }
+
     if (result.status === 0) {
         return "Couldn't reach the server. Check your connection and try again.";
     }

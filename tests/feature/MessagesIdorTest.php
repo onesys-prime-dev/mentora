@@ -157,4 +157,40 @@ final class MessagesIdorTest extends RouteTestCase
         // From the Messages screen on, a list row carries a preview of the last message, as plain data for a participant.
         $this->assertSame($payload, json_decode($list, true)['conversations'][0]['preview']);
     }
+
+    public function testRefusalsAreIndistinguishable(): void
+    {
+        $db      = db_connect();
+        $now     = date('Y-m-d H:i:s');
+        $blocker = PeopleFactory::person('instructor', 'Blo', 'Cker', null, $this->institution);
+        $minor   = PeopleFactory::person('student', 'Min', 'Or', null, $this->institution);
+        $fresh   = PeopleFactory::person('instructor', 'Fre', 'Sh', null, $this->institution);
+        $db->table('user_blocks')->insert(['institution_id' => $this->institution, 'blocker_id' => $blocker->id, 'blocked_id' => $this->student->id, 'created_at' => $now]);
+        $db->table('institution_users')->where('user_id', $minor->id)->update(['is_minor' => 1]);
+        $this->signIn($this->student);
+
+        $probe = function (int $recipient): array {
+            $out = [];
+
+            foreach (['conversations' => [], 'conversations/first' => ['body' => 'hi', 'client_uuid' => $this->uuid()]] as $uri => $extra) {
+                $response = $this->api('POST', $uri, ['recipient_id' => $recipient] + $extra)->response();
+                $out[]    = [$response->getStatusCode(), $response->getBody()];
+            }
+
+            return $out;
+        };
+
+        $unknown = $probe(999999);
+        $this->assertSame(404, $unknown[0][0]);
+        $this->assertSame($unknown, $probe((int) $blocker->id), 'blocked by the recipient');
+        $this->assertSame($unknown, $probe((int) $minor->id), 'a minor the sender may not reach');
+
+        // The sender's own restriction refuses new threads the same way.
+        $db->table('message_restrictions')->insert([
+            'institution_id' => $this->institution, 'user_id' => (int) $this->student->id, 'kind' => 'no_new', 'source' => 'pause',
+            'starts_at' => $now, 'ends_at' => date('Y-m-d H:i:s', strtotime('+2 days')), 'created_at' => $now,
+        ]);
+        $this->assertSame($unknown, $probe((int) $fresh->id), 'restricted sender');
+        $this->assertSame(0, $db->table('messages')->countAllResults());
+    }
 }
