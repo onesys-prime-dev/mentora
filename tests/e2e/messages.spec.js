@@ -1027,7 +1027,8 @@ test("TC-MSG-46 A restricted student sees the notice, cannot start, and can stil
         }
 
         // Pressing + New repeats the reason instead of opening the picker.
-        await student.page.locator("[data-role=new]").click();
+        // Forced: Playwright waits for an aria-disabled button to become enabled, but a person can still press it.
+        await student.page.locator("[data-role=new]").click({ force: true });
         await expect(student.page.locator("[data-role=list-note]")).toContainText("You can't start new conversations");
         await expect(student.page.locator("#messages-picker")).toBeHidden();
 
