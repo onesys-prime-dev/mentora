@@ -110,6 +110,7 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         CourseFactory::enroll($offering, $adult);
         CourseFactory::assignInstructor($offering, $instructor);
         db_connect()->table('institution_users')->where('institution_id', $this->institution)->where('user_id', $minor->id)->update(['is_minor' => 1]);
+        $this->homeProgram($minor, $this->programA);
 
         $this->assertTrue($this->resolver->forStart($instructor, $minor, null)->recipientMinor);
         $this->assertTrue($this->resolver->forStart($instructor, $minor, null)->senderTeachesRecipient);
@@ -127,6 +128,40 @@ final class MessagingContextResolverTest extends DatabaseTestCase
         $other    = DeanFactory::college('M3');
         $outsider = $this->person('student', $other['institution']);
         $this->assertFalse($this->resolver->forStart($dean, $outsider, null)->sameInstitution);
+    }
+
+    /** M5 ruling: "their department" is the home program's department, not the departments of the courses they take. */
+    public function testAChairOrDeanLeadsAMinorThroughTheirHomeProgramOnly(): void
+    {
+        $other     = DeanFactory::college('M4', $this->institution);
+        $otherDep  = DeanFactory::department($other['college'], 'MC');
+        $minor     = $this->person('student');
+        $chairA    = DeanFactory::chair($this->departmentA);
+        $chairB    = DeanFactory::chair($this->departmentB);
+        $chairC    = DeanFactory::chair($otherDep);
+        $dean      = DeanFactory::dean($this->institution, $this->college);
+        $otherDean = DeanFactory::dean($this->institution, $other['college']);
+        db_connect()->table('institution_users')->where('institution_id', $this->institution)->where('user_id', $minor->id)->update(['is_minor' => 1]);
+
+        // Taking a course of department C (another college) gives its chair and dean no reach.
+        CourseFactory::enroll(DeanFactory::offering(DeanFactory::program($otherDep, 'MC'), $this->term, 'C9'), $minor);
+        $this->homeProgram($minor, $this->programB);
+
+        $this->assertTrue($this->resolver->forStart($chairB, $minor, null)->senderLeadsRecipient);
+        $this->assertTrue($this->resolver->forStart($dean, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($chairA, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($chairC, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($otherDean, $minor, null)->senderLeadsRecipient);
+
+        // No home program: no chair or dean leads them.
+        $this->homeProgram($minor, null);
+        $this->assertFalse($this->resolver->forStart($chairB, $minor, null)->senderLeadsRecipient);
+        $this->assertFalse($this->resolver->forStart($dean, $minor, null)->senderLeadsRecipient);
+    }
+
+    private function homeProgram(\CodeIgniter\Shield\Entities\User $student, ?int $program): void
+    {
+        db_connect()->table('user_profiles')->where('user_id', $student->id)->update(['program_id' => $program]);
     }
 
     public function testLinkedChildIsTheParentSideLinkedToTheNamedChild(): void

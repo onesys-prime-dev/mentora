@@ -50,7 +50,7 @@ Evaluated in this order; the first refusal wins.
 3. **Pair rules:**
    - parent ↔ student, parent ↔ parent: never (D2).
    - student ↔ student (both non-staff): follows the institution's scope (D3): off = refused; same course = needs a shared course; whole institution = allowed.
-   - **minor recipient (D9):** allowed only if the sender teaches them, is the chairperson of their department or dean of their college, shares a course with them as a student, or is an institutional admin. Applies even if the minor also holds a staff role.
+   - **minor recipient (D9):** allowed only if the sender teaches them, is the chairperson of their department or dean of their college, shares a course with them as a student, or is an institutional admin. Applies even if the minor also holds a staff role. "Their department" is the department of their home program (M5 ruling, 2026-11-27).
    - everything else in the institution: allowed (D1), including anyone → institutional admin (D21).
 4. **Blocks (D5):** refused if the recipient has an **active** block on the sender. A block is inactive (paused) while the two share the protected link defined in FR4. Blocks by institutional admins never bind (D21).
 

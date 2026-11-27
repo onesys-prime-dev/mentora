@@ -82,6 +82,10 @@ What these prove, in the order of the design (`docs/superpowers/specs/2026-11-02
 | [TC-MSG-46](#tc-msg-46-the-restriction-notice) | The restriction notice | Student |
 | [TC-MSG-47](#tc-msg-47-a-student-owns-a-group) | A student owns a group | Student |
 | [TC-MSG-48](#tc-msg-48-the-student-messaging-scope-switch) | The student messaging scope switch | Institution admin, Student |
+| [TC-MSG-49](#tc-msg-49-one-new-button-for-a-message-or-a-group) | One **+ New** button for a message or a group | Instructor, Chairperson |
+| [TC-MSG-50](#tc-msg-50-a-chairperson-or-dean-reaches-a-minor-through-their-home-program) | A chairperson or dean reaches a minor through their home program | Chairperson, Dean, Student |
+| [TC-MSG-51](#tc-msg-51-being-added-to-a-group-is-emailed-as-the-email-setting-says) | Being added to a group is emailed as the email setting says | Chairperson, Instructor |
+| [TC-MSG-52](#tc-msg-52-unsent-drafts-are-gone-after-signing-out) | Unsent drafts are gone after signing out | Student |
 
 Not in the browser (manual, before turning the flag on; the checklist is in
 `docs/messages.md`): a captured email for a test phrase, restoring a backup with
@@ -228,11 +232,11 @@ and without the key, and rotating the key with `messages:reencrypt`.
 ### TC-MSG-09 A chairperson starts a group
 
 - **Role:** Chairperson, Instructor, Dean. **Priority:** P2
-- **Data:** `chairperson1@mentora.test`, `instructor2@mentora.test`, `dean1@mentora.test`
+- **Data:** `chairperson1@mentora.test`, `instructor1@mentora.test`, `instructor2@mentora.test`, `dean1@mentora.test`
 - **Steps:**
-  1. The chairperson presses "+ New group", names it, adds Joseph Garcia, creates it and posts.
+  1. The chairperson presses "+ New", picks Joseph Garcia and Maria Santos, names the group, presses **Create group** and posts.
   2. The instructor opens Messages.
-  3. The dean presses "+ New group" and searches "Roberto" (a parent).
+  3. The dean presses "+ New", picks Joseph Garcia, then searches "Roberto" (a parent).
 - **Expected:**
   - The group opens for the chairperson; the instructor sees it with the post.
   - The dean finds no one: a parent can neither create nor be added to a group.
@@ -603,11 +607,11 @@ Restrictions, administrator DM removal, the automatic pause and reports by perso
 - **Role:** Institution admin, Student. **Priority:** P1
 - **Steps:**
   1. The administrator opens **Reports**, picks a reported student's card, presses **Restrict…**, chooses "No new conversations" for 1 day.
-  2. The student opens Messages and tries **+ New** and **+ New group**; then replies in an existing conversation.
+  2. The student opens Messages and tries **+ New**; then replies in an existing conversation.
   3. The administrator restricts again with "No sending"; the student tries to reply.
   4. The administrator presses **Lift**.
 - **Expected:**
-  - Step 2: a notice card says they can't start new conversations until the end time; both buttons are greyed and repeat the reason; replying still works; an existing conversation still opens from the picker.
+  - Step 2: a notice card says they can't start new conversations until the end time; **+ New** is greyed and repeats the reason; replying still works; an existing conversation still opens from the picker.
   - Step 3: reply boxes are replaced by the restriction text, except course chats the person teaches.
   - Step 4: everything works again. Each step is audited with ids only.
 - **Already automated:** `tests/database/RestrictionServiceTest.php`, `tests/feature/MessagesReportsPageTest.php`, `tests/js/pages/messages-page.test.js`
@@ -715,7 +719,7 @@ Owner-run groups (FR7, D26, S2-c, S2-g).
 
 - **Role:** Student (owner), classmates. **Priority:** P1
 - **Steps:**
-  1. **+ New group**, name it, add classmates; send a message.
+  1. **+ New**, pick two or more classmates, name the group (or leave it blank); send a message.
   2. "⋯" → **Group settings** → Members: add someone, remove someone; Details: rename.
   3. A member opens Group settings.
 - **Expected:**
@@ -815,7 +819,7 @@ Institution-wide reach (FR1, FR2, FR11, FR12; D1, D2, D4, D9, D21, S2-e, S2-i). 
   3. They reply in an existing conversation.
 - **Expected:**
   - A notice in the list says "You can't start new conversations" with its end time and "Set by your school.".
-  - **+ New** and **+ New group** are greyed. Pressing one repeats the reason, and the picker does not open.
+  - **+ New** is greyed. Pressing it repeats the reason, and the picker does not open.
   - The reply is sent.
 - **Already automated:** `tests/database/RestrictionServiceTest.php`, `tests/js/pages/messages-page.test.js`
 - **Playwright:** `tests/e2e/messages.spec.js`
@@ -825,9 +829,9 @@ Institution-wide reach (FR1, FR2, FR11, FR12; D1, D2, D4, D9, D21, S2-e, S2-i). 
 ### TC-MSG-47 A student owns a group
 
 - **Role:** Student (owner), Student (member). **Priority:** P2
-- **Data:** `student5@mentora.test` (owner), `student1@mentora.test`, `student2@mentora.test`
+- **Data:** `student5@mentora.test` (owner), `student1@mentora.test`, `student2@mentora.test`, `instructor1@mentora.test`
 - **Steps:**
-  1. Michael creates a group with Juan and posts.
+  1. Michael creates a group with Juan and Maria Santos (his instructor) and posts.
   2. In **Group settings** he adds Pedro, then renames the group.
   3. Juan opens the group and its settings.
 - **Expected:**
@@ -853,6 +857,68 @@ Institution-wide reach (FR1, FR2, FR11, FR12; D1, D2, D4, D9, D21, S2-e, S2-i). 
 - **Already automated:** `tests/database/StudentDmSwitchTest.php`, `tests/database/ThreadReadOnlyTest.php`, `tests/database/RecipientSearchTest.php`, `tests/feature/InstitutionMessagesSettingsTest.php`
 - **Playwright:** `tests/e2e/messages.spec.js`
 - **Basis:** `StudentMessaging::scope`, `MessagingContextResolver::pairLost`
+- **Review:** Draft
+
+## The merged picker and the deferred items (TC-MSG-49 to 52)
+
+### TC-MSG-49 One New button for a message or a group
+
+- **Role:** Instructor, Chairperson. **Priority:** P1
+- **Data:** `chairperson1@mentora.test`, `instructor1@mentora.test`, `instructor2@mentora.test`
+- **Steps:**
+  1. Press **+ New** and search "Garcia". Pick Joseph Garcia.
+  2. Search "Santos" and pick Maria Santos. Remove Maria's chip, then pick her again.
+  3. Leave the group name blank and press **Create group**.
+  4. Press **+ New**, pick one person and press **Message**.
+- **Expected:**
+  - There is no "+ New group" button. A pick stays in the dialog as a chip, and the search clears for the next name.
+  - With one person the button says **Message**; with two or more it says **Create group** and an optional "Group name" field shows.
+  - Step 3: the group opens named after its members ("Joseph Garcia and Maria Santos"); each member sees the others' names.
+  - Step 4: the direct draft opens, as before.
+  - A person picked "about" a child is a thread of their own: the search hides once they are picked. A parent picks one person and goes straight to the draft.
+- **Already automated:** `tests/js/pages/messages-group.test.js`, `tests/database/GroupServiceTest.php` (`testAnUntitledGroupIsNamedAfterItsOtherMembers`, `testCandidatesArePagedSoEveryMatchCanBeReached`)
+- **Playwright:** `tests/e2e/messages.spec.js` (TC-MSG-09, TC-MSG-47), `tests/e2e/responsive.spec.js`
+- **Basis:** `messages.js` (the new-message picker), `GroupService::create`, `ConversationPresenter::memberNames`
+- **Review:** Draft
+
+### TC-MSG-50 A chairperson or dean reaches a minor through their home program
+
+- **Role:** Chairperson, Dean, Student (minor). **Priority:** P1
+- **Steps:**
+  1. Mark a BSIT student as a minor and enrol them in a course of another department.
+  2. The chairperson and dean of that other department search for the student.
+  3. The BSIT department's chairperson and the college's dean search for the student.
+- **Expected:**
+  - Step 2: nobody is found. Taking a course there gives no reach.
+  - Step 3: the student is found and can be messaged.
+  - A minor with no home program is found by no chairperson or dean (their instructors, classmates and the administrator still reach them).
+- **Already automated:** `tests/database/MessagingContextResolverTest.php` (`testAChairOrDeanLeadsAMinorThroughTheirHomeProgramOnly`)
+- **Basis:** M5 ruling 2026-11-27: "their department" is the home program's (`user_profiles.program_id`). `MessagingContextResolver::leads`, `minorReachSql`
+- **Review:** Draft
+
+### TC-MSG-51 Being added to a group is emailed as the email setting says
+
+- **Role:** Chairperson, Instructors. **Priority:** P2
+- **Steps:**
+  1. Instructor A keeps email on for every message; B emails only from people they have talked with; C has email off; D is in quiet hours.
+  2. A chairperson who shares no course with B creates a group with all four.
+- **Expected:**
+  - Everyone gets the in-app "Added to a group" notice at once.
+  - Only A is emailed. B is not (they have not talked), C is not (email off), and D is not (quiet hours hold back the email only).
+- **Already automated:** `tests/database/GroupServiceTest.php` (`testBeingAddedIsEmailedAsTheirEmailSettingSays`)
+- **Basis:** S2-g, D18; `GroupService::tell`
+- **Review:** Draft
+
+### TC-MSG-52 Unsent drafts are gone after signing out
+
+- **Role:** Student. **Priority:** P2
+- **Steps:**
+  1. Open a new conversation, type a message and do not send it.
+  2. Sign out, then sign in again on the same browser.
+- **Expected:**
+  - The draft is gone, so nobody else who signs in on that browser can read it.
+- **Already automated:** `tests/js/pages/login-drafts.test.js`
+- **Basis:** `resources/js/pages/login/login.js` (a sign-out lands on the login page)
 - **Review:** Draft
 
 Data integrity across the migrations (AC9, AC10) is not a browser case. `tests/database/MessagingDataIntegrityTest.php` checks it: counts are unchanged and blocks = kept + history, after up, after rollback and after the redo.

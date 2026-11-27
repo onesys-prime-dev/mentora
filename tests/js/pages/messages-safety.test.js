@@ -39,7 +39,11 @@ const SHELL = `
   </section>
   <div id="messages-new" data-dialog hidden>
     <button data-dialog-close></button>
-    <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
+    <div data-role="picker-name" hidden><input data-role="group-title" maxlength="80"></div>
+    <ul data-role="picker-chips" hidden></ul>
+    <div data-role="picker-search"><label data-role="picker-label"></label><input data-role="picker-input"><ul data-role="picker-results"></ul></div>
+    <p data-role="picker-state"></p>
+    <button type="button" data-role="picker-start" hidden></button>
   </div>
   <button type="button" data-role="report-open" data-dialog-open="messages-report" hidden></button>
   <div id="messages-report" data-dialog hidden>

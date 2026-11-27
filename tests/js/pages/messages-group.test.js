@@ -2,12 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mountMessages } from "../../../resources/js/pages/messages/messages.js";
 
-// The hooks pages/messages/index.php provides, with the new-group button and dialog.
+// The hooks pages/messages/index.php provides, with the new-message picker and the group settings dialog.
 const shell = (canGroup) => `
 <div id="messages-app" data-view="list" data-api="/messages/api" data-user-id="1" data-open="" data-can-group="${canGroup ? "1" : "0"}">
   <section data-pane="list">
     <button data-role="new" data-dialog-open="messages-new"></button>
-    <button data-role="new-group" data-dialog-open="messages-group" hidden></button>
     <input data-role="search">
     <button data-chip="all" aria-pressed="true"></button><button data-chip="course" aria-pressed="false"></button>
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
@@ -37,16 +36,11 @@ const shell = (canGroup) => `
   </section>
   <div id="messages-new" data-dialog hidden>
     <button data-dialog-close></button>
-    <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
-  </div>
-  <div id="messages-group" data-dialog hidden>
-    <button data-dialog-close></button>
-    <input data-role="group-title" maxlength="80">
-    <input data-role="group-search">
-    <ul data-role="group-results"></ul>
-    <ul data-role="group-chips"></ul>
-    <p data-role="group-note" role="status"></p>
-    <button type="button" data-role="group-create" disabled></button>
+    <div data-role="picker-name" hidden><input data-role="group-title" maxlength="80"></div>
+    <ul data-role="picker-chips" hidden></ul>
+    <div data-role="picker-search"><label data-role="picker-label"></label><input data-role="picker-input"><ul data-role="picker-results"></ul></div>
+    <p data-role="picker-state"></p>
+    <button type="button" data-role="picker-start" hidden></button>
   </div>
   <div id="messages-group-settings" data-dialog hidden>
     <button data-dialog-close></button>
@@ -82,15 +76,15 @@ const ok = (data, status = 200) => ({ status, data });
 function makeApi(over = {}) {
     return {
         conversations: vi.fn().mockResolvedValue(ok({ conversations: [], unread: 0 })),
-        start: vi.fn(),
         page: vi.fn().mockResolvedValue(ok({ messages: [], has_more: false })),
         send: vi.fn(),
         markRead: vi.fn().mockResolvedValue(ok({ ok: true })),
         changes: vi.fn().mockResolvedValue(ok({ messages: [], server_time: "2026-01-01 00:00:00", more: false })),
         hide: vi.fn().mockResolvedValue(ok({ ok: true })),
         unread: vi.fn().mockResolvedValue(ok({ unread: 0 })),
-        recipients: vi.fn().mockResolvedValue(ok({ recipients: [] })),
-        groupCandidates: vi.fn().mockResolvedValue(ok({ candidates: [person(7, "Ivy Alpha"), person(8, "Ian <b>Alpha</b>")] })),
+        recipients: vi.fn().mockResolvedValue(ok({ recipients: [person(7, "Ivy Alpha"), person(9, "Kim Alpha")], next: null })),
+        start: vi.fn().mockResolvedValue(ok({ draft: { recipient_id: 7, subject_student_id: null, first_contact: false, conversation_id: null, name: "Ivy Alpha", avatar: null } })),
+        groupCandidates: vi.fn().mockResolvedValue(ok({ candidates: [person(7, "Ivy Alpha"), person(8, "Ian <b>Alpha</b>")], next: null })),
         createGroup: vi.fn().mockResolvedValue(ok({ conversation: { id: 31, type: "group", name: "Exam planning", initials: "EP", preview: null, unread: 0, can_post: true, can_moderate: true, is_locked: 0, last_message_at: null } }, 201)),
         ...over,
     };
@@ -117,9 +111,10 @@ async function type(selector, text) {
     await vi.advanceTimersByTimeAsync(300);
 }
 
-const results = () => all("[data-role=group-results] button");
-const chips = () => all("[data-role=group-chips] li");
-const create = () => q("[data-role=group-create]");
+const results = () => all("[data-role=picker-results] button");
+const chips = () => all("[data-role=picker-chips] li");
+const start = () => q("[data-role=picker-start]");
+const search = (text) => type("[data-role=picker-input]", text);
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -131,166 +126,188 @@ afterEach(() => {
     document.body.innerHTML = "";
 });
 
-describe("the new group button", () => {
-    it("is shown only to someone the page says can start groups", async () => {
-        await mount(makeApi(), true);
-        expect(q("[data-role=new-group]").hidden).toBe(false);
-
-        await mount(makeApi(), false);
-        expect(q("[data-role=new-group]").hidden).toBe(true);
-    });
-});
-
-describe("choosing the members", () => {
-    it("sends nothing for fewer than two letters", async () => {
+// One "+ New" for both: a pick becomes a chip (as Messenger does); one person is a direct draft, two or more a group.
+describe("the new-message picker", () => {
+    it("keeps a pick as a removable chip and clears the search for the next name", async () => {
         const api = makeApi();
 
         await mount(api);
-        await type("[data-role=group-search]", "i");
-
-        expect(api.groupCandidates).not.toHaveBeenCalled();
-        expect(results()).toHaveLength(0);
-    });
-
-    it("lists the names as text, never as markup", async () => {
-        await mount(makeApi());
-        await type("[data-role=group-search]", "alpha");
-
-        expect(results().map((b) => b.textContent)).toEqual(expect.arrayContaining(["Ivy Alpha", "Ian <b>Alpha</b>"]));
-        expect(all("[data-role=group-results] b")).toHaveLength(0);
-    });
-
-    it("draws each candidate's avatar inside the choice as decoration only", async () => {
-        const avatar = { id: 7, name: "Jun Dela Cruz", initials: "JD", colour: "#1D4ED8", photoUrl: null, photoUrlLg: null, interactive: true };
-
-        await mount(makeApi({ groupCandidates: vi.fn().mockResolvedValue(ok({ candidates: [{ ...person(7, "Jun Dela Cruz"), avatar }] })) }));
-        await type("[data-role=group-search]", "dela");
-
-        expect(results()[0].textContent).toContain("Jun Dela Cruz");
-        expect(results()[0].querySelector("[data-avatar]").getAttribute("aria-hidden")).toBe("true");
-        expect(results()[0].querySelector("[data-person-avatar]")).toBeNull();
-    });
-
-    it("selects a person as a removable chip, and again removes them", async () => {
-        await mount(makeApi());
-        await type("[data-role=group-search]", "alpha");
+        // Open, as the dialog is when a person picks (nothing inside a hidden dialog takes focus).
+        q("#messages-new").hidden = false;
+        await search("alpha");
+        expect(api.recipients).toHaveBeenCalledWith("alpha");
 
         results()[0].click();
+
+        expect(api.start).not.toHaveBeenCalled();
         expect(chips().map((c) => c.textContent)).toEqual(["Ivy Alpha ×"]);
-        expect(results()[0].getAttribute("aria-pressed")).toBe("true");
+        expect(q("[data-role=picker-input]").value).toBe("");
+        expect(document.activeElement).toBe(q("[data-role=picker-input]"));
+        expect(start().hidden).toBe(false);
+        expect(start().textContent).toBe("Message");
+        expect(q("[data-role=picker-name]").hidden).toBe(true);
+        expect(q("[data-role=picker-label]").textContent).toBe("Add another person to make a group");
 
-        results()[0].click();
-        expect(chips()).toHaveLength(0);
-
-        results()[0].click();
         chips()[0].querySelector("button").click();
+
         expect(chips()).toHaveLength(0);
+        expect(start().hidden).toBe(true);
+        expect(document.activeElement).toBe(q("[data-role=picker-input]"));
     });
 
-    it("ignores an answer for a search that has since been replaced", async () => {
-        let release;
-        const api = makeApi({ groupCandidates: vi.fn()
-            .mockImplementationOnce(() => new Promise((resolve) => { release = () => resolve(ok({ candidates: [person(1, "Old Result")] })); }))
-            .mockResolvedValueOnce(ok({ candidates: [person(2, "New Result")] })) });
-
-        await mount(api);
-        await type("[data-role=group-search]", "ol");
-        await type("[data-role=group-search]", "new");
-        release();
-        await flush();
-
-        expect(results().map((b) => b.textContent)).toEqual(["New Result"]);
-    });
-});
-
-describe("creating the group", () => {
-    async function ready(api) {
-        await mount(api);
-        q("[data-role=group-title]").value = "Exam planning";
-        q("[data-role=group-title]").dispatchEvent(new Event("input", { bubbles: true }));
-        await type("[data-role=group-search]", "alpha");
-        results()[0].click();
-    }
-
-    it("needs a title and at least one member, and the title is capped at 80", async () => {
-        await mount(makeApi());
-        expect(create().disabled).toBe(true);
-        expect(q("[data-role=group-title]").maxLength).toBe(80);
-
-        await type("[data-role=group-search]", "alpha");
-        results()[0].click();
-        expect(create().disabled).toBe(true);
-
-        q("[data-role=group-title]").value = "   ";
-        q("[data-role=group-title]").dispatchEvent(new Event("input", { bubbles: true }));
-        expect(create().disabled).toBe(true);
-
-        q("[data-role=group-title]").value = "Exam planning";
-        q("[data-role=group-title]").dispatchEvent(new Event("input", { bubbles: true }));
-        expect(create().disabled).toBe(false);
-    });
-
-    it("creates the group, closes the dialog and opens it at the top of the list", async () => {
+    it("opens the direct draft for one person", async () => {
         const api = makeApi();
         const closed = vi.fn();
 
-        await ready(api);
-        q("#messages-group [data-dialog-close]").addEventListener("click", closed);
-        create().click();
+        await mount(api);
+        q("#messages-new [data-dialog-close]").addEventListener("click", closed);
+        await search("alpha");
+        results()[0].click();
+        start().click();
         await flush();
 
-        expect(api.createGroup).toHaveBeenCalledWith("Exam planning", [7]);
+        expect(api.start).toHaveBeenCalledWith(7, undefined);
+        expect(closed).toHaveBeenCalled();
+        expect(q("[data-role=head-name]").textContent).toBe("Ivy Alpha");
+        expect(chips()).toHaveLength(0);
+    });
+
+    it("after the first pick, finds only people who can be in a group, leaving out who is picked", async () => {
+        const api = makeApi();
+
+        await mount(api);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+
+        expect(api.groupCandidates).toHaveBeenCalledWith("alpha");
+        expect(results().map((b) => b.textContent)).toEqual(["Ian <b>Alpha</b>Instructor"]);
+        // Names are text, never markup.
+        expect(all("[data-role=picker-results] b")).toHaveLength(0);
+    });
+
+    it("makes a group of two or more, named after its members when the name is left blank", async () => {
+        const api = makeApi();
+        const closed = vi.fn();
+
+        await mount(api);
+        q("#messages-new [data-dialog-close]").addEventListener("click", closed);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+        results()[0].click();
+
+        expect(chips()).toHaveLength(2);
+        expect(q("[data-role=picker-name]").hidden).toBe(false);
+        expect(start().textContent).toBe("Create group");
+
+        start().click();
+        await flush();
+
+        expect(api.createGroup).toHaveBeenCalledWith("", [7, 8]);
         expect(closed).toHaveBeenCalled();
         expect(q("[data-role=rows] button").textContent).toContain("Exam planning");
         expect(q("[data-role=head-name]").textContent).toBe("Exam planning");
     });
 
-    it("sends once while a request is in flight", async () => {
+    it("sends the group name when one is given, capped at 80", async () => {
+        const api = makeApi();
+
+        await mount(api);
+        expect(q("[data-role=group-title]").maxLength).toBe(80);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+        results()[0].click();
+        q("[data-role=group-title]").value = "  Exam planning ";
+        start().click();
+        await flush();
+
+        expect(api.createGroup).toHaveBeenCalledWith("Exam planning", [7, 8]);
+    });
+
+    it("lets no one else be added beside a person picked about a child", async () => {
+        await mount(makeApi({ recipients: vi.fn().mockResolvedValue(ok({ recipients: [{ ...person(4, "Ann Lee", "parent"), subject_student_id: 9, subject_name: "Stu Dent" }] })) }));
+        await search("ann");
+        results()[0].click();
+
+        expect(chips().map((c) => c.textContent)).toEqual(["Ann Lee · about Stu Dent ×"]);
+        expect(q("[data-role=picker-search]").hidden).toBe(true);
+        expect(start().textContent).toBe("Message");
+    });
+
+    it("creates once while a request is in flight", async () => {
         let release;
         const api = makeApi({ createGroup: vi.fn(() => new Promise((resolve) => { release = () => resolve(ok({ conversation: { id: 31, type: "group", name: "Exam planning", initials: "EP", unread: 0, can_post: true, is_locked: 0 } }, 201)); })) });
 
-        await ready(api);
-        create().click();
-        create().click();
+        await mount(api);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+        results()[0].click();
+        start().click();
+        start().click();
         await flush();
 
         expect(api.createGroup).toHaveBeenCalledTimes(1);
-        expect(create().disabled).toBe(true);
+        expect(start().disabled).toBe(true);
 
         release();
         await flush();
     });
 
-    it("says so and keeps the form when the server refuses", async () => {
+    it("says so and keeps the picks when the server refuses the group", async () => {
         const api = makeApi({ createGroup: vi.fn().mockResolvedValue(ok({ error: "not_found" }, 404)) });
 
-        await ready(api);
-        create().click();
+        await mount(api);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+        results()[0].click();
+        start().click();
         await flush();
 
-        expect(q("[data-role=group-note]").textContent).toBe("Couldn't create the group");
-        expect(q("[data-role=group-title]").value).toBe("Exam planning");
-        expect(chips()).toHaveLength(1);
-        expect(create().disabled).toBe(false);
+        expect(q("[data-role=picker-state]").textContent).toBe("Couldn't create the group");
+        expect(chips()).toHaveLength(2);
+        expect(start().disabled).toBe(false);
     });
-});
 
-// A pick redraws the results and the chips, so the button that was tapped is gone: focus must stay in the dialog
-// (on the search), or Escape and Tab would leave it.
-describe("focus after a pick", () => {
-    it("stays on the search after picking a person and after removing a chip", async () => {
+    it("starts afresh each time + New is pressed", async () => {
         await mount(makeApi());
-        // Open, as the dialog is when a person picks (nothing inside a hidden dialog takes focus).
-        q("#messages-group").hidden = false;
-        await type("[data-role=group-search]", "alpha");
-
-        results()[0].focus();
+        await search("alpha");
         results()[0].click();
-        expect(document.activeElement).toBe(q("[data-role=group-search]"));
+        q("[data-role=new]").click();
 
-        chips()[0].querySelector("button").focus();
-        chips()[0].querySelector("button").click();
-        expect(document.activeElement).toBe(q("[data-role=group-search]"));
+        expect(chips()).toHaveLength(0);
+        expect(start().hidden).toBe(true);
+    });
+
+    it("opens the draft at once for someone who cannot start groups", async () => {
+        const api = makeApi();
+
+        await mount(api, false);
+        await search("alpha");
+        results()[0].click();
+        await flush();
+
+        expect(api.start).toHaveBeenCalledWith(7, undefined);
+        expect(chips()).toHaveLength(0);
+    });
+
+    it("pages the group candidates with the server's cursor", async () => {
+        const api = makeApi({ groupCandidates: vi.fn()
+            .mockResolvedValueOnce(ok({ candidates: [person(8, "Ian Alpha")], next: 8 }))
+            .mockResolvedValueOnce(ok({ candidates: [person(10, "Lee Alpha")], next: null })) });
+
+        await mount(api);
+        await search("alpha");
+        results()[0].click();
+        await search("alpha");
+        q("[data-action=picker-more]").click();
+        await flush();
+
+        expect(api.groupCandidates).toHaveBeenLastCalledWith("alpha", 8);
+        expect(results().map((b) => b.textContent)).toEqual(["Ian AlphaInstructor", "Lee AlphaInstructor"]);
     });
 });
 

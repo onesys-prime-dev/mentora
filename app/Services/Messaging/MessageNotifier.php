@@ -242,7 +242,7 @@ class MessageNotifier
     private function chatName(array $chat): ?string
     {
         if ($chat['type'] === 'group') {
-            return (string) $chat['title'];
+            return $chat['title'] === null ? 'a group' : (string) $chat['title'];
         }
 
         if ($chat['type'] !== 'course') {

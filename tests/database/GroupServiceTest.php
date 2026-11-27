@@ -159,8 +159,7 @@ final class GroupServiceTest extends DatabaseTestCase
         $one    = [$this->teacherA1->id];
         $before = $this->counts();
 
-        $this->assertNull($this->groupService()->create($this->chairA, '', $one));
-        $this->assertNull($this->groupService()->create($this->chairA, "  \t ", $one));
+        // A blank name is allowed now (the group is named after its members): see testAnUntitledGroupIsNamedAfterItsOtherMembers.
         $this->assertNull($this->groupService()->create($this->chairA, str_repeat('x', GroupService::MAX_TITLE + 1), $one));
         $this->assertNotNull($this->groupService()->create($this->chairA, str_repeat('é', GroupService::MAX_TITLE), $one));
         $this->assertNull($this->groupService()->create($this->chairA, 'Group', []));
@@ -288,6 +287,78 @@ final class GroupServiceTest extends DatabaseTestCase
         $this->assertSame(3, db_connect()->table('conversation_participants')->where('conversation_id', $group['id'])->countAllResults());
         // Being added is told at once (S2-g): the two others, never the creator.
         $this->assertSame(2, db_connect()->table('notifications')->where('type', 'message')->like('dedupe_key', 'group-add:' . $group['id'] . ':', 'after')->countAllResults());
+    }
+
+    /** S2-g: being added is in the app at once; it is emailed as their email setting says (D18), never in quiet hours. */
+    public function testBeingAddedIsEmailedAsTheirEmailSettingSays(): void
+    {
+        $prefs = db_connect()->table('message_preferences');
+        // teacherA2 switched email off; teacherB emails only from people they have talked with (they share no course
+        // with chairA); the dean is in quiet hours all day. teacherA1 keeps the default: every message.
+        $prefs->insert(['user_id' => $this->teacherA2->id, 'email_alerts' => 0, 'email_scope' => 'everyone']);
+        $prefs->insert(['user_id' => $this->teacherB->id, 'email_alerts' => 1, 'email_scope' => 'talked']);
+        $prefs->insert(['user_id' => $this->dean->id, 'email_alerts' => 1, 'email_scope' => 'everyone', 'quiet_mode' => 'own', 'quiet_start' => '00:00', 'quiet_end' => '23:59']);
+
+        $group = $this->groupService()->create($this->chairA, 'Planning', [$this->teacherA1->id, $this->teacherA2->id, $this->teacherB->id, $this->dean->id]);
+        $this->assertNotNull($group);
+
+        $emailed = static fn ($user): ?int => ($row = db_connect()->table('notifications')->where('user_id', $user->id)->like('dedupe_key', 'group-add:' . $group['id'] . ':', 'after')->get()->getRowArray()) === null ? null : (int) $row['urgent'];
+
+        $this->assertSame(1, $emailed($this->teacherA1));
+        $this->assertSame(0, $emailed($this->teacherA2));
+        $this->assertSame(0, $emailed($this->teacherB));
+        $this->assertSame(0, $emailed($this->dean));
+    }
+
+    /** M6: the people a creator may add come a page at a time from a cursor, so every match can be reached. */
+    public function testCandidatesArePagedSoEveryMatchCanBeReached(): void
+    {
+        $ids = [];
+
+        for ($i = 1; $i <= 23; $i++) {
+            $ids[] = (int) PeopleFactory::person('instructor', 'Quill' . str_pad((string) $i, 2, '0', STR_PAD_LEFT), 'Paging', null, $this->institution)->id;
+        }
+
+        $first = $this->groupService()->candidatePage($this->chairA, 'Quill', null);
+        $this->assertCount(20, $first['candidates']);
+        $this->assertNotNull($first['next']);
+
+        $second = $this->groupService()->candidatePage($this->chairA, 'Quill', $first['next']);
+        $this->assertNull($second['next']);
+
+        $seen = [...array_column($first['candidates'], 'id'), ...array_column($second['candidates'], 'id')];
+        $this->assertSame([], array_values(array_diff($ids, $seen)), 'every match is on a page');
+        $this->assertSame(count($seen), count(array_unique($seen)), 'nobody twice');
+
+        // A parent is never offered, and a cursor naming someone not offered finds nothing.
+        $parent = PeopleFactory::person('parent', 'Quill', 'Parent', null, $this->institution);
+        $this->assertNotContains((int) $parent->id, $seen);
+        $this->assertSame(['candidates' => [], 'next' => null], $this->groupService()->candidatePage($this->chairA, 'Quill', (int) $parent->id));
+    }
+
+    /** A blank name leaves the group untitled: each member sees it named after the others, as Messenger does. */
+    public function testAnUntitledGroupIsNamedAfterItsOtherMembers(): void
+    {
+        [$a, $b, $c, $d, $e] = $this->students(5);
+
+        $group = $this->groupService()->create($a, "  \t ", [$b->id, $c->id]);
+        $this->assertNotNull($group);
+        $this->assertNull($group['title']);
+
+        $name = fn (User $viewer, int $id): string => array_values(array_filter(
+            (new ConversationPresenter($this->cipher()))->present($viewer, (new ConversationService())->listFor($viewer, 'group')),
+            static fn (array $row): bool => $row['id'] === $id,
+        ))[0]['name'];
+
+        $this->assertSame('Stu2 Pupil and Stu3 Pupil', $name($a, (int) $group['id']));
+        $this->assertSame('Stu1 Pupil and Stu3 Pupil', $name($b, (int) $group['id']));
+        $this->assertSame('You were added to a group.', db_connect()->table('notifications')->where('user_id', $b->id)->like('dedupe_key', 'group-add:' . $group['id'] . ':', 'after')->get()->getRowArray()['body']);
+
+        $big = $this->groupService()->create($a, '', [$b->id, $c->id, $d->id, $e->id]);
+        $this->assertSame('Stu2 Pupil, Stu3 Pupil and 2 others', $name($a, (int) $big['id']));
+
+        // A name is still at most MAX_TITLE characters.
+        $this->assertNull($this->groupService()->create($a, str_repeat('x', GroupService::MAX_TITLE + 1), [$b->id]));
     }
 
     public function testParentCannotCreateOrBeAdded(): void

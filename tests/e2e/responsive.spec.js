@@ -257,23 +257,22 @@ const SCREENS = [
             via("calendar-modal", calendarForm, (page) => openCalendarAction(page, "add-reminder")),
         ],
     },
-    // Messages as the chairperson and the dean: New message (with people found), Settings, and New group, which only
-    // they may start (with one person picked, so the chip shows). Scoped to the app once its list has loaded.
+    // Messages as the chairperson and the dean: New message (with people found and one picked, so the chip shows) and
+    // Settings. Scoped to the app once its list has loaded.
     ...["chairperson", "dean"].map((role) => ({
         name: `${role}-messages`,
         path: "/messages",
         as: role === "dean" ? "dean2" : role,
         scope: "#messages-app:has([data-state=loading][hidden])",
         dialogs: [
-            via("messages-new", (page) => page.locator("[data-role=new]"), null, (dialog) => findPeople(dialog, "[data-role=picker-input]", "[data-role=picker-results] button")),
-            via("messages-prefs", (page) => page.locator("[data-role=prefs-open]")),
-            via("messages-group", (page) => page.locator("[data-role=new-group]"), null, async (dialog) => {
-                await findPeople(dialog, "[data-role=group-search]", "[data-role=group-results] button");
-                await dialog.locator("[data-role=group-results] button").first().click();
-                await expect(dialog.locator("[data-role=group-chips] li").first()).toBeVisible();
+            via("messages-new", (page) => page.locator("[data-role=new]"), null, async (dialog) => {
+                await findPeople(dialog, "[data-role=picker-input]", "[data-role=picker-results] button");
+                await dialog.locator("[data-role=picker-results] button").first().click();
+                await expect(dialog.locator("[data-role=picker-chips] li").first()).toBeVisible();
                 // The pick redraws the results: focus stays in the dialog (so the sweep's Escape still closes it).
-                await expect(dialog.locator("[data-role=group-search]")).toBeFocused();
+                await expect(dialog.locator("[data-role=picker-input]")).toBeFocused();
             }),
+            via("messages-prefs", (page) => page.locator("[data-role=prefs-open]")),
         ],
     })),
     // The institution administrator's and the platform administrator's screens (Phase 7). `as: "systemAdmin"` signs in

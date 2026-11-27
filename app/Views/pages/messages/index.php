@@ -33,7 +33,6 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
                     <?php if ($canReview ?? false): ?>
                         <a href="<?= esc(site_url('messages/reports')) ?>" class="inline-flex items-center rounded-full border border-gray-300 px-3 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Reports</a>
                     <?php endif; ?>
-                    <button type="button" data-role="new-group" data-dialog-open="messages-group" hidden class="rounded-full border border-brand px-3 py-1 text-[13px] font-semibold text-brand pointer-coarse:min-h-11 hover:bg-brand-tint aria-disabled:cursor-not-allowed aria-disabled:border-gray-300 aria-disabled:text-gray-400 aria-disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New group</button>
                     <button type="button" data-role="prefs-open" data-dialog-open="messages-prefs" aria-label="Settings" class="rounded-full border border-gray-300 px-2.5 py-1 text-[13px] font-semibold text-[#646464] pointer-coarse:min-h-11 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">Settings</button>
                     <button type="button" data-role="new" data-dialog-open="messages-new" class="rounded-full bg-brand px-3 py-1 text-[13px] font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark aria-disabled:cursor-not-allowed aria-disabled:bg-gray-300 aria-disabled:hover:bg-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">+ New</button>
                 </span>
@@ -132,11 +131,18 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
         'id'    => 'messages-new',
         'title' => 'New message',
         'size'  => 'sm',
-        'body'  => '<div>'
-            . '<label for="messages-picker" class="mb-1 block text-xs font-medium text-gray-600">Find a person by name</label>'
+        // One person picked is a direct message; two or more make a group, named or named after its members.
+        'body'  => '<div class="flex flex-col gap-3">'
+            . '<div data-role="picker-name" hidden><label for="messages-group-title" class="mb-1 block text-xs font-medium text-gray-600">Group name (optional)</label>'
+            . '<input id="messages-group-title" data-role="group-title" type="text" maxlength="80" autocomplete="off" placeholder="Named after the members if left blank" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div>'
+            . '<ul data-role="picker-chips" hidden class="flex flex-wrap gap-1.5" aria-label="People you picked"></ul>'
+            . '<div data-role="picker-search">'
+            . '<label for="messages-picker" data-role="picker-label" class="mb-1 block text-xs font-medium text-gray-600">Find a person by name</label>'
             . '<input id="messages-picker" data-role="picker-input" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
             . '<ul data-role="picker-results" class="mt-3 flex max-h-64 flex-col overflow-y-auto" aria-live="polite"></ul>'
-            . '<p data-role="picker-state" class="mt-2 text-xs text-[#646464]">' . (($noLinkedChild ?? false) ? 'Your account is not linked to a child yet, so you cannot start a conversation.' : 'Type at least two letters of a name.') . '</p>'
+            . '</div>'
+            . '<p data-role="picker-state" role="status" class="text-xs text-[#646464]">' . (($noLinkedChild ?? false) ? 'Your account is not linked to a child yet, so you cannot start a conversation.' : 'Type at least two letters of a name.') . '</p>'
+            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:sticky sm:bottom-0"><button type="button" data-role="picker-start" hidden class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Message</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 
@@ -168,22 +174,6 @@ $chips = ['all' => 'All', 'course' => 'Courses', 'direct' => 'Direct', 'group' =
             . '<ul data-role="blocked-list" class="flex flex-col gap-1"></ul>'
             . '<p data-role="blocked-empty" class="text-xs text-[#646464]">No one blocked.</p></div>'
             . '</div>'
-            . '</div>',
-    ], ['saveData' => false]) ?>
-
-    <?= view('components/dialog', [
-        'id'    => 'messages-group',
-        'title' => 'New group',
-        'size'  => 'sm',
-        'body'  => '<div class="flex flex-col gap-3">'
-            . '<div><label for="messages-group-title" class="mb-1 block text-xs font-medium text-gray-600">Group name</label>'
-            . '<input id="messages-group-title" data-role="group-title" type="text" maxlength="80" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"></div>'
-            . '<div><label for="messages-group-search" class="mb-1 block text-xs font-medium text-gray-600">Add people by name</label>'
-            . '<input id="messages-group-search" data-role="group-search" type="search" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-base sm:text-sm pointer-coarse:min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50">'
-            . '<ul data-role="group-results" class="mt-2 flex max-h-40 flex-col overflow-y-auto" aria-live="polite"></ul></div>'
-            . '<ul data-role="group-chips" class="flex flex-wrap gap-1.5" aria-label="People in the group"></ul>'
-            . '<p data-role="group-note" role="status" class="text-xs text-[#646464]"></p>'
-            . '<div data-messages-actions class="flex justify-end bg-white max-sm:sticky max-sm:-bottom-6 max-sm:-mx-6 max-sm:-mb-6 max-sm:border-t max-sm:border-gray-100 max-sm:px-6 max-sm:pt-3 max-sm:pb-safe-4 sm:sticky sm:bottom-0"><button type="button" data-role="group-create" disabled class="rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white pointer-coarse:min-h-11 hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 disabled:cursor-not-allowed disabled:opacity-50">Create group</button></div>'
             . '</div>',
     ], ['saveData' => false]) ?>
 

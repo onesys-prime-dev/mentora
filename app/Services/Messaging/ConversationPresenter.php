@@ -59,6 +59,7 @@ class ConversationPresenter
         $others      = $otherIds === [] ? [] : model(UserModel::class)->whereIn('id', $otherIds)->findAll();
         $otherById   = array_combine(array_map(static fn (User $u): int => (int) $u->id, $others), $others);
         $otherParty  = $this->resolver->parties($others);
+        $untitled    = $this->memberNames($viewer, array_map(static fn (array $r): int => (int) $r['id'], array_values(array_filter($rows, static fn (array $r): bool => $r['type'] === 'group' && ($r['title'] ?? null) === null))));
         $out         = [];
 
         foreach ($rows as $row) {
@@ -77,7 +78,7 @@ class ConversationPresenter
                 $short  = $course['code'];
                 $closed = $course['closed'];
             } elseif ($row['type'] === 'group') {
-                $name  = (string) ($row['title'] ?? 'Group');
+                $name  = ($row['title'] ?? null) === null ? ($untitled[$row['id']] ?? 'Group') : (string) $row['title'];
                 $short = $name;
             } else {
                 $name  = $other === null ? 'Someone' : ($avatars[$other]['name'] ?? $people[$other] ?? 'Someone');
@@ -282,6 +283,46 @@ class ConversationPresenter
 
         foreach (db_connect()->table('course_offerings co')->select('co.id, co.status, c.course_code, c.course_title')->join('courses c', 'c.id = co.course_id')->whereIn('co.id', $offeringIds)->get()->getResultArray() as $row) {
             $out[(int) $row['id']] = ['code' => (string) $row['course_code'], 'title' => (string) $row['course_title'], 'closed' => $row['status'] !== 'active'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * A name for each group left untitled, from its other members as the viewer may see them, as Messenger does:
+     * "Ana", "Ana and Ben", "Ana, Ben and Cy", "Ana, Ben and 3 others" (earliest to join first).
+     *
+     * @param list<int> $groupIds
+     *
+     * @return array<int, string>
+     */
+    private function memberNames(User $viewer, array $groupIds): array
+    {
+        if ($groupIds === []) {
+            return [];
+        }
+
+        $rows = db_connect()->table('conversation_participants')->select('conversation_id, user_id')->whereIn('conversation_id', $groupIds)
+            ->where('left_at', null)->where('user_id !=', (int) $viewer->id)->orderBy('joined_at')->orderBy('id')->get()->getResultArray();
+        $members = [];
+
+        foreach ($rows as $row) {
+            $members[(int) $row['conversation_id']][] = (int) $row['user_id'];
+        }
+
+        $names = (new AvatarData())->forViewerJson($viewer, array_values(array_unique(array_merge([], ...array_values($members)))));
+        $out   = [];
+
+        foreach ($members as $groupId => $ids) {
+            $first = array_map(static fn (int $id): string => (string) ($names[$id]['name'] ?? 'Someone'), array_slice($ids, 0, 2));
+            $rest  = count($ids) - 2;
+
+            $out[$groupId] = match (true) {
+                count($ids) === 1 => $first[0],
+                $rest <= 0        => "{$first[0]} and {$first[1]}",
+                $rest === 1       => "{$first[0]}, {$first[1]} and " . ($names[$ids[2]]['name'] ?? 'Someone'),
+                default           => "{$first[0]}, {$first[1]} and {$rest} others",
+            };
         }
 
         return $out;
