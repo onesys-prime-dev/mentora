@@ -69,10 +69,20 @@ export async function openItem(page, title) {
     const row = itemRow(page, title);
     const unit = page.locator("[data-learning-unit-wrapper]").filter({ has: row });
     const panel = unit.locator("[data-learning-unit-content]").first();
+    // Opening an item puts it in the address (?item=<id>).
+    const opened = new RegExp(`[?&]item=${await row.first().getAttribute("data-learning-item")}(&|$)`);
 
-    if ((await panel.getAttribute("class"))?.includes("max-h-0")) {
-        await unit.locator("[data-learning-unit]").first().click();
-    }
-
-    await row.click();
+    // A click that lands while the unit is still opening, or before the page script has attached, opens
+    // nothing (a slow CI runner hits this), so repeat the step until the item is open.
+    await expect(async () => {
+        if (opened.test(page.url())) {
+            return;
+        }
+        if ((await panel.getAttribute("class", { timeout: 3_000 }))?.includes("max-h-0")) {
+            await unit.locator("[data-learning-unit]").first().click({ timeout: 3_000 });
+            await expect(panel).not.toHaveClass(/max-h-0/, { timeout: 2_000 });
+        }
+        await row.click({ timeout: 3_000 });
+        await expect(page).toHaveURL(opened, { timeout: 3_000 });
+    }).toPass({ timeout: 30_000 });
 }
