@@ -116,9 +116,9 @@ function bindMessageButtons(container) {
         say("");
         buttons().forEach((b) => { b.disabled = true; });
 
-        const id = await startThread(button.dataset.instructorId, button.dataset.childId);
+        const draft = await startThread(button.dataset.instructorId, button.dataset.childId);
 
-        if (id === null) {
+        if (draft === null) {
 
             say("You can't message them right now");
             buttons().forEach((b) => { b.disabled = false; });
@@ -128,14 +128,16 @@ function bindMessageButtons(container) {
 
         }
 
-        // Left disabled: the page is about to change.
-        navigation.go(`${siteBase()}/messages/${id}`);
+        // Left disabled: the page is about to change. No thread yet: Messages opens the draft, saved on the first send.
+        navigation.go(draft.conversation_id
+            ? `${siteBase()}/messages/${draft.conversation_id}`
+            : `${siteBase()}/messages?to=${Number(draft.recipient_id)}&child=${Number(draft.subject_student_id)}`);
 
     });
 
 }
 
-/** The id of the conversation the server started or reopened, or null when it refused or could not be reached. */
+/** The server's draft for that person about the child (with the thread's id when one exists), or null when it refused or could not be reached. */
 async function startThread(instructorId, childId) {
 
     try {
@@ -160,7 +162,7 @@ async function startThread(instructorId, childId) {
 
         const data = await response.json().catch(() => null);
 
-        return response.ok ? data?.conversation?.id ?? null : null;
+        return response.ok ? data?.draft ?? null : null;
 
     } catch {
 

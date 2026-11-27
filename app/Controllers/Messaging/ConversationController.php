@@ -50,10 +50,18 @@ class ConversationController extends MessagingController
             return $this->notFound();
         }
 
-        // The header needs a name before any thread exists: the same gated name and avatar the list uses.
-        $avatar = (new AvatarData())->forViewerJson(auth()->user(), [(int) $draft['recipient_id']])[(int) $draft['recipient_id']] ?? null;
+        // The header needs names before any thread exists: the same gated names and avatar the list uses. The child a
+        // thread is about was already checked by draftFor.
+        $recipient = (int) $draft['recipient_id'];
+        $child     = $draft['subject_student_id'] === null ? null : (int) $draft['subject_student_id'];
+        $people    = (new AvatarData())->forViewerJson(auth()->user(), array_values(array_filter([$recipient, $child])));
+        $avatar    = $people[$recipient] ?? null;
 
-        return $this->response->setJSON(['draft' => $draft + ['name' => $avatar['name'] ?? 'Someone', 'avatar' => $avatar]]);
+        return $this->response->setJSON(['draft' => $draft + [
+            'name'         => $avatar['name'] ?? 'Someone',
+            'avatar'       => $avatar,
+            'subject_name' => $child === null ? null : ($people[$child]['name'] ?? null),
+        ]]);
     }
 
     /** The first message: creates the conversation and the message together. */

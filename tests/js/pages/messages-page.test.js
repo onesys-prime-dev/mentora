@@ -1061,6 +1061,15 @@ describe("the draft and the first-contact line", () => {
         expect(location.search).toBe("");
     });
 
+    it("a draft about a child says who it is about", async () => {
+        const api = makeApi({ start: vi.fn().mockResolvedValue(ok({ draft: { ...draftOf(), subject_student_id: 9, subject_name: "Juan Dela Cruz" } })) });
+
+        history.replaceState(null, "", "/messages?to=4&child=9");
+        await mount(api);
+
+        expect(q("[data-role=head-sub]").textContent).toBe("About Juan Dela Cruz");
+    });
+
     it("recipient sees the first-contact line with Block and Report", async () => {
         const api = makeApi({
             block: vi.fn().mockResolvedValue(ok({ ok: true })),

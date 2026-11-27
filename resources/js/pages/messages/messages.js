@@ -1046,7 +1046,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             return open(draft.conversation_id);
         }
 
-        return openDraft({ recipientId: draft.recipient_id, subjectStudentId: draft.subject_student_id ?? null, name: draft.name ?? fallbackName ?? "Someone", firstContact: draft.first_contact === true, avatar: draft.avatar ?? null });
+        return openDraft({ recipientId: draft.recipient_id, subjectStudentId: draft.subject_student_id ?? null, name: draft.name ?? fallbackName ?? "Someone", firstContact: draft.first_contact === true, avatar: draft.avatar ?? null, subjectName: draft.subject_name ?? null });
     }
 
     function openDraft(draft) {
@@ -1081,7 +1081,7 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         bodyEl.style.height = "auto";
         bodyEl.style.height = `${Math.min(bodyEl.scrollHeight, 128)}px`;
         syncSend();
-        applyConversation({ type: "direct", name: draft.name, initials: draft.name.slice(0, 2).toUpperCase(), avatar: draft.avatar, can_post: true });
+        applyConversation({ type: "direct", name: draft.name, initials: draft.name.slice(0, 2).toUpperCase(), avatar: draft.avatar, subtitle: draft.subjectName ?? null, can_post: true });
         renderList();
         renderMessages();
         bodyEl.focus();

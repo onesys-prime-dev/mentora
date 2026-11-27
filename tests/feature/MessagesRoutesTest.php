@@ -357,4 +357,21 @@ final class MessagesRoutesTest extends RouteTestCase
         $this->signIn($this->student);
         $this->assertArrayNotHasKey('reason', json_decode($this->api('GET', 'recipients?q=zzzz')->response()->getBody(), true), 'only that parent is told');
     }
+
+    /** The draft header says who a parent's thread is about before anything is sent, like the thread's own header. */
+    public function testAParentsDraftAboutTheirChildNamesTheChild(): void
+    {
+        $parent = PeopleFactory::person('parent', 'Par', 'Ent', null, $this->institution);
+        db_connect()->table('parent_student_links')->insert(['institution_id' => $this->institution, 'parent_user_id' => $parent->id, 'student_user_id' => $this->student->id, 'created_at' => date('Y-m-d H:i:s')]);
+
+        $this->signIn($parent);
+        $draft = json_decode($this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id, 'subject_student_id' => (int) $this->student->id])->response()->getBody(), true)['draft'];
+
+        $this->assertSame((int) $this->student->id, $draft['subject_student_id']);
+        $this->assertNotSame('', (string) ($draft['subject_name'] ?? ''));
+
+        $this->signIn($this->student);
+        $plain = json_decode($this->api('POST', 'conversations', ['recipient_id' => (int) $this->instructor->id])->response()->getBody(), true)['draft'];
+        $this->assertNull($plain['subject_name']);
+    }
 }

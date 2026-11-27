@@ -217,7 +217,8 @@ test("TC-MSG-06 A parent messages the child's instructor; the thread is about th
         await openInstructorTab(page);
         const instructorName = (await page.locator("[data-parent-message]").first().innerText()).replace(/^Message\s+/, "").trim();
         await page.locator("[data-parent-message]").first().click();
-        await expect(page).toHaveURL(/\/messages\/\d+$/);
+        // A first message: Messages opens the draft about the child (nothing is stored until it is sent).
+        await expect(page).toHaveURL(/\/messages(\/\d+)?$/);
 
         await expect(page.locator("[data-role=head-name]")).toHaveText(instructorName);
         await expect(page.locator("[data-role=head-sub]")).toContainText("About ");
