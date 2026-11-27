@@ -56,7 +56,7 @@ export function createApi(base, fetchImpl = (...args) => fetch(...args)) {
         block: (userId) => request("POST", "blocks", { user_id: userId }),
         unblock: (userId) => request("POST", `blocks/${userId}/remove`, {}),
         report: (id, messageId, reason, note) => request("POST", `conversations/${id}/messages/${messageId}/report`, { reason, note }),
-        groupCandidates: (q) => request("GET", `group-candidates${query({ q })}`),
+        groupCandidates: (q, after) => request("GET", `group-candidates${query({ q, after })}`),
         createGroup: (title, memberIds) => request("POST", "groups", { title, member_ids: memberIds }),
         groupMembers: (id) => request("GET", `groups/${id}/members`),
         addGroupMembers: (id, memberIds) => request("POST", `groups/${id}/members`, { member_ids: memberIds }),

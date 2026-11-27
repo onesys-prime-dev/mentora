@@ -22,7 +22,7 @@
 import { renderAvatar } from "../../shared/avatar.js";
 import { createApi } from "./api.js";
 import { canSend, createComposer } from "./composer.js";
-import { createGroupPicker, MAX_MEMBERS } from "./group.js";
+import { MAX_MEMBERS } from "./group.js";
 import { createGroupSettings } from "./group-settings.js";
 import { REASONS, describeFailure } from "./safety.js";
 import { createPicker } from "./picker.js";
@@ -68,7 +68,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const toastEl = $("[data-role=toast]");
     const restrictionEl = $("[data-role=restriction]");
     const newEl = $("[data-role=new]");
-    const newGroupEl = $("[data-role=new-group]");
 
     const listGuard = createGuard();
     const threadGuard = createGuard();
@@ -170,25 +169,23 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             }
         }
 
-        [newEl, newGroupEl].forEach((button) => {
-            if (button) {
-                button.toggleAttribute("aria-disabled", r !== null);
+        if (newEl) {
+            newEl.toggleAttribute("aria-disabled", r !== null);
 
-                if (r) {
-                    button.setAttribute("aria-disabled", "true");
-                }
+            if (r) {
+                newEl.setAttribute("aria-disabled", "true");
             }
-        });
+        }
     }
 
     // Capture phase on the buttons themselves, so the dialog opener never sees the click.
-    [newEl, newGroupEl].forEach((button) => button?.addEventListener("click", (event) => {
+    newEl?.addEventListener("click", (event) => {
         if (state.restriction) {
             event.preventDefault();
             event.stopImmediatePropagation();
             showListNote(`${restrictionTitle()}${endsWords(state.restriction.ends_at)}${state.restriction.source === "pause" ? ", while some reports are reviewed" : ""}.`);
         }
-    }, true));
+    }, true);
 
     function updateBadge(count) {
         state.badge = count;
@@ -1112,25 +1109,147 @@ export function mountMessages(root, { api, now = () => new Date() }) {
         }
     }
 
-    async function startWith(entry) {
-        const { status, data } = await api.start(entry.id, entry.subject_student_id);
+    // ---- the new-message picker ----------------------------------------
+    // As Messenger does: a pick becomes a chip and the search clears for the next name. One person is a direct
+    // draft; two or more make a group (named, or named after its members). Someone who cannot start groups (a parent)
+    // goes straight to the draft, since there is no one to add beside them.
 
-        if (status !== 200 || !data?.draft) {
-            pickerNote.textContent = "That person can't be messaged.";
+    const canGroup = root.dataset.canGroup === "1";
+    const pickerInput = $("[data-role=picker-input]");
+    const pickerChips = $("[data-role=picker-chips]");
+    const pickerName = $("[data-role=picker-name]");
+    const groupTitle = $("[data-role=group-title]");
+    const pickerStart = $("[data-role=picker-start]");
+    // By person and child: a parent is offered once per child, and each child is a separate thread.
+    const chosen = new Map();
+    const keyOf = (entry) => `${entry.id}:${entry.subject_student_id || 0}`;
+    let starting = false;
+    let pickerFailure = "";
+
+    // A thread about a child is with that one person (D2): no one can be added beside them.
+    const oneToOne = () => [...chosen.values()].some((entry) => entry.subject_student_id);
+
+    function resetPicker() {
+        chosen.clear();
+        starting = false;
+        pickerFailure = "";
+        groupTitle.value = "";
+        pickerInput.value = "";
+        picker.input("");
+    }
+
+    function choose(entry) {
+        if (!canGroup) {
+            startWith(entry);
 
             return;
         }
 
-        $("[data-role=picker-input]").value = "";
+        chosen.set(keyOf(entry), entry);
+        pickerFailure = "";
+        pickerInput.value = "";
         picker.input("");
+        // The tapped result goes with the redraw: focus stays in the dialog, on the search (or the button once no
+        // one else can be added).
+        (oneToOne() ? pickerStart : pickerInput).focus();
+    }
+
+    function unchoose(entry) {
+        chosen.delete(keyOf(entry));
+        pickerFailure = "";
+        // The search source follows the count (anyone for the first pick, group members after), so ask again.
+        picker.input(pickerInput.value);
+        pickerInput.focus();
+    }
+
+    async function startWith(entry) {
+        const { status, data } = await api.start(entry.id, entry.subject_student_id);
+
+        if (status !== 200 || !data?.draft) {
+            pickerFailure = "That person can't be messaged.";
+            renderPicker();
+
+            return;
+        }
+
+        resetPicker();
         $("#messages-new [data-dialog-close]")?.click();
         openFromDraft(data.draft, entry.name);
+    }
+
+    async function startGroup(people) {
+        starting = true;
+        renderPicker();
+
+        const { status, data } = await api.createGroup(groupTitle.value.trim(), people.map((entry) => entry.id));
+
+        starting = false;
+
+        if (status === 201 && data?.conversation) {
+            const conversation = data.conversation;
+
+            state.conversations = [conversation, ...state.conversations.filter((c) => c.id !== conversation.id)];
+            resetPicker();
+            $("#messages-new [data-dialog-close]")?.click();
+            open(conversation.id);
+
+            return;
+        }
+
+        pickerFailure = "Couldn't create the group";
+        renderPicker();
+    }
+
+    pickerStart.addEventListener("click", () => {
+        const people = [...chosen.values()];
+
+        if (starting || people.length === 0) {
+            return;
+        }
+
+        if (people.length === 1) {
+            startWith(people[0]);
+        } else {
+            startGroup(people);
+        }
+    });
+
+    function renderChips() {
+        const people = [...chosen.values()];
+        // The person starting a group is a member too.
+        const full = people.length + 1 >= MAX_MEMBERS;
+
+        pickerChips.hidden = people.length === 0;
+        pickerChips.replaceChildren(...people.map((entry) => {
+            const item = document.createElement("li");
+            const name = document.createElement("span");
+            const remove = document.createElement("button");
+
+            item.className = "inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-xs text-brand-dark";
+            name.textContent = entry.subject_name ? `${entry.name} · about ${entry.subject_name}` : entry.name;
+            remove.type = "button";
+            remove.className = "ml-1 inline-flex items-center justify-center rounded-full px-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
+            remove.setAttribute("aria-label", `Remove ${entry.name}`);
+            remove.textContent = "×";
+            remove.addEventListener("click", () => unchoose(entry));
+            item.append(name, document.createTextNode(" "), remove);
+
+            return item;
+        }));
+
+        pickerName.hidden = people.length < 2;
+        $("[data-role=picker-search]").hidden = oneToOne() || full;
+        $("[data-role=picker-label]").textContent = people.length === 0 ? "Find a person by name" : "Add another person to make a group";
+        pickerStart.hidden = people.length === 0;
+        pickerStart.textContent = people.length >= 2 ? "Create group" : "Message";
+        pickerStart.disabled = starting;
     }
 
     function renderPicker() {
         const list = $("[data-role=picker-results]");
 
-        list.replaceChildren(...picker.results.map((entry) => {
+        renderChips();
+        list.replaceChildren(...picker.results.filter((entry) => !chosen.has(keyOf(entry))).map((entry) => {
             const item = document.createElement("li");
             const button = document.createElement("button");
             const name = document.createElement("span");
@@ -1152,6 +1271,12 @@ export function mountMessages(root, { api, now = () => new Date() }) {
 
             return item;
         }));
+
+        if (pickerFailure !== "") {
+            pickerNote.textContent = pickerFailure;
+
+            return;
+        }
 
         if (picker.next !== null) {
             const item = document.createElement("li");
@@ -1184,12 +1309,24 @@ export function mountMessages(root, { api, now = () => new Date() }) {
             empty: "No one found.",
             error: "The search failed. Try again.",
             no_child: noChild,
-        }[picker.state] ?? (picker.results.length > 0 ? "" : root.dataset.noChild === "1" ? noChild : "Type at least two letters of a name.");
+        }[picker.state] ?? (picker.results.length > 0 || chosen.size > 0 ? "" : root.dataset.noChild === "1" ? noChild : "Type at least two letters of a name.");
     }
 
-    const picker = createPicker({ search: (...args) => api.recipients(...args), onPick: startWith, onChange: renderPicker });
+    // The first pick may be anyone the person can message; after it, only people who can be in a group with them.
+    const search = async (...args) => {
+        if (chosen.size === 0) {
+            return api.recipients(...args);
+        }
 
-    $("[data-role=picker-input]").addEventListener("input", (event) => picker.input(event.target.value));
+        const { status, data } = await api.groupCandidates(...args);
+
+        return { status, data: data ? { ...data, recipients: data.candidates } : data };
+    };
+    const picker = createPicker({ search, onPick: choose, onChange: renderPicker });
+
+    pickerInput.addEventListener("input", (event) => picker.input(event.target.value));
+    // A fresh start each time the dialog opens (the restriction check above runs first, in the capture phase).
+    newEl?.addEventListener("click", () => { resetPicker(); });
 
     // ---- block, report, settings ---------------------------------------
 
@@ -1296,104 +1433,6 @@ export function mountMessages(root, { api, now = () => new Date() }) {
     const settings = createSettings({ root, api });
 
     $("[data-role=prefs-open]")?.addEventListener("click", () => settings.sync());
-
-    // ---- starting a staff group ----------------------------------------
-    // Staff and students are offered the button; the server decides who may be added and who may start.
-
-    const groupBtn = newGroupEl;
-    const groupTitle = $("[data-role=group-title]");
-    const groupSearch = $("[data-role=group-search]");
-    const groupResults = $("[data-role=group-results]");
-    const groupChips = $("[data-role=group-chips]");
-    const groupNote = $("[data-role=group-note]");
-    const groupCreate = $("[data-role=group-create]");
-    let creatingGroup = false;
-    let groupFailure = "";
-
-    if (groupBtn) {
-        groupBtn.hidden = root.dataset.canGroup !== "1";
-    }
-
-    function syncGroup() {
-        const count = groupPicker.ids().length;
-
-        // The person starting the group is a member too.
-        groupCreate.disabled = creatingGroup || groupTitle.value.trim() === "" || count < 1 || count + 1 > MAX_MEMBERS;
-    }
-
-    function renderGroup() {
-        groupResults.replaceChildren(...groupPicker.results.map((entry) => {
-            const item = document.createElement("li");
-            const button = document.createElement("button");
-
-            button.type = "button";
-            button.className = "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-gray-900 pointer-coarse:min-h-11 hover:bg-brand-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
-            // Inside the choice button, so never a button itself: decoration beside the name.
-            button.append(...(entry.avatar ? [renderAvatar({ ...entry.avatar, interactive: false }, "xs", { decorative: true })] : []), entry.name);
-            button.title = ROLE_WORDS[entry.role] ?? entry.role;
-            button.setAttribute("aria-pressed", String(groupPicker.isChosen(entry.id)));
-            // The pick redraws the results and chips, so the tapped button goes: focus stays in the dialog, on the search.
-            button.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
-            item.append(button);
-
-            return item;
-        }));
-
-        groupChips.replaceChildren(...groupPicker.chosen().map((entry) => {
-            const item = document.createElement("li");
-            const name = document.createElement("span");
-            const remove = document.createElement("button");
-
-            item.className = "inline-flex items-center rounded-full bg-brand-tint px-2.5 py-0.5 text-xs text-brand-dark";
-            name.textContent = entry.name;
-            remove.type = "button";
-            remove.className = "ml-1 inline-flex items-center justify-center rounded-full px-1 pointer-coarse:min-h-11 pointer-coarse:min-w-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50";
-            remove.setAttribute("aria-label", `Remove ${entry.name}`);
-            remove.textContent = "×";
-            remove.addEventListener("click", () => { groupPicker.toggle(entry); groupSearch.focus(); });
-            item.append(name, document.createTextNode(" "), remove);
-
-            return item;
-        }));
-
-        groupNote.textContent = groupFailure || ({ loading: "Searching…", empty: "No one found.", error: "The search failed. Try again." }[groupPicker.state] ?? "");
-        syncGroup();
-    }
-
-    const groupPicker = createGroupPicker({ search: (q) => api.groupCandidates(q), onChange: renderGroup });
-
-    groupSearch?.addEventListener("input", (event) => groupPicker.input(event.target.value));
-    groupTitle?.addEventListener("input", () => { groupFailure = ""; renderGroup(); });
-
-    groupCreate?.addEventListener("click", async () => {
-        if (creatingGroup) {
-            return;
-        }
-
-        creatingGroup = true;
-        groupFailure = "";
-        syncGroup();
-
-        const { status, data } = await api.createGroup(groupTitle.value.trim(), groupPicker.ids());
-
-        creatingGroup = false;
-
-        if (status === 201 && data?.conversation) {
-            const conversation = data.conversation;
-
-            state.conversations = [conversation, ...state.conversations.filter((c) => c.id !== conversation.id)];
-            groupTitle.value = "";
-            groupSearch.value = "";
-            groupPicker.reset();
-            $("#messages-group [data-dialog-close]")?.click();
-            open(conversation.id);
-
-            return;
-        }
-
-        groupFailure = "Couldn't create the group";
-        renderGroup();
-    });
 
     // ---- group settings ------------------------------------------------
 

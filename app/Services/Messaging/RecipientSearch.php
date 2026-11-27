@@ -50,10 +50,14 @@ class RecipientSearch
      * One page, starting after the person $after (the last one an earlier page returned). A cursor naming anyone
      * this search would not offer the sender finds nothing, exactly like an unknown one, so a crafted cursor learns
      * nothing about hidden people. `next` is the cursor for the following page, null once the names end.
+     * $offer replaces the start check (rows, wanted count => entries), and $membersOnly drops anyone who is neither
+     * staff nor a student: how GroupService pages the people a creator may add.
+     *
+     * @param (callable(list<array<string, mixed>>, int): list<array{id: int, name: string, role: string, subject_student_id: int|null, subject_name: null}>)|null $offer
      *
      * @return array{recipients: list<array{id: int, name: string, role: string, subject_student_id: int|null, subject_name: string|null, avatar: array<string, mixed>|null}>, next: int|null}
      */
-    public function page(User $sender, string $query, ?int $after, int $limit = 20): array
+    public function page(User $sender, string $query, ?int $after, int $limit = 20, ?callable $offer = null, bool $membersOnly = false): array
     {
         $query       = trim($query);
         $institution = $this->resolver->institutionOf($sender);
@@ -73,8 +77,9 @@ class RecipientSearch
         $student = $holds("'student'");
         $visible = $senderParty->isStaff() ? "({$staff} OR {$student})" : "({$staff} AND NOT {$student})";
         $email   = "(EXISTS (SELECT 1 FROM auth_identities ai WHERE ai.user_id = iu.user_id AND ai.type = 'email_password' AND ai.secret LIKE {$like}) AND {$visible})";
-        $reach   = $this->reachable($sender, $senderParty, $institution, $staff, $student);
+        $reach   = $this->reachable($sender, $senderParty, $institution, $staff, $student) . ($membersOnly ? " AND ({$staff} OR {$student})" : '');
         $senderId = (int) $sender->id;
+        $offer ??= fn (array $rows, int $want): array => $this->offers($sender, $senderParty, $rows, $want);
 
         // Matches in name order after $from (keyset cursor), optionally only the person $only.
         $read = static function (?array $from, int $n, ?int $only = null) use ($db, $institution, $senderId, $like, $email, $reach): array {
@@ -101,7 +106,7 @@ class RecipientSearch
         if ($after !== null) {
             $from = $read(null, 1, $after)[0] ?? null;
 
-            if ($from === null || $this->offers($sender, $senderParty, [$from], 1) === []) {
+            if ($from === null || $offer([$from], 1) === []) {
                 return $none;
             }
         }
@@ -111,7 +116,7 @@ class RecipientSearch
 
         do {
             $batch = $read($from, self::BATCH);
-            $found = [...$found, ...$this->offers($sender, $senderParty, $batch, $limit - count($found))];
+            $found = [...$found, ...$offer($batch, $limit - count($found))];
 
             if (count($found) >= $limit) {
                 // The page ended on this person; a cursor only while someone after them still matches.

@@ -133,6 +133,26 @@ export async function startThreadWith(page, search, name, role = null) {
     await expect(page.locator("[data-role=head-name]")).toContainText(name);
 }
 
+/**
+ * "+ New", then each [search, name] picked in turn (each becomes a chip), the group name if any, and Create group;
+ * leaves the new group open. Two or more picks make a group; one would be a direct message.
+ */
+export async function startGroupWith(page, picks, title = "") {
+    await page.locator("[data-role=new]").click();
+
+    for (const [search, name] of picks) {
+        await page.locator("#messages-picker").fill(search);
+        await page.locator("[data-role=picker-results] button", { hasText: name }).first().click();
+        await expect(page.locator("[data-role=picker-chips] li", { hasText: name })).toBeVisible();
+    }
+
+    if (title !== "") {
+        await page.locator("[data-role=group-title]").fill(title);
+    }
+
+    await page.locator("[data-role=picker-start]").click();
+}
+
 /** What the picker says after a search that finds nobody. */
 export async function searchFindsNobody(page, search) {
     await page.locator("[data-role=new]").click();

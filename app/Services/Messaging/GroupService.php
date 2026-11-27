@@ -11,6 +11,7 @@ use App\Services\Profiles\AvatarData;
 use App\Services\Profiles\RoleRank;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
+use DateTimeImmutable;
 use Throwable;
 
 /**
@@ -29,11 +30,6 @@ class GroupService
 
     public const MAX_TITLE = 80;
 
-    private const MIN_QUERY = 2;
-
-    /** Names scanned before the scope narrows them; the scope is the filter, not the limit. */
-    private const CANDIDATES = 200;
-
     private MessagingContextResolver $resolver;
 
     private MessagingPolicy $policy;
@@ -51,47 +47,56 @@ class GroupService
      */
     public function candidates(User $creator, string $query, int $limit = 20): array
     {
-        $query = trim($query);
+        return $this->candidatePage($creator, $query, null, $limit)['candidates'];
+    }
+
+    /**
+     * One page of the people the creator may add, after the person $after, read and paged as the new-message picker
+     * is (RecipientSearch::page), so every match can be reached, not only the first names scanned (M6).
+     *
+     * @return array{candidates: list<array{id: int, name: string, role: string, avatar: array<string, mixed>|null}>, next: int|null}
+     */
+    public function candidatePage(User $creator, string $query, ?int $after, int $limit = 20): array
+    {
         $party = $this->actorParty($creator);
 
-        if ($party === null || mb_strlen($query) < self::MIN_QUERY) {
-            return [];
+        if ($party === null) {
+            return ['candidates' => [], 'next' => null];
         }
-
-        $db    = db_connect();
-        $like  = $db->escape('%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $query) . '%');
-        $names = $db->table('institution_users iu')->select('up.user_id, up.first_name, up.last_name')
-            ->join('user_profiles up', 'up.user_id = iu.user_id')
-            ->where('iu.institution_id', $party->institutionId)->where('iu.user_id !=', (int) $creator->id)
-            ->where("(up.first_name LIKE {$like} OR up.last_name LIKE {$like} OR CONCAT(up.first_name, ' ', up.last_name) LIKE {$like})", null, false)
-            ->orderBy('up.last_name')->orderBy('up.first_name')->limit(self::CANDIDATES)->get()->getResultArray();
 
         $users = model(UserModel::class);
-        $found = [];
+        $offer = function (array $rows, int $want) use ($creator, $party, $users): array {
+            $found = [];
 
-        foreach ($names as $row) {
-            $member = $users->findById((int) $row['user_id']);
+            foreach ($rows as $row) {
+                $member = $users->findById((int) $row['user_id']);
 
-            if ($member === null || ! $this->reachable($creator, $party, $member)) {
-                continue;
+                if ($member === null || ! $this->reachable($creator, $party, $member)) {
+                    continue;
+                }
+
+                $found[] = ['id' => (int) $member->id, 'name' => trim($row['first_name'] . ' ' . $row['last_name']), 'role' => RoleRank::highest($this->resolver->roles($member)) ?? '', 'subject_student_id' => null, 'subject_name' => null];
+
+                if (count($found) >= $want) {
+                    break;
+                }
             }
 
-            $found[] = ['id' => (int) $member->id, 'name' => trim($row['first_name'] . ' ' . $row['last_name']), 'role' => RoleRank::highest($this->resolver->roles($member)) ?? ''];
+            return $found;
+        };
 
-            if (count($found) >= $limit) {
-                break;
-            }
-        }
+        $page = (new RecipientSearch($this->resolver))->page($creator, $query, $after, $limit, $offer, true);
 
-        // Shown as the creator may see each person; matched above on the legal name only.
-        $avatars = (new AvatarData())->forViewerJson($creator, array_column($found, 'id'));
-
-        return array_map(static fn (array $f): array => ['id' => $f['id'], 'name' => $avatars[$f['id']]['name'] ?? $f['name'], 'role' => $f['role'], 'avatar' => $avatars[$f['id']] ?? null], $found);
+        return [
+            'candidates' => array_map(static fn (array $f): array => ['id' => $f['id'], 'name' => $f['name'], 'role' => $f['role'], 'avatar' => $f['avatar']], $page['recipients']),
+            'next'       => $page['next'],
+        ];
     }
 
     /**
      * The new group as a `conversations` row, or null when the creator may not start groups, the title or the
-     * member list is not acceptable, or any member is someone they may not add. Nothing is created on a null.
+     * member list is not acceptable, or any member is someone they may not add. Nothing is created on a null. A blank
+     * title leaves the group untitled: the list names it after its members (ConversationPresenter::memberNames).
      *
      * @throws RateLimitedException when the creator has started too many new threads this hour
      *
@@ -101,10 +106,11 @@ class GroupService
      */
     public function create(User $creator, string $title, array $memberIds): ?array
     {
-        $party = $this->actorParty($creator);
-        $title = self::cleanTitle($title);
+        $party    = $this->actorParty($creator);
+        $untitled = trim((string) preg_replace('/[\x00-\x1F\x7F]/u', '', $title)) === '';
+        $title    = $untitled ? null : self::cleanTitle($title);
 
-        if ($party === null || $title === null) {
+        if ($party === null || (! $untitled && $title === null)) {
             return null;
         }
 
@@ -154,7 +160,7 @@ class GroupService
         $this->note($group, 'group_created', $creator, (int) $creator->id, null);
 
         foreach ($ids as $userId) {
-            $this->tell($group, $userId, $now);
+            $this->tell($group, $userId, (int) $creator->id, $now);
         }
 
         $db->transComplete();
@@ -186,7 +192,7 @@ class GroupService
         $avatars = (new AvatarData())->forViewerJson($viewer, $ids);
 
         return [
-            'title'      => (string) $c['title'],
+            'title'      => (string) ($c['title'] ?? ''),
             'closed'     => $c['closed_at'] !== null,
             'can_manage' => $this->mayManage($viewer, $c),
             'max'        => self::MAX_MEMBERS,
@@ -332,7 +338,7 @@ class GroupService
 
                 $current[$id]      = $member;
                 $result['added'][] = $id;
-                $this->tell($c, $id, $now, $this->note($c, 'member_added', $actor, (int) $actor->id, $id));
+                $this->tell($c, $id, (int) $actor->id, $now, $this->note($c, 'member_added', $actor, (int) $actor->id, $id));
             }
 
             return $result;
@@ -642,18 +648,25 @@ class GroupService
     }
 
     /**
-     * Being added is told at once, in the app, without names (S2-g).
+     * Being added is told at once, in the app, without names (S2-g). It is emailed as their email setting says for a
+     * message from the person who added them (D18); quiet hours hold back only the email.
      *
      * @param array<string, mixed> $c
      */
-    private function tell(array $c, int $userId, string $now, int $eventId = 0): void
+    private function tell(array $c, int $userId, int $actorId, string $now, int $eventId = 0): void
     {
+        $institution = (int) $c['institution_id'];
+        $prefs       = new MessagePreferences();
+        $scope       = $prefs->get($userId, $institution)['email_scope'];
+        $email       = ($scope === 'everyone' || ($scope === 'talked' && $this->resolver->talkedBefore($actorId, $userId)))
+            && ! $prefs->isQuiet($userId, new DateTimeImmutable($now), $institution);
+
         (new NotificationService())->send(
             $userId,
             'message',
             'Added to a group',
-            'You were added to the group ' . (string) $c['title'] . '.',
-            false,
+            $c['title'] === null ? 'You were added to a group.' : 'You were added to the group ' . (string) $c['title'] . '.',
+            $email,
             "group-add:{$c['id']}:{$userId}:{$eventId}:" . strtotime($now),
             (int) $c['institution_id'],
             'messages/' . $c['id'],

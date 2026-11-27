@@ -35,6 +35,7 @@ import {
     sendMessage,
     setMinor,
     setStudentMessages,
+    startGroupWith,
     startThreadWith,
     syncChats,
     thread,
@@ -295,17 +296,13 @@ test("TC-MSG-08 A parent sees the read-only feed of the instructor's posts and n
     }
 });
 
-test("TC-MSG-09 A chairperson starts a group with an instructor; a parent cannot be added", async ({ browser }) => {
+test("TC-MSG-09 A chairperson starts a group with two instructors; a parent cannot be added", async ({ browser }) => {
     const chair = await openMessagesAs(browser, people.chairperson);
     const teacher = await openMessagesAs(browser, people.instructor2);
     const dean = await openMessagesAs(browser, people.dean);
 
     try {
-        await chair.page.locator("[data-role=new-group]").click();
-        await chair.page.locator("[data-role=group-title]").fill("IT college planning");
-        await chair.page.locator("[data-role=group-search]").fill("Garcia");
-        await chair.page.locator("[data-role=group-results] button", { hasText: people.instructor2.name }).click();
-        await chair.page.locator("[data-role=group-create]").click();
+        await startGroupWith(chair.page, [["Garcia", people.instructor2.name], ["Santos", people.instructor1.name]], "IT college planning");
         await expect(chair.page.locator("[data-role=head-name]")).toHaveText("IT college planning");
         await sendMessage(chair.page, "Please send me your exam dates.");
 
@@ -314,11 +311,13 @@ test("TC-MSG-09 A chairperson starts a group with an instructor; a parent cannot
         await rowFor(teacher.page, "IT college planning").click();
         await expect(thread(teacher.page).getByText("Please send me your exam dates.")).toBeVisible();
 
-        // Groups are for everyone but parents: the dean finds no parent to add.
-        await dean.page.locator("[data-role=new-group]").click();
-        await dean.page.locator("[data-role=group-search]").fill("Roberto");
-        await expect(dean.page.locator("[data-role=group-note]")).toHaveText("No one found.");
-        await expect(dean.page.locator("[data-role=group-results] button")).toHaveCount(0);
+        // Groups are for everyone but parents: once the dean has picked someone, the search finds no parent to add.
+        await dean.page.locator("[data-role=new]").click();
+        await dean.page.locator("#messages-picker").fill("Garcia");
+        await dean.page.locator("[data-role=picker-results] button", { hasText: people.instructor2.name }).click();
+        await dean.page.locator("#messages-picker").fill("Roberto");
+        await expect(dean.page.locator("[data-role=picker-state]")).toHaveText("No one found.");
+        await expect(dean.page.locator("[data-role=picker-results] button")).toHaveCount(0);
     } finally {
         await chair.context.close();
         await teacher.context.close();
@@ -1022,9 +1021,7 @@ test("TC-MSG-46 A restricted student sees the notice, cannot start, and can stil
         await expect(notice).toContainText("You can't start new conversations");
         await expect(notice).toContainText("Set by your school.");
 
-        for (const button of ["new", "new-group"]) {
-            await expect(student.page.locator(`[data-role=${button}]`)).toHaveAttribute("aria-disabled", "true");
-        }
+        await expect(student.page.locator("[data-role=new]")).toHaveAttribute("aria-disabled", "true");
 
         // Pressing + New repeats the reason instead of opening the picker.
         // Forced: Playwright waits for an aria-disabled button to become enabled, but a person can still press it.
@@ -1047,11 +1044,8 @@ test("TC-MSG-47 A student creates a group, adds and renames as its owner; a memb
     const title = "Quiz review circle";
 
     try {
-        await owner.page.locator("[data-role=new-group]").click();
-        await owner.page.locator("[data-role=group-title]").fill(title);
-        await owner.page.locator("[data-role=group-search]").fill("Juan");
-        await owner.page.locator("[data-role=group-results] button", { hasText: people.juan.name }).click();
-        await owner.page.locator("[data-role=group-create]").click();
+        // A classmate and their instructor (a group is two or more people besides its owner).
+        await startGroupWith(owner.page, [["Juan", people.juan.name], ["Santos", people.instructor1.name]], title);
         await expect(owner.page.locator("[data-role=head-name]")).toHaveText(title);
         await sendMessage(owner.page, "Let us review chapter two on Thursday.");
 

@@ -167,6 +167,11 @@ Inherited constraints from User Profile (not decided here, do not change without
 - **S2-h (D16):** no notices for the carry-over items or the block reset.
 - **S2-i (D2):** a parent with no linked child cannot start a thread; the picker explains why.
 
+## After the track (2026-11-27)
+- **M5 ruling (D9):** "their department" for a chairperson and "their college" for a dean is the department of the minor's **home program** (`user_profiles.program_id`), not the departments of the courses they take. A minor with no home program is led by no chairperson or dean; their instructors, classmates and the institutional admin still reach them. (User, 2026-11-27.)
+- **One "+ New" (refines D12):** the "+ New group" button is gone. In the New message dialog a pick becomes a chip and the search clears for the next name, as Messenger does. One person is a direct draft; two or more make a group. The group name is **optional**: left blank, each member sees the group named after the others ("Ana and Ben", "Ana, Ben and 3 others"). The owner can still rename it. (User, 2026-11-27.)
+- **S2-g email:** being added to a group is emailed as the person's email setting says for a message from whoever added them (D18); quiet hours hold back only the email. Implemented 2026-11-27.
+
 ## Question log
 - Q1 (2026-11-23): overall permission model → A (D1).
 - Q2 (2026-11-23): parents' reach → B (D2).

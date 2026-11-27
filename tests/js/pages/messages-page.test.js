@@ -7,7 +7,6 @@ const SHELL = `
 <div id="messages-app" data-view="list" data-api="/messages/api" data-user-id="1" data-open="">
   <section data-pane="list">
     <button data-role="new" data-dialog-open="messages-new"></button>
-    <button data-role="new-group" data-dialog-open="messages-group" hidden></button>
     <input data-role="search">
     <button data-chip="all" aria-pressed="true"></button><button data-chip="course" aria-pressed="false"></button>
     <button data-chip="direct" aria-pressed="false"></button><button data-chip="group" aria-pressed="false"></button>
@@ -42,7 +41,11 @@ const SHELL = `
   </div>
   <div id="messages-new" data-dialog hidden>
     <button data-dialog-close></button>
-    <input data-role="picker-input"><ul data-role="picker-results"></ul><p data-role="picker-state"></p>
+    <div data-role="picker-name" hidden><input data-role="group-title" maxlength="80"></div>
+    <ul data-role="picker-chips" hidden></ul>
+    <div data-role="picker-search"><label data-role="picker-label"></label><input data-role="picker-input"><ul data-role="picker-results"></ul></div>
+    <p data-role="picker-state"></p>
+    <button type="button" data-role="picker-start" hidden></button>
   </div>
 </div>
 <span data-messages-badge hidden></span>
@@ -1206,25 +1209,6 @@ describe("restriction notice", () => {
         await flush();
 
         expect(q("[data-role=composer]").hidden).toBe(false);
-
-    });
-
-    it("greys + New group the same way and repeats the reason on a click", async () => {
-
-        document.body.innerHTML = SHELL;
-        const page = mountMessages(q("#messages-app"), { api: withRestriction({ kind: "no_new", ends_at: "2026-11-30T17:00:00+00:00", source: "admin" }) });
-        const opened = vi.fn();
-
-        q("[data-role=new-group]").addEventListener("click", opened);
-        await page.ready;
-        await flush();
-
-        expect(q("[data-role=new-group]").getAttribute("aria-disabled")).toBe("true");
-
-        q("[data-role=new-group]").click();
-
-        expect(q("[data-role=list-note]").textContent).toContain("can't start new conversations");
-        expect(opened).not.toHaveBeenCalled();
 
     });
 

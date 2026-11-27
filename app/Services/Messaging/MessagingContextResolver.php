@@ -450,7 +450,7 @@ class MessagingContextResolver
 
     /**
      * SQL true when $sender may reach $person (a column) were $person a minor (D9, MessagingPolicy::reachesMinor):
-     * teaches them, is a classmate, or chairs or deans a department or college they study in. Null when nothing
+     * teaches them, is a classmate, or chairs or deans their home program's department or college. Null when nothing
      * narrows (the institution's admin). Restates teaches(), classmates() and leads() for the recipient search.
      */
     public function minorReachSql(User $sender, Party $senderParty, string $person): ?string
@@ -469,9 +469,9 @@ class MessagingContextResolver
                 . " WHERE mco.status = 'active' AND ma.status = 'enrolled' AND mb.status = 'enrolled' AND ma.student_user_id = {$id} AND mb.student_user_id = {$person})";
         }
 
-        // As departmentIds($recipient, 'student'): any offering they are enrolled in, whatever its status.
-        $studies = static fn (string $where): string => "EXISTS (SELECT 1 FROM enrollments me JOIN course_offerings meo ON meo.id = me.offering_id JOIN courses mc ON mc.id = meo.course_id"
-            . " JOIN programs mp ON mp.id = mc.program_id JOIN departments md ON md.id = mp.department_id WHERE me.student_user_id = {$person} AND me.status = 'enrolled' AND {$where})";
+        // As homeDepartmentIds(): the department of their home program.
+        $studies = static fn (string $where): string => "EXISTS (SELECT 1 FROM user_profiles mup JOIN programs mp ON mp.id = mup.program_id"
+            . " JOIN departments md ON md.id = mp.department_id WHERE mup.user_id = {$person} AND {$where})";
         $departments = in_array('chairperson', $roles, true) ? $this->departmentIds($sender, 'chairperson') : [];
         $colleges    = in_array('dean', $roles, true) ? $this->collegeIds($sender, 'dean') : [];
 
@@ -589,19 +589,30 @@ class MessagingContextResolver
     }
 
     /**
-     * The sender chairs a department the recipient studies in, or is dean of a college the recipient studies in.
+     * The sender chairs the department of the recipient's home program, or is dean of its college. The home program
+     * (user_profiles.program_id), not the courses they take, is "their department" (M5 ruling); none, nobody leads them.
      *
      * @param list<string> $senderRoles
      */
     private function leads(User $sender, array $senderRoles, User $recipient): bool
     {
-        if (in_array('chairperson', $senderRoles, true)
-            && array_intersect($this->departmentIds($sender, 'chairperson'), $this->departmentIds($recipient, 'student')) !== []) {
-            return true;
+        $chairs = in_array('chairperson', $senderRoles, true);
+        $deans  = in_array('dean', $senderRoles, true);
+
+        if (! $chairs && ! $deans) {
+            return false;
         }
 
-        return in_array('dean', $senderRoles, true)
-            && array_intersect($this->collegeIds($sender, 'dean'), $this->collegeIds($recipient, 'student')) !== [];
+        $home = db_connect()->table('user_profiles up')->select('d.id, d.college_id')
+            ->join('programs p', 'p.id = up.program_id')->join('departments d', 'd.id = p.department_id')
+            ->where('up.user_id', (int) $recipient->id)->get()->getRowArray();
+
+        if ($home === null) {
+            return false;
+        }
+
+        return ($chairs && in_array((int) $home['id'], $this->departmentIds($sender, 'chairperson'), true))
+            || ($deans && in_array((int) $home['college_id'], $this->collegeIds($sender, 'dean'), true));
     }
 
     /**

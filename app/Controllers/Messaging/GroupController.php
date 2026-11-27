@@ -18,11 +18,12 @@ use CodeIgniter\HTTP\ResponseInterface;
  */
 class GroupController extends MessagingController
 {
+    /** A page of the people the creator may add; `?after=` is the `next` of the page before. */
     public function candidates(): ResponseInterface
     {
-        return $this->response->setJSON([
-            'candidates' => (new GroupService())->candidates(auth()->user(), (string) $this->request->getGet('q')),
-        ]);
+        $after = $this->request->getGet('after');
+
+        return $this->response->setJSON((new GroupService())->candidatePage(auth()->user(), (string) $this->request->getGet('q'), is_numeric($after) ? (int) $after : null));
     }
 
     public function create(): ResponseInterface

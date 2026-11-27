@@ -25,3 +25,11 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
         hiddenIcon?.classList.toggle("hidden", isRevealed);
     });
 });
+
+// A sign-out lands here: drop the unsent Messages drafts this browser keeps (messages.js draftKey), so the next
+// person to sign in on it never finds them.
+try {
+    Object.keys(localStorage).filter((key) => key.startsWith("messages:draft:")).forEach((key) => localStorage.removeItem(key));
+} catch {
+    // No storage, so no drafts.
+}
